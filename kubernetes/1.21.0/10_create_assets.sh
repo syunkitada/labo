@@ -8,7 +8,7 @@ fi
 
 NODE_IP=$1
 API_IP=${NODE_IP}
-mkdir ~/k8s-assets
+mkdir -p ~/k8s-assets
 cd ~/k8s-assets
 
 # Create CA(Certificate Authority)
@@ -117,13 +117,12 @@ cfssl gencert \
 fi
 
 
-
 # The Controller Manager Client Certificate
 # kube-proxy-key.pem, kube-proxy.pem
-if [ ! -e kube-proxy.pem ] || [ ! -e kube-proxy-key.pem ] || [ ! -e kube-proxy.csr ]; then
-cat > kube-proxy-csr.json <<EOF
+if [ ! -e kube-controller-manager.pem ] || [ ! -e kube-controller-manager-key.pem ] || [ ! -e kube-controller-manager.csr ]; then
+cat > kube-controller-manager-csr.json <<EOF
 {
-  "CN": "system:kube-proxy",
+  "CN": "system:kube-controller-manager",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -132,7 +131,7 @@ cat > kube-proxy-csr.json <<EOF
     {
       "C": "US",
       "L": "Portland",
-      "O": "system:kube-proxy",
+      "O": "system:kube-controller-manager",
       "OU": "Kubernetes The Hard Way",
       "ST": "Oregon"
     }
@@ -145,7 +144,7 @@ cfssl gencert \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
   -profile=kubernetes \
-  kube-proxy-csr.json | cfssljson -bare kube-proxy
+  kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
 fi
 
 
