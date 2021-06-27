@@ -7,7 +7,6 @@ if [ $# != 1 ]; then
 fi
 NODE_IP=$1
 ETCD_NAME=$NODE_IP
-POD_CIDR="10.0.0.0/16"
 
 sudo yum install -y socat conntrack ipset
 
@@ -25,7 +24,7 @@ fi
 if [ ! -e /usr/local/bin/runc ]; then
     wget "https://github.com/opencontainers/runc/releases/download/v1.0.0-rc93/runc.amd64"
     chmod +x runc.amd64
-    sudo mv runc.amd64 /usr/local/bin/runc
+    sudo mv runc.amd64 /usr/local/bin/
 fi
 
 if [ ! -e /opt/cni ]; then
@@ -34,13 +33,6 @@ if [ ! -e /opt/cni ]; then
       /etc/cni/net.d \
       /opt/cni/bin
     sudo tar -xvf cni-plugins-linux-amd64-v0.9.1.tgz -C /opt/cni/bin/
-fi
-
-if [ ! -e /opt/cni ]; then
-    wget "https://github.com/containerd/containerd/releases/download/v1.4.4/containerd-1.4.4-linux-amd64.tar.gz"
-    mkdir -p containerd
-    tar -xvf containerd-1.4.4-linux-amd64.tar.gz -C containerd
-    sudo mv containerd/bin/* /bin/
 fi
 
 if [ ! -e /usr/local/bin/kubectl ]; then
@@ -69,7 +61,7 @@ sudo mkdir -p \
   /var/run/kubernetes
 
 
-
+POD_CIDR="10.0.0.0/16"
 # Configure CNI Networking
 cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
 {
@@ -98,44 +90,9 @@ cat <<EOF | sudo tee /etc/cni/net.d/99-loopback.conf
 EOF
 
 
-sudo mkdir -p /etc/containerd/
-
-cat << EOF | sudo tee /etc/containerd/config.toml
-[plugins]
-  [plugins.cri.containerd]
-    snapshotter = "overlayfs"
-    [plugins.cri.containerd.default_runtime]
-      runtime_type = "io.containerd.runtime.v1.linux"
-      runtime_engine = "/usr/local/bin/runc"
-      runtime_root = ""
-EOF
-
-cat <<EOF | sudo tee /etc/systemd/system/containerd.service
-[Unit]
-Description=containerd container runtime
-Documentation=https://containerd.io
-After=network.target
-
-[Service]
-ExecStartPre=/sbin/modprobe overlay
-ExecStart=/bin/containerd
-Restart=always
-RestartSec=5
-Delegate=yes
-KillMode=process
-OOMScoreAdjust=-999
-LimitNOFILE=1048576
-LimitNPROC=infinity
-LimitCORE=infinity
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-
 cd ~/k8s-assets
-sudo cp ${NODE_IP}-key.pem ${NODE_IP}.pem /var/lib/kubelet/
-sudo cp ${NODE_IP}.kubeconfig /var/lib/kubelet/kubeconfig
+sudo cp ${$NODE_IP}-key.pem ${$NODE_IP}.pem /var/lib/kubelet/
+sudo cp ${$NODE_IP}.kubeconfig /var/lib/kubelet/kubeconfig
 sudo cp ca.pem /var/lib/kubernetes/
 
 cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
@@ -186,7 +143,6 @@ EOF
 
 # Configure the Kubernetes Proxy
 sudo cp kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
-
 cat <<EOF | sudo tee /var/lib/kube-proxy/kube-proxy-config.yaml
 kind: KubeProxyConfiguration
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
@@ -195,22 +151,3 @@ clientConnection:
 mode: "iptables"
 clusterCIDR: "10.200.0.0/16"
 EOF
-
-cat <<EOF | sudo tee /etc/systemd/system/kube-proxy.service
-[Unit]
-Description=Kubernetes Kube Proxy
-Documentation=https://github.com/kubernetes/kubernetes
-
-[Service]
-ExecStart=/usr/local/bin/kube-proxy \\
-  --config=/var/lib/kube-proxy/kube-proxy-config.yaml
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable containerd kubelet kube-proxy
-sudo systemctl start containerd kubelet kube-proxy
