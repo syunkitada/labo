@@ -49,3 +49,7 @@ LimitCORE=infinity
 [Install]
 WantedBy=multi-user.target
 EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable containerd
+sudo systemctl restart containerd

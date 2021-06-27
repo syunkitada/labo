@@ -151,3 +151,8 @@ clientConnection:
 mode: "iptables"
 clusterCIDR: "10.200.0.0/16"
 EOF
+
+
+sudo systemctl daemon-reload
+sudo systemctl enable kubelet kube-proxy
+sudo systemctl start kubelet kube-proxy
