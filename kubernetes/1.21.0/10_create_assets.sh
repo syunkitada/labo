@@ -282,6 +282,18 @@ kubectl config set-cluster kubernetes-the-hard-way \
   --embed-certs=true \
   --server=https://${API_IP}:6443 \
   --kubeconfig=${NODE_IP}.kubeconfig
+
+kubectl config set-credentials system:node:${NODE_IP} \
+  --client-certificate=${NODE_IP}.pem \
+  --client-key=${NODE_IP}-key.pem \
+  --embed-certs=true \
+  --kubeconfig=${NODE_IP}.kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes-the-hard-way \
+  --user=system:node:${NODE_IP} \
+  --kubeconfig=${NODE_IP}.kubeconfig
+
 kubectl config use-context default --kubeconfig=${NODE_IP}.kubeconfig
 
 
