@@ -1,6 +1,5 @@
 #!/bin/bash -xe
 
-if [ ! -e /opt/cni ]; then
 cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
 overlay
 br_netfilter

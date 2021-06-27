@@ -91,8 +91,8 @@ EOF
 
 
 cd ~/k8s-assets
-sudo cp ${$NODE_IP}-key.pem ${$NODE_IP}.pem /var/lib/kubelet/
-sudo cp ${$NODE_IP}.kubeconfig /var/lib/kubelet/kubeconfig
+sudo cp ${NODE_IP}-key.pem ${NODE_IP}.pem /var/lib/kubelet/
+sudo cp ${NODE_IP}.kubeconfig /var/lib/kubelet/kubeconfig
 sudo cp ca.pem /var/lib/kubernetes/
 
 cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
