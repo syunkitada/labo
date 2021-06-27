@@ -1,12 +1,11 @@
 #!/bin/bash -xe
 
 if [ $# != 1 ]; then
-    echo "ERROR: Input node_ip"
-    echo "./10_setup_kube-apiserver.sh [node_ip]"
+    echo "ERROR: Input node_host"
+    echo "./41_setup_kubelet.sh [node_host]"
     exit 1
 fi
-NODE_IP=$1
-ETCD_NAME=$NODE_IP
+NODE_HOST=$1
 
 sudo yum install -y socat conntrack ipset
 
@@ -91,8 +90,8 @@ EOF
 
 
 cd ~/k8s-assets
-sudo cp ${NODE_IP}-key.pem ${NODE_IP}.pem /var/lib/kubelet/
-sudo cp ${NODE_IP}.kubeconfig /var/lib/kubelet/kubeconfig
+sudo cp ${NODE_HOST}-key.pem ${NODE_HOST}.pem /var/lib/kubelet/
+sudo cp ${NODE_HOST}.kubeconfig /var/lib/kubelet/kubeconfig
 sudo cp ca.pem /var/lib/kubernetes/
 
 cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
@@ -113,8 +112,8 @@ clusterDNS:
 podCIDR: "${POD_CIDR}"
 resolvConf: "/etc/resolv.conf"
 runtimeRequestTimeout: "15m"
-tlsCertFile: "/var/lib/kubelet/${NODE_IP}.pem"
-tlsPrivateKeyFile: "/var/lib/kubelet/${NODE_IP}-key.pem"
+tlsCertFile: "/var/lib/kubelet/${NODE_HOST}.pem"
+tlsPrivateKeyFile: "/var/lib/kubelet/${NODE_HOST}-key.pem"
 EOF
 
 cat <<EOF | sudo tee /etc/systemd/system/kubelet.service
