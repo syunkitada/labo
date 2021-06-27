@@ -1,12 +1,13 @@
 #!/bin/bash -xe
 
-if [ $# != 1 ]; then
+if [ $# != 2 ]; then
     echo "ERROR: Input node_ip"
     echo "./10_setup_cfgs.sh [node_ip]"
     exit 1
 fi
 
-NODE_IP=$1
+NODE_HOST=$1
+NODE_IP=$2
 API_IP=${NODE_IP}
 mkdir -p ~/k8s-assets
 cd ~/k8s-assets
@@ -87,10 +88,10 @@ fi
 # Create The Kubelet Client Certificates
 # Kubernetes uses a special-purpose authorization mode called Node Authorizer, that specifically authorizes API requests made by Kubelets. In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the system:nodes group, with a username of system:node:<nodeName>. In this section you will create a certificate for each Kubernetes worker node that meets the Node Authorizer requirements.
 # xxx-key.pem, xxx.pem
-if [ ! -e ${NODE_IP}.pem ] || [ ! -e ${NODE_IP}-key.pem ] || [ ! -e ${NODE_IP}.csr ]; then
-cat > ${NODE_IP}-csr.json <<EOF
+if [ ! -e ${NODE_HOST}.pem ] || [ ! -e ${NODE_HOST}-key.pem ] || [ ! -e ${NODE_HOST}.csr ]; then
+cat > ${NODE_HOST}-csr.json <<EOF
 {
-  "CN": "system:node:${NODE_IP}",
+  "CN": "system:node:${NODE_HOST}",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -111,9 +112,9 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=${NODE_IP} \
+  -hostname=${NODE_HOST},${NODE_IP} \
   -profile=kubernetes \
-  ${NODE_IP}-csr.json | cfssljson -bare ${NODE_IP}
+  ${NODE_HOST}-csr.json | cfssljson -bare ${NODE_HOST}
 fi
 
 
@@ -232,11 +233,13 @@ cat > kubernetes-csr.json <<EOF
 }
 EOF
 
+KUBERNETES_HOSTNAMES=kubernetes,kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.svc.cluster.local
+
 cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${API_IP},127.0.0.1 \
+  -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${API_IP},127.0.0.1,${KUBERNETES_HOSTNAMES} \
   -profile=kubernetes \
   kubernetes-csr.json | cfssljson -bare kubernetes
 fi
@@ -280,20 +283,20 @@ kubectl config set-cluster kubernetes-the-hard-way \
   --certificate-authority=ca.pem \
   --embed-certs=true \
   --server=https://${API_IP}:6443 \
-  --kubeconfig=${NODE_IP}.kubeconfig
+  --kubeconfig=${NODE_HOST}.kubeconfig
 
-kubectl config set-credentials system:node:${NODE_IP} \
-  --client-certificate=${NODE_IP}.pem \
-  --client-key=${NODE_IP}-key.pem \
+kubectl config set-credentials system:node:${NODE_HOST} \
+  --client-certificate=${NODE_HOST}.pem \
+  --client-key=${NODE_HOST}-key.pem \
   --embed-certs=true \
-  --kubeconfig=${NODE_IP}.kubeconfig
+  --kubeconfig=${NODE_HOST}.kubeconfig
 
 kubectl config set-context default \
   --cluster=kubernetes-the-hard-way \
-  --user=system:node:${NODE_IP} \
-  --kubeconfig=${NODE_IP}.kubeconfig
+  --user=system:node:${NODE_HOST} \
+  --kubeconfig=${NODE_HOST}.kubeconfig
 
-kubectl config use-context default --kubeconfig=${NODE_IP}.kubeconfig
+kubectl config use-context default --kubeconfig=${NODE_HOST}.kubeconfig
 
 
 # The kube-proxy Kubernetes Configuration File
