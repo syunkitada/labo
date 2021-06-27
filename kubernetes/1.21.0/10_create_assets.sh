@@ -378,3 +378,25 @@ kubectl config set-context default \
   --kubeconfig=admin.kubeconfig
 
 kubectl config use-context default --kubeconfig=admin.kubeconfig
+
+
+
+# Generating the Data Encryption Config and Key
+# Kubernetes stores a variety of data including cluster state, application configurations, and secrets. Kubernetes supports the ability to encrypt cluster data at rest.
+# In this lab you will generate an encryption key and an encryption config suitable for encrypting Kubernetes Secrets.
+if [ ! -e encryption-config.yaml ]; then
+ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
+cat > encryption-config.yaml <<EOF
+kind: EncryptionConfig
+apiVersion: v1
+resources:
+  - resources:
+      - secrets
+    providers:
+      - aescbc:
+          keys:
+            - name: key1
+              secret: ${ENCRYPTION_KEY}
+      - identity: {}
+EOF
+fi
