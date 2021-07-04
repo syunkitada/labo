@@ -12,7 +12,9 @@ API_IP=${NODE_IP}
 mkdir -p ~/k8s-assets
 cd ~/k8s-assets
 
-# Create CA(Certificate Authority)
+# CA(Certificate Authority: 認証局)を作成する
+# CAの秘密鍵は、証明書を発行する際の電子署名に利用される
+# 証明書のCNは、ユーザ名として利用される
 # ca-key.pem, ca.pem
 if [ ! -e ca-key.pem ] || [ ! -e ca.pem ] || [ ! -e ca.csr ]; then
 cat > ca-config.json <<EOF
@@ -54,7 +56,7 @@ cfssl gencert -initca ca-csr.json | cfssljson -bare ca
 fi
 
 
-# Create The Admin Client Certificate
+# adminユーザ用のクライアント証明書を作成する
 # admin-key.pem, admin.pem
 if [ ! -e admin-key.pem ] || [ ! -e admin.csr ] || [ ! -e admin.pem ]; then
 cat > admin-csr.json <<EOF
@@ -85,8 +87,9 @@ cfssl gencert \
 fi
 
 
-# Create The Kubelet Client Certificates
-# Kubernetes uses a special-purpose authorization mode called Node Authorizer, that specifically authorizes API requests made by Kubelets. In order to be authorized by the Node Authorizer, Kubelets must use a credential that identifies them as being in the system:nodes group, with a username of system:node:<nodeName>. In this section you will create a certificate for each Kubernetes worker node that meets the Node Authorizer requirements.
+# kubelet用のクライアント証明書を作成する
+# kubernetes-apiserverは、kubeletからのリクエストを認証するNode Authorizerとよばれる認証モードを使用する
+# Node Authorizerによって認証されるためには、kubeletはsystem:nodes system:node:<nodeName>のユーザ名でsystem:nodesグループ内に存在することを示す証明書を利用する必要がある
 # xxx-key.pem, xxx.pem
 if [ ! -e ${NODE_HOST}.pem ] || [ ! -e ${NODE_HOST}-key.pem ] || [ ! -e ${NODE_HOST}.csr ]; then
 cat > ${NODE_HOST}-csr.json <<EOF
@@ -118,8 +121,8 @@ cfssl gencert \
 fi
 
 
-# The Controller Manager Client Certificate
-# kube-proxy-key.pem, kube-proxy.pem
+# kube-controller-manager用のクライアント証明書を作成する
+# kube-controller-manager-key.pem, kube-controller-manager-key.pem
 if [ ! -e kube-controller-manager.pem ] || [ ! -e kube-controller-manager-key.pem ] || [ ! -e kube-controller-manager.csr ]; then
 cat > kube-controller-manager-csr.json <<EOF
 {
@@ -149,7 +152,7 @@ cfssl gencert \
 fi
 
 
-# Create The Kube Proxy Client Certificate
+# kube-proxy用のクライアント証明書を作成する
 # kube-proxy-key.pem, kube-proxy.pem
 if [ ! -e kube-proxy.pem ] || [ ! -e kube-proxy-key.pem ] || [ ! -e kube-proxy.csr ]; then
 cat > kube-proxy-csr.json <<EOF
@@ -180,7 +183,7 @@ cfssl gencert \
 fi
 
 
-# Create The Scheduler Client Certificate
+# kube-scheduler用のクライアント証明書を作成する
 # kube-scheduler-key.pem, kube-scheduler.pem
 if [ ! -e kube-scheduler.pem ] || [ ! -e kube-scheduler-key.pem ] || [ ! -e kube-scheduler.csr ]; then
 cat > kube-scheduler-csr.json <<EOF
@@ -211,7 +214,7 @@ cfssl gencert \
 fi
 
 
-# Create The Kubernetes API Server Certificate
+# kube-api-server用の証明書を作成する
 # kubernetes-key.pem, kubernetes.pem
 if [ ! -e kubernetes.pem ] || [ ! -e kubernetes-key.pem ] || [ ! -e kubernetes.csr ]; then
 cat > kubernetes-csr.json <<EOF
@@ -245,7 +248,8 @@ cfssl gencert \
 fi
 
 
-# The Service Account Key Pair
+# サービスアカウントのキーペア(証明書と秘密鍵)を生成する
+# キーペアは、Controller Managerで稼働するToken ControllerがService Account Tokenを生成するためのもの
 # service-account-key.pem, service-account.pem
 if [ ! -e service-account.pem ] || [ ! -e service-account-key.pem ] || [ ! -e service-account.csr ]; then
 cat > service-account-csr.json <<EOF
@@ -275,10 +279,15 @@ cfssl gencert \
   service-account-csr.json | cfssljson -bare service-account
 fi
 
+
+
 # ---------------------------------------------
 # Create kubernetes configs
 # ---------------------------------------------
-# The kubelet Kubernetes Configuration File
+
+# k8sの各サービスが使用するkubeconfigを作成する
+
+# kubelet用のkubeconfigを作成する
 kubectl config set-cluster kubernetes-the-hard-way \
   --certificate-authority=ca.pem \
   --embed-certs=true \
@@ -299,7 +308,7 @@ kubectl config set-context default \
 kubectl config use-context default --kubeconfig=${NODE_HOST}.kubeconfig
 
 
-# The kube-proxy Kubernetes Configuration File
+# kube-proxy用のkubeconfigを作成する
 kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.pem \
     --embed-certs=true \
@@ -320,7 +329,7 @@ kubectl config set-context default \
 kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
 
 
-# The kube-controller-manager Kubernetes Configuration File
+# kube-controller-manager用のkubeconfigを作成する
 kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.pem \
     --embed-certs=true \
@@ -341,7 +350,7 @@ kubectl config set-context default \
 kubectl config use-context default --kubeconfig=kube-controller-manager.kubeconfig
 
 
-# The kube-scheduler Kubernetes Configuration File
+# kube-scheduler用のkubeconfigを作成する
 kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.pem \
     --embed-certs=true \
@@ -362,7 +371,7 @@ kubectl config set-context default \
 kubectl config use-context default --kubeconfig=kube-scheduler.kubeconfig
 
 
-# The admin Kubernetes Configuration File
+# adminユーザ用のkubeconfig
 kubectl config set-cluster kubernetes-the-hard-way \
   --certificate-authority=ca.pem \
   --embed-certs=true \
@@ -384,9 +393,7 @@ kubectl config use-context default --kubeconfig=admin.kubeconfig
 
 
 
-# Generating the Data Encryption Config and Key
-# Kubernetes stores a variety of data including cluster state, application configurations, and secrets. Kubernetes supports the ability to encrypt cluster data at rest.
-# In this lab you will generate an encryption key and an encryption config suitable for encrypting Kubernetes Secrets.
+# Secretを暗号化するための鍵と設定ファイルを作成する
 if [ ! -e encryption-config.yaml ]; then
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
 cat > encryption-config.yaml <<EOF
