@@ -1,0 +1,22 @@
+[Unit]
+Description=Initial myinit job (metadata service crawler)
+DefaultDependencies=no
+After=systemd-networkd-wait-online.service
+After=networking.service
+Before=network-online.target
+Before=sshd-keygen.service
+Before=sshd.service
+Before=sysinit.target
+Before=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/myinit/bin/myinit
+RemainAfterExit=yes
+TimeoutSec=0
+
+# Output needs to appear in instance console output
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

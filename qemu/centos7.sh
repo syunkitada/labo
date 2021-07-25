@@ -1,0 +1,58 @@
+#!/bin/bash -x
+
+source envrc
+source utilsrc
+
+# ["image"]=${CENTOS7_IMG}
+
+declare -A vmdata=(
+	["name"]="centos7-small1.example.com"
+	["vcpus"]="2"
+	["mem"]="2048"
+	["disk"]="10G"
+	["image"]="centos7_custom"
+	["defaultGateway"]=192.168.100.1
+	["resolver"]=192.168.10.1
+)
+
+declare -A port1=(
+	["name"]="com-0"
+	["vmIp"]="192.168.100.2"
+	["vmMac"]="02:17:bd:b7:9b:7e"
+	["vmIpSubnet"]="192.168.100.2/24"
+	["vmSubnet"]="192.168.100.0/24"
+	["netnsIp"]="169.254.32.1"
+	["netnsGateway"]="169.254.1.1"
+)
+
+COMMAND="${@:-help}"
+
+function help() {
+    cat << EOS
+EOS
+}
+
+function start() {
+    prepareNetns port1
+    prepareConfigdrive vmdata port1
+    startQemu vmdata port1
+    registerPdns vmdata port1
+}
+
+function stop() {
+    stopQemu vmdata
+}
+
+function destroy() {
+    destroyQemu vmdata
+}
+
+function console() {
+    consoleQemu vmdata
+}
+
+function monitor() {
+    monitorQemu vmdata
+}
+
+$COMMAND

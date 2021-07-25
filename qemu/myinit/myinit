@@ -1,0 +1,59 @@
+#!/bin/bash -x
+
+echo "start myinit"
+
+# adduser実行時に以下のエラーで追加できない場合があるのでuntilでリトライする
+# adduser: cannot lock /etc/passwd; try again later.
+until adduser admin
+do
+    sleep 1
+done
+echo 'admin:admin' |chpasswd
+groupadd admin
+usermod -a -G admin admin
+echo "%admin  ALL=(ALL:ALL) ALL" >> /etc/sudoers
+
+mkdir -p /mnt/cidata
+# mount実行時に以下のエラーで追加できない場合がるのでuntilでリトライする
+# mount: special device /dev/disk/by-label/cidata does not exist
+until mount /dev/disk/by-label/cidata /mnt/cidata
+do
+    sleep 1
+done
+
+
+# Read meta-data
+host=`grep hostname: /mnt/cidata/meta-data | awk '{print $2}'`
+
+
+# ------------------------------
+# Setup hostname
+hostname $host
+echo $host > /etc/hostname
+grep "127.0.1.1 $host" /etc/hosts || echo "127.0.1.1 $host" >> /etc/hosts
+# ------------------------------
+
+
+# ------------------------------
+# Setup sshd
+# Enable password login by ssh
+sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+systemctl enable ssh
+systemctl enable sshd
+# ------------------------------
+
+
+# Setup basic
+# TODO
+
+
+# ------------------------------
+# Run user-data
+# ------------------------------
+if [ -e /mnt/cidata/user-data ]; then
+    /bin/bash -x /mnt/cidata/user-data
+fi
+
+
+umount /mnt/cidata
+rm -rf /mnt/cidata
