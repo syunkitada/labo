@@ -1,9 +1,7 @@
-#!/bin/bash -x
+#!/bin/bash -xe
 
 source envrc
 source utilsrc
-
-# ["image"]=${CENTOS7_IMG}
 
 declare -A vmdata=(
 	["name"]="centos7-small1.example.com"
@@ -29,6 +27,20 @@ COMMAND="${@:-help}"
 
 function help() {
     cat << EOS
+# start vm
+./*.sh start
+
+# stop vm
+./*.sh stop
+
+# destroy vm
+./*.sh destroy
+
+# console vm
+./*.sh console
+
+# monitor vm
+./*.sh monitor
 EOS
 }
 

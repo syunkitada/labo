@@ -66,9 +66,11 @@ function init-centos7-img() {
 
     sudo chroot /mnt/qemu-nbd yum remove -y cloud-init
 
-    sudo rm -rf /mnt/qemu-nbd/etc/sysconfig/network-scripts/ifcfg-eth0
     # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
+    # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
     sudo rm -rf /mnt/qemu-nbd/lib/udev/rules.d/80-net-setup-link.rules
+    # network-scripts/ifcfg-eth0(anacondaで作成された?)が残ってるので削除してく
+    sudo rm -rf /mnt/qemu-nbd/etc/sysconfig/network-scripts/ifcfg-eth0
 
     sudo umount /mnt/qemu-nbd/dev
 

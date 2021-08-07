@@ -1,8 +1,8 @@
 #!/bin/bash -x
 
-sudo docker ps | grep mysql || \
+sudo docker ps | grep " mysql " || \
     ( \
-        ((sudo docker ps --all | grep mysql && sudo docker rm mysql) || echo "mysql not found") && \
+        ((sudo docker ps --all | grep " mysql " && sudo docker rm mysql) || echo "mysql not found") && \
         sudo docker run -v "/var/lib/docker-mysql":/var/lib/mysql --net=host --name mysql -e MYSQL_ROOT_PASSWORD=rootpass -d mysql \
     )
 

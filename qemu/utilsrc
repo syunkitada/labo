@@ -21,35 +21,35 @@ function prepareNetns() {
     exLink=${netns}-ex
     inLink=${netns}-in
 
-    ip netns | grep $netns || ip netns add $netns
+    ip netns | grep $netns || sudo ip netns add $netns
 
-    ip link | grep $exLink || ip link add $exLink type veth peer name $inLink
+    ip link | grep $exLink || sudo ip link add $exLink type veth peer name $inLink
 
-    ip link set $exLink up
-    sysctl -w net.ipv4.conf.$exLink.forwarding=1
-    sysctl -w net.ipv4.conf.$exLink.proxy_arp=1
-    ip route | grep ${_vmdata[vmIp]} || ip route add ${_vmdata[vmIp]} dev $exLink
-    ip route | grep ${_vmdata[netnsIp]} || ip route add ${_vmdata[netnsIp]} dev $exLink
+    sudo ip link set $exLink up
+    sudo sysctl -w net.ipv4.conf.$exLink.forwarding=1
+    sudo sysctl -w net.ipv4.conf.$exLink.proxy_arp=1
+    ip route | grep ${_vmdata[vmIp]} || sudo ip route add ${_vmdata[vmIp]} dev $exLink
+    ip route | grep ${_vmdata[netnsIp]} || sudo ip route add ${_vmdata[netnsIp]} dev $exLink
 
-    ip netns exec $netns ip link | grep $inLink || ip link set $inLink netns $netns
+    sudo ip netns exec $netns ip link | grep $inLink || sudo ip link set $inLink netns $netns
 
-    ip netns exec $netns ip a | grep ${_vmdata[netnsIp]} || ip netns exec $netns ip addr add dev $inLink ${_vmdata[netnsIp]}/32
-    ip netns exec $netns ip link set lo up
-    ip netns exec $netns ip link set $inLink up
-    ip netns exec $netns sysctl -w net.ipv4.conf.$inLink.proxy_arp=1
+    sudo ip netns exec $netns ip a | grep ${_vmdata[netnsIp]} || sudo ip netns exec $netns ip addr add dev $inLink ${_vmdata[netnsIp]}/32
+    sudo ip netns exec $netns ip link set lo up
+    sudo ip netns exec $netns ip link set $inLink up
+    sudo ip netns exec $netns sysctl -w net.ipv4.conf.$inLink.proxy_arp=1
 
-    ip netns exec $netns ip route | grep ${_vmdata[netnsGateway]} || ip netns exec $netns ip route add ${_vmdata[netnsGateway]} dev $inLink
-    ip netns exec $netns ip route | grep default || ip netns exec $netns ip route add default via ${_vmdata[netnsGateway]}
+    sudo ip netns exec $netns ip route | grep ${_vmdata[netnsGateway]} || sudo ip netns exec $netns ip route add ${_vmdata[netnsGateway]} dev $inLink
+    sudo ip netns exec $netns ip route | grep default || sudo ip netns exec $netns ip route add default via ${_vmdata[netnsGateway]}
 
     #
     # Setup NAT by iptables
     #
-    iptables -t nat -L | grep MASQUERADE | grep "tcp  --  ${_vmdata[vmSubnet]}" || iptables -t nat -A POSTROUTING -p TCP -s ${_vmdata[vmSubnet]} ! -d ${_vmdata[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
-    iptables -t nat -L | grep MASQUERADE | grep "udp  --  ${_vmdata[vmSubnet]}" || iptables -t nat -A POSTROUTING -p UDP -s ${_vmdata[vmSubnet]} ! -d ${_vmdata[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
-    iptables -t nat -L | grep RETURN | grep "${_vmdata[vmSubnet]}" || iptables -t nat -A POSTROUTING -s ${_vmdata[vmSubnet]} -d 255.255.255.255 -j RETURN
+    iptables -t nat -L | grep MASQUERADE | grep "tcp  --  ${_vmdata[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -p TCP -s ${_vmdata[vmSubnet]} ! -d ${_vmdata[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
+    iptables -t nat -L | grep MASQUERADE | grep "udp  --  ${_vmdata[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -p UDP -s ${_vmdata[vmSubnet]} ! -d ${_vmdata[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
+    iptables -t nat -L | grep RETURN | grep "${_vmdata[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -s ${_vmdata[vmSubnet]} -d 255.255.255.255 -j RETURN
 
 
-    iptables -P FORWARD ACCEPT
+    sudo iptables -P FORWARD ACCEPT
 }
 
 function prepareConfigdrive() {
@@ -189,7 +189,7 @@ function startQemu() {
 
     echo "debug vcpus" ${_vmdata[vcpus]}
 
-    qemu-system-x86_64 \
+    sudo qemu-system-x86_64 \
         -enable-kvm -machine q35,accel=kvm \
         -cpu host \
         -smp cores=${_vmdata[vcpus]} \
@@ -216,12 +216,12 @@ function startQemu() {
         declare -n port=$i
         netns=${port[name]}
         vmIp=${port[vmIp]}
-        ip link set ${netns}-tap netns ${netns}
-        ip netns exec ${netns} ip link set ${netns}-tap up
-        ip netns exec ${netns} ip route | grep ${vmIp} || ip netns exec ${netns} ip route add ${vmIp} dev ${netns}-tap
-        ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.forwarding=1
-        ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.forwarding=1
-        ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.proxy_arp=1
+        sudo ip link set ${netns}-tap netns ${netns}
+        sudo ip netns exec ${netns} ip link set ${netns}-tap up
+        sudo ip netns exec ${netns} ip route | grep ${vmIp} || sudo ip netns exec ${netns} ip route add ${vmIp} dev ${netns}-tap
+        sudo ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.forwarding=1
+        sudo ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.forwarding=1
+        sudo ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.proxy_arp=1
     done
 
     # jobs
@@ -234,7 +234,7 @@ function stopQemu() {
 
     pid=`ps ax | grep ${_vmdata[name]} | grep [q]emu-system | awk '{print $1}'`
     if [ -n "$pid" ]; then
-        kill $pid
+        sudo kill $pid
     fi
 }
 
@@ -243,7 +243,7 @@ function destroyQemu() {
     stopQemu destroyQemuVmdata
 
     vmDir=$VM_DIR/${destroyQemuVmdata[name]}
-    rm -rf $vmDir
+    sudo rm -rf $vmDir
 }
 
 

@@ -2,24 +2,40 @@
 
 echo "start myinit"
 
-# adduser実行時に以下のエラーで追加できない場合があるのでuntilでリトライする
+function retry() {
+    local retries=$1
+    shift
+
+    local count=0
+    until "$@"; do
+        exit=$?
+        wait=$((2 ** $count))
+        count=$(($count + 1))
+        if [ $count -lt $retries ]; then
+            echo "Retry $count/$retries exited $exit, retrying in $wait seconds..."
+            sleep $wait
+        else
+            echo "Retry $count/$retries exited $exit, no more retries left."
+            return $exit
+        fi
+    done
+    return 0
+}
+
+# adduser実行時に以下のエラーで追加できない場合があるのでリトライする
 # adduser: cannot lock /etc/passwd; try again later.
-until adduser admin
-do
-    sleep 1
-done
-echo 'admin:admin' |chpasswd
-groupadd admin
-usermod -a -G admin admin
-echo "%admin  ALL=(ALL:ALL) ALL" >> /etc/sudoers
+if ! grep '^admin:' /etc/passwd; then
+  retry 5 adduser admin
+  echo 'admin:admin' |chpasswd
+  groupadd admin
+  usermod -a -G admin admin
+  echo "%admin  ALL=(ALL:ALL) ALL" >> /etc/sudoers
+fi
 
 mkdir -p /mnt/cidata
-# mount実行時に以下のエラーで追加できない場合がるのでuntilでリトライする
+# mount実行時に以下のエラーで追加できない場合がるのでリトライする
 # mount: special device /dev/disk/by-label/cidata does not exist
-until mount /dev/disk/by-label/cidata /mnt/cidata
-do
-    sleep 1
-done
+retry 10 mount /dev/disk/by-label/cidata /mnt/cidata
 
 
 # Read meta-data
