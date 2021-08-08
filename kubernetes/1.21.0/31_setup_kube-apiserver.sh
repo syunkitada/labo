@@ -6,7 +6,6 @@ if [ $# != 1 ]; then
     exit 1
 fi
 NODE_IP=$1
-ETCD_NAME=$NODE_IP
 
 if [ ! -e /usr/local/bin/kube-apiserver ]; then
     wget "https://storage.googleapis.com/kubernetes-release/release/v1.21.0/bin/linux/amd64/kube-apiserver"

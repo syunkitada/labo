@@ -1,5 +1,7 @@
 #!/bin/bash -xe
 
+sudo yum install -y wget
+
 if [ ! -e /usr/local/bin/cfssl ]; then
     wget https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/1.4.1/linux/cfssl
     chmod +x cfssl

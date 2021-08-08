@@ -2,7 +2,7 @@
 
 if [ $# != 2 ]; then
     echo "ERROR: Input node_ip"
-    echo "./10_setup_cfgs.sh [node_ip]"
+    echo "./10_setup_cfgs.sh [node_host] [node_ip]"
     exit 1
 fi
 

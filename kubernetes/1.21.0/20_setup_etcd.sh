@@ -1,12 +1,12 @@
 #!/bin/bash -xe
 
-if [ $# != 1 ]; then
+if [ $# != 2 ]; then
     echo "ERROR: Input node_ip"
-    echo "./10_setup_cfgs.sh [node_ip]"
+    echo "./10_setup_cfgs.sh [etcd_name] [node_ip]"
     exit 1
 fi
-NODE_IP=$1
-ETCD_NAME=$NODE_IP
+ETCD_NAME=$1
+NODE_IP=$2
 
 if [ ! -e /usr/local/bin/etcd ]; then
     wget "https://github.com/etcd-io/etcd/releases/download/v3.4.15/etcd-v3.4.15-linux-amd64.tar.gz"
