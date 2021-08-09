@@ -244,6 +244,8 @@ function destroyQemu() {
 
     vmDir=$VM_DIR/${destroyQemuVmdata[name]}
     sudo rm -rf $vmDir
+
+    ssh-keygen -R ${destroyQemuVmdata[name]}
 }
 
 function logQemu() {

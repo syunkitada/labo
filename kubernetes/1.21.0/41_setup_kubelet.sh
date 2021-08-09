@@ -56,7 +56,8 @@ sudo mkdir -p \
 
 POD_CIDR="10.0.0.0/16"
 # Configure CNI Networking
-cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
+if ! sudo ls /etc/cni/net.d | grep calico; then
+    cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
 {
     "cniVersion": "0.4.0",
     "name": "bridge",
@@ -74,14 +75,14 @@ cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
 }
 EOF
 
-cat <<EOF | sudo tee /etc/cni/net.d/99-loopback.conf
+    cat <<EOF | sudo tee /etc/cni/net.d/99-loopback.conf
 {
     "cniVersion": "0.4.0",
     "name": "lo",
     "type": "loopback"
 }
 EOF
-
+fi
 
 cd ~/k8s-assets
 sudo cp ${NODE_HOST}-key.pem ${NODE_HOST}.pem /var/lib/kubelet/

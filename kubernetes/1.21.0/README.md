@@ -13,6 +13,8 @@
 ./34_setup_auth.sh
 ./40_setup_containerd.sh
 ./41_setup_kubelet.sh `hostname`
+./50_setup_dns.sh
+./60_setup_calico.sh
 ```
 
 ## 確認
@@ -21,10 +23,8 @@
 $ export KUBECONFIG=~/k8s-assets/admin.kubeconfig
 
 $ kubectl get node
-```
 
-```
-$ sudo ctr containers list
+$ kubectl apply -f resources/nginx.yaml
 
-$ sudo ctr run docker.io/library/nginx:latest nginx-test
+...
 ```
