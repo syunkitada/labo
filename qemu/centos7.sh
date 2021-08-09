@@ -63,6 +63,10 @@ function console() {
     consoleQemu vmdata
 }
 
+function log() {
+    logQemu vmdata
+}
+
 function monitor() {
     monitorQemu vmdata
 }

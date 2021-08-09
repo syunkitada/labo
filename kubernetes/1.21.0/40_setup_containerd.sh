@@ -1,5 +1,7 @@
 #!/bin/bash -xe
 
+CONTAINERD_VERSION=1.5.5
+
 cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
 overlay
 br_netfilter
@@ -16,12 +18,19 @@ EOF
 
 
 if [ ! -e /opt/containerd ]; then
-    wget "https://github.com/containerd/containerd/releases/download/v1.4.4/containerd-1.4.4-linux-amd64.tar.gz"
+    pushd /tmp
+    wget "https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz"
     mkdir -p containerd
-    tar -xvf containerd-1.4.4-linux-amd64.tar.gz -C containerd
+    tar -xvf containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz -C containerd
     sudo mv containerd/bin/* /bin/
+    popd /tmp
 fi
 
+if [ ! -e /usr/local/bin/runc ]; then
+    wget "https://github.com/opencontainers/runc/releases/download/v1.0.0-rc93/runc.amd64"
+    chmod +x runc.amd64
+    sudo mv runc.amd64 /usr/local/bin/runc
+fi
 
 sudo mkdir -p /etc/containerd/
 

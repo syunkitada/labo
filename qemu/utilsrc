@@ -246,6 +246,12 @@ function destroyQemu() {
     sudo rm -rf $vmDir
 }
 
+function logQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    serialLogPath=$vmDir/serial.log
+    cat $serialLogPath
+}
 
 function consoleQemu() {
     declare -n _vmdata=$1

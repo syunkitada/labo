@@ -20,12 +20,6 @@ if [ ! -e /usr/local/bin/crictl ]; then
     sudo mv crictl /usr/local/bin/
 fi
 
-if [ ! -e /usr/local/bin/runc ]; then
-    wget "https://github.com/opencontainers/runc/releases/download/v1.0.0-rc93/runc.amd64"
-    chmod +x runc.amd64
-    sudo mv runc.amd64 /usr/local/bin/
-fi
-
 if [ ! -e /opt/cni ]; then
     wget "https://github.com/containernetworking/plugins/releases/download/v0.9.1/cni-plugins-linux-amd64-v0.9.1.tgz"
     sudo mkdir -p \

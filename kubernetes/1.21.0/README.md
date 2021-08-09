@@ -25,4 +25,6 @@ $ kubectl get node
 
 ```
 $ sudo ctr containers list
+
+$ sudo ctr run docker.io/library/nginx:latest nginx-test
 ```
