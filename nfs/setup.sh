@@ -26,3 +26,5 @@ EOS
 # -a すべてのディレクトリをexport/unexportする
 # -r すべてのディレクトリを再exportする、/var/lib/nfs/xtabを/etc/exportsと同期させる
 sudo exportfs -ra
+
+sudo mount -t nfs localhost:/ /mnt/nfs
