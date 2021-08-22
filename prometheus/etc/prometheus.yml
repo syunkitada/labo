@@ -9,11 +9,11 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          # - alertmanager:9093
+          - localhost:9093
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
-  # - "first_rules.yml"
+  - "alertrules.yml"
   # - "second_rules.yml"
 
 # A scrape configuration containing exactly one endpoint to scrape:
@@ -27,3 +27,7 @@ scrape_configs:
 
     static_configs:
       - targets: ["localhost:9090"]
+
+  - job_name: "myjob"
+    static_configs:
+      - targets: ["localhost:9980"]

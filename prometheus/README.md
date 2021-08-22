@@ -10,11 +10,14 @@
     - Target は、Scrape のためのオブジェクトデータ
     - Instance は、Target を一意に識別するためのラベル
     - 一つの Target につき、一つの Instance が存在する
+  - Alert
+    - Prometheus は定義されたルールに従って Alert を作成することができる
+    - Alert も一つのメトリクスとして Pometheus に保存される
+    - 作成された Alert は、Alertmanager に転送することができる
 - Pushgateway
   - Prometheus は Pull のみをサポートしてるため、メトリクスの Push ができない
   - Pushgateway に Push でメトリクスを保存しておき、Prometheus は Pushgateway からメトリクスを Pull する
 - Alertmanager
-  - Alert はあらかじめ定義したルールに則って Prometheus によって発火され、Alertmanager へ送信される
   - Alertmanager は、受け取った Alert をグループに集約し、重複を排除し、silences(無視ルール) を適用し、throttles(抑制ルール)を適用し、アラートを送信する
   - 再送やクロージングのコントロールもする
 - Exporter
@@ -44,6 +47,21 @@
   - 一つの Prometheus で、全 Target のメトリクスを収集するのではなく、複数の Prometheus で分担して収集する
   - これら複数の Prometheus をフェデレーションする Prometheus を用意する
   - 一つの Prometheus で扱える Target 数、メトリクス数の限界を把握し適切にキャパプラする必要がある
+- Cortex
+  - https://cortexmetrics.io/docs/
+  - Prometheus の Remote Write API を利用して、Cortex のフロントエンドへメトリクスを書き込む
+  - Cortex のバックエンドは、BigTable/Casandra/DynamoDB を利用でき、データの冗長性はそちらで管理される
+  - Grafana などから利用する場合は、Cortex に問い合わせてメトリクスが取得できる(このとき Prometheus にはアクセスされない)
+  - Prometheus はあくまでメトリクスの収集目的で利用しており、一時的なメトリクス置き場として利用される
+- Thanos
+  - https://thanos.io/v0.22/thanos/getting-started.md/
+  - Prometheus の Remote Write API を利用して、Thanos のフロントエンド(Thanos Receive)へメトリクスを書き込む
+  - Thanos のバックエンドは、オブジェクトストレージを利用でき、データの冗長性はそちらで管理される
+  - 直近データに関しては Prometheus を見に行く
+- M3DB
+  - https://m3db.io/docs/
+- Victoria Metrics
+  - https://github.com/VictoriaMetrics/VictoriaMetrics
 
 ## タイムスタンプについて
 
@@ -51,9 +69,29 @@
 - Exporter や、Pushgateway では、メトリクスにタイムスタンプを設定することができない
 - このためメトリクスのタイムスタンプは、若干のラグがあることに注意する
 
+## Alerting
+
+- AlertRules
+  - Prometheus は AlertRules を一定間隔ごとに評価して、Alert の生成を行う
+  - Alert は AlertManager に評価のつど送信される
+  - Alert は AlertManager 側で抑制されることを想定している
+  - Alert Rule は以下を参考にするとよい
+    - 参考: https://awesome-prometheus-alerts.grep.to/rules.html
+  - Alert が成功時にも Alertmanager にアラートが送られて、Alertmanager からアラートが消える
+  - Prometheus 側の Alert が一方的に消されて Alert の成功が Alertmanager に知らされない場合は Alert が残り続けるので注意
+- Grouping
+  - 複数の Alert を束ねて一つの Alert として集約する
+- Inhibitation
+  - 特定のアラートがすでに発生してる場合に、他の特定のアラートの通知を抑制する
+  - 例: クラスタ全体に到達できないアラートが発生してるとき、このクラスタに関する他のアラートの通知を抑制する
+- Silences
+  - ルールにマッチした Alert の通知を抑制する
+  - ルールを適用する有効期限も指定できる
+
 ## メモ
 
 - Prometheus は、Pull 型の TSDB であり、Push ができない
+- Prometheus 側の rule 設定で group ごとに rule を設定するが、AlertManager 側の group とは関係ない
 - Push ができないことの制約
   - メトリクスデータが欠けた場合、それを後で補填することができない
   - メトリクスデータの再計算ができない
@@ -63,3 +101,4 @@
 ## 参考
 
 - [prometheus: configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
+- [Prometheus Meetup Tokyo #3](https://dev.classmethod.jp/articles/202001-report-prometheus-meetup-tokyo-3/)

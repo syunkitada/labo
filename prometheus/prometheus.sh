@@ -4,8 +4,14 @@ COMMAND="${@:-help}"
 
 function help() {
     cat << EOS
-# start vm
+# start prometheus
 ./*.sh start
+
+# stop prometheus
+./*.sh stop
+
+# restart prometheus
+./*.sh restart
 EOS
 }
 
@@ -15,11 +21,14 @@ fi
 
 function start() {
     ymlPath="${PWD}/prometheus/etc/prometheus.yml"
+    alertrulesYmlPath="${PWD}/prometheus/etc/alertrules.yml"
     sudo docker ps | grep " prometheus$" || \
         ( \
             ((sudo docker ps --all | grep " prometheus$" && sudo docker rm prometheus) || echo "prometheus not found") && \
-            sudo docker run -p 9090:9090 --name prometheus -d \
+            sudo docker run --name prometheus -d \
+            --net="host" \
             -v ${ymlPath}:/etc/prometheus/prometheus.yml \
+            -v ${alertrulesYmlPath}:/etc/prometheus/alertrules.yml \
             prom/prometheus \
         )
 }

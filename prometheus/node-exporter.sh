@@ -5,8 +5,14 @@ COMMAND="${@:-help}"
 
 function help() {
     cat << EOS
-# start vm
+# start node-exporter
 ./*.sh start
+
+# stop node-exporter
+./*.sh stop
+
+# restart node-exporter
+./*.sh restart
 EOS
 }
 

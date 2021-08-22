@@ -1,0 +1,3 @@
+check1{output="successout"} 0
+check2{output="warningout"} 1
+check3{output="criticalout"} 2
