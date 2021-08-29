@@ -21,13 +21,12 @@ EOS
 }
 
 function start() {
-    cd /tmp/
+    cd ~/.setup-scripts/prometheus/
     python3 -m http.server ${PORT} &> /dev/null &
     echo "Started"
 }
 
 function stop() {
-    cd /tmp/
     for pid in `ps ax | grep "[p]ython3 -m http.server ${PORT}" | awk '{print $1}'`
     do
         kill $pid

@@ -33,7 +33,7 @@ function start() {
 }
 
 function stop() {
-    sudo docker ps | grep " prometheus$" && sudo docker kill alertmanager || echo "alertmanager not found"
+    sudo docker ps | grep " alertmanager$" && sudo docker kill alertmanager || echo "alertmanager not found"
 }
 
 function restart() {
