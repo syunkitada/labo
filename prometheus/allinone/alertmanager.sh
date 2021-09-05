@@ -15,7 +15,7 @@ function help() {
 EOS
 }
 
-ROOT=`echo $PWD | awk -F setup-scripts '{print $1"setup-scripts/prometheus/ha"}'`
+ROOT=`echo $PWD | awk -F setup-scripts '{print $1"setup-scripts/prometheus/allinone"}'`
 
 function _start() {
     name=alertmanager$1
@@ -28,7 +28,6 @@ function _start() {
         ( \
             ((sudo docker ps --all | grep " ${name}$" && sudo docker rm ${name}) || echo "${name} not found") && \
             sudo docker run --name ${name} -d \
-            --user root \
             --net="host" \
             -v ${ymlPath}:/etc/alertmanager/alertmanager.yml \
             -v ${storagePath}:/var/lib/alertmanager \
@@ -47,15 +46,11 @@ function _stop() {
 }
 
 function start() {
-    _start 1-1 9193 9194 "--cluster.peer=127.0.0.1:9294 --cluster.peer=127.0.0.1:9394"
-    _start 1-2 9293 9294 "--cluster.peer=127.0.0.1:9194 --cluster.peer=127.0.0.1:9394"
-    _start 1-3 9393 9394 "--cluster.peer=127.0.0.1:9194 --cluster.peer=127.0.0.1:9294"
+    _start "" 9093 9094
 }
 
 function stop() {
-    _stop 1-1
-    _stop 1-2
-    _stop 1-3
+    _stop ""
 }
 
 function restart() {

@@ -1,2 +1,2 @@
 env:
-	./env.sh
+	./tools/env.sh

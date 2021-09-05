@@ -22,3 +22,20 @@ groups:
       severity: critical
     annotations:
       summary: check3 alert summary
+
+- name: pushgateway
+  rules:
+  - alert: check_pusher1
+    expr: check_pusher1{job="federate-pushgateway"} > 0
+    for: 5s
+    labels:
+      severity: critical
+    annotations:
+      summary: check_pusher1 alert summary
+  - alert: check_pusher2
+    expr: check_pusher2{job="federate-pushgateway"} > 0
+    for: 5s
+    labels:
+      severity: critical
+    annotations:
+      summary: check_pusher2 alert summary

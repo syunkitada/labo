@@ -15,7 +15,7 @@ function help() {
 EOS
 }
 
-ROOT=`echo $PWD | awk -F setup-scripts '{print $1"setup-scripts/prometheus/ha"}'`
+ROOT=`echo $PWD | awk -F setup-scripts '{print $1"setup-scripts/prometheus/allinone"}'`
 
 function _start() {
     name=pushgateway$1
@@ -36,13 +36,11 @@ function _stop() {
 }
 
 function start() {
-    _start 1-1 9181
-    _start 1-2 9182
+    _start "" 9091
 }
 
 function stop() {
-    _stop 1-1
-    _stop 1-2
+    _stop ""
 }
 
 function restart() {

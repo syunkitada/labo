@@ -4,6 +4,14 @@ global:
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
 
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets:
+        - localhost:9193
+        - localhost:9293
+
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
   - "alertrules.yml"
@@ -15,12 +23,16 @@ scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:9092"]
+      - targets: ["localhost:9012"]
 
   - job_name: 'federate'
     scrape_interval: 15s
     honor_labels: true
     metrics_path: '/federate'
+    params:
+      'match[]':
+        - '{job="prometheus"}'
+        - '{job="myjob"}'
     static_configs:
       - targets:
         - '127.0.0.1:9191'
@@ -32,4 +44,5 @@ scrape_configs:
     honor_labels: true
     static_configs:
       - targets:
-        - '127.0.0.1:9091'
+        - '127.0.0.1:9181'
+        - '127.0.0.1:9182'
