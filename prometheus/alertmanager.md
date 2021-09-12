@@ -197,14 +197,16 @@ inhibit_rules:
 - 細かい設定項目は以下を参照
   - https://github.com/prometheus/alertmanager#high-availability
 - --cluster.peer=[target:port] を指定することでクラスタリングができる
-- Alertmanager は、メモリ上に alerts、slicences, notificationLog を持っているが、これらのデータはプロセスがリスタートされると消失する
+- 同期するデータ、されないデータ
+  - alerts は同期されない
+    - alert は定期的に prometheus から送られてくるので、同期する必要がない
+    - Alertmanager は、すべてのアラート情報を受信するか、まったく受信しないことを想定とする
+      - ロードバランサを間に入れてはいけない
+      - データのバックアップ用のプロセスを立てておいて、そこにはいっさいアラート情報を転送しないというのはあり
+  - silences, notificationLog は同期される
+- ローカルに保存されるデータ
+  - alerts はローカルに保存されない
   - --storage.path=/alertmanager を指定することで silences, notificationLog はデータを永続化できる
-    - これは逐次同期されるわけではないので注意（silences や notificationLog が更新された後すぐにプロセスをリスタートするとその分は保存されない）
-    - 一定の時間(15 分程度？)おきに、バイナリファイルが作成され、この後でリスタートした場合は保存された分に関しては復旧できる
-    - silences, nflog という名前で保存される
-  - ローカルのデータはあくまでバックアップとして扱い、基本的にはクラスタリングによってデータの永続化を担保するほうがよい
-- クラスタリングをすることで、silences, nitificationLog は同期される(alerts は同期されない)
-  - アラート情報は Prometheus が定期的に送信してくるので問題ない
-- Alertmanager は、すべてのアラート情報を受信するか、まったく受信しないことを想定とする
-  - ロードバランサを間に入れてはいけない
-  - データのバックアップ用のプロセスを立てておいて、そこにはいっさいアラート情報を転送しないというのはあり
+    - silences, notificationLog は、更新された際に即時ローカルに保存されるのではなく、定期的（15 分ごと）にローカルに保存されるだけ
+    - また、プロセスのストップ時にもローカルにデータが保存される
+      - SIGKILL などで停止すると、これらは保存されないので注意
