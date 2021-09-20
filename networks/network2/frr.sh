@@ -32,12 +32,11 @@ function init-node() {
 }
 
 function init() {
+    sudo mkdir -p /var/run/netns
     init-node leaf1
     init-node leaf2
     init-node spine1
     init-node spine2
-
-    sudo mkdir -p /var/run/netns
 
     sudo ip link add spine1-leaf1-1 type veth peer name spine1-leaf1-2
     sudo ip link add spine2-leaf1-1 type veth peer name spine2-leaf1-2
