@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-COMMAND="${@:-help}"
+COMMAND="${@:-start}"
 
 function help() {
     cat << EOS
