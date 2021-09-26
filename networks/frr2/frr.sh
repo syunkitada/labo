@@ -49,23 +49,51 @@ function link-node() {
 
 function init() {
     sudo mkdir -p /var/run/netns
-    init-node hv1
-    init-node leaf1
-    init-node spine1
+    init-node hv111
+    init-node hv112
+    init-node lf111
+    init-node lf112
+
+    init-node hv121
+    init-node hv122
+    init-node lf121
+    init-node lf122
+
+    init-node sp11
+    init-node sp12
 
     # 配線
-    link-node leaf1 hv1
-    link-node spine1 leaf1
+    link-node lf111 hv111
+    link-node lf111 hv112
+    link-node lf112 hv111
+    link-node lf112 hv112
+
+    link-node lf121 hv121
+    link-node lf121 hv122
+    link-node lf122 hv121
+    link-node lf122 hv122
+
+    link-node sp11 lf111
+    link-node sp11 lf112
+    link-node sp12 lf121
+    link-node sp12 lf122
 
     # init interface
-    init-interface hv1 10.1.10.1
-    init-interface leaf1 10.1.20.1
-    init-interface spine1 10.1.30.1
+    init-interface hv111 10.1.10.111
+    init-interface hv112 10.1.10.112
+    init-interface hv121 10.1.10.121
+    init-interface hv122 10.1.10.122
+    init-interface lf111 10.1.20.11
+    init-interface lf112 10.1.20.12
+    init-interface lf121 10.1.20.21
+    init-interface lf122 10.1.20.22
+    init-interface sp11 10.1.30.11
+    init-interface sp12 10.1.30.12
 
     # init frr
-    init-frr hv1
-    init-frr leaf1
-    init-frr spine1
+    # init-frr hv1
+    # init-frr lf1
+    # init-frr sp1
 }
 
 
