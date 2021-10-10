@@ -194,7 +194,7 @@ function startQemu() {
         -cpu host \
         -smp cores=${_vmdata[vcpus]} \
         -m ${_vmdata[mem]}M,slots=64,maxmem=1024G \
-        -object memory-backend-file,id=mem1,size=${_vmdata[mem]}M,mem-path=/dev/hugepages/${_vmdata[name]} \
+        -object memory-backend-file,id=mem1,size=${_vmdata[mem]}M,mem-path=/dev/hugepages/${_vmdata[name]},host-nodes=0,policy=bind \
         -numa node,nodeid=0,memdev=mem1 \
         -drive id=bootdisk1,file=${imagePath},if=none \
         -device virtio-blk-pci,scsi=off,drive=bootdisk1,bootindex=1 \
