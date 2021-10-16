@@ -1,27 +1,29 @@
 #!/bin/bash
 
 source envrc
+source utilsrc
 
 COMMAND="${@:-help}"
 
 function help() {
     cat << EOS
-# show images
-./image.sh list
-
-# download centos7
-./image.sh download-centos7
-
-# download ubuntu20
-./image.sh download-ubuntu20
+list
+delete [image name]
+download-centos7
+download-ubuntu20
+umount-qemu-ndb [image name]
+mount-qemu-ndb [image name]
+custom-img [image name]
 EOS
 }
+
+MOUNT_PATH=/mnt/qemu-nbd
 
 CENTOS7_URL=https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2.xz
 
 UBUNTU20_URL=https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img
 
-function download() {
+function _download() {
     IMAGE_TMP_PATH=${IMAGE_DIR}/$1.tmp
     IMAGE_PATH=${IMAGE_DIR}/$1
     IMAGE_URL=$2
@@ -50,15 +52,114 @@ function download() {
 }
 
 function download-centos7() {
-    download $CENTOS7_IMG $CENTOS7_URL
+    _download $CENTOS7_IMG $CENTOS7_URL
 }
 
 function download-ubuntu20() {
-    download $UBUNTU20_IMG $UBUNTU20_URL
+    _download $UBUNTU20_IMG $UBUNTU20_URL
 }
 
 function list() {
     ls -lh $IMAGE_DIR
+}
+
+function delete() {
+    if [ $# != 1 ]; then
+        help
+        exit 1
+    fi
+    rm $IMAGE_DIR/$1
+}
+
+function umount-qemu-nbd() {
+    mount | grep $MOUNT_PATH && sudo umount $MOUNT_PATH || echo "already unmounted"
+    sudo qemu-nbd --disconnect /dev/nbd0
+    sudo rm -rf $MOUNT_PATH
+}
+
+# MEMO: qemu-nbdにより、nbd(network block device)経由で、qcow2などの仮想ディスクイメージを物理デバイスのように扱うことができる
+function mount-qemu-nbd() {
+    if [ $# != 1 ]; then
+        help
+        exit 1
+    fi
+    umount-qemu-nbd
+
+    path=$IMAGE_DIR/$1
+    test -e $path || (echo "file is not found: $path" && exit 1)
+
+    sudo modprobe nbd max_part=63
+    sudo mkdir -p $MOUNT_PATH
+    sudo qemu-nbd -c /dev/nbd0 $path
+    sleep 1s
+    sudo mount /dev/nbd0p1 $MOUNT_PATH
+}
+
+function _init-centos7-img() {
+    sudo mount -o bind /dev /mnt/qemu-nbd/dev
+    sudo cp myinit/myinit.service /mnt/qemu-nbd/etc/systemd/system/
+    sudo mkdir -p /mnt/qemu-nbd/opt/myinit/bin
+    sudo cp myinit/myinit /mnt/qemu-nbd/opt/myinit/bin/myinit
+    sudo chroot /mnt/qemu-nbd systemctl enable myinit.service
+
+    sudo chroot /mnt/qemu-nbd yum remove -y cloud-init
+
+    # admin userの作成
+    grep '^admin:' /mnt/qemu-nbd/etc/group || sudo chroot /mnt/qemu-nbd groupadd admin
+    sudo chroot /mnt/qemu-nbd useradd -g admin admin
+    echo 'admin:admin' | sudo chroot /mnt/qemu-nbd chpasswd
+    sudo mkdir -p /mnt/qemu-nbd/home/admin
+    sudo grep "%admin ALL=(ALL) ALL" /mnt/qemu-nbd/etc/sudoers || sudo sed -i '$ i %admin ALL=(ALL) ALL' /mnt/qemu-nbd/etc/sudoers
+
+    # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
+    # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
+    sudo rm -rf /mnt/qemu-nbd/lib/udev/rules.d/80-net-setup-link.rules
+    # network-scripts/ifcfg-eth0(anacondaで作成された?)が残ってるので削除してく
+    sudo rm -rf /mnt/qemu-nbd/etc/sysconfig/network-scripts/ifcfg-eth0
+
+    sudo umount /mnt/qemu-nbd/dev
+}
+
+function _init-ubuntu20-img() {
+    sudo mount -o bind /dev /mnt/qemu-nbd/dev
+    sudo cp myinit/myinit.service /mnt/qemu-nbd/etc/systemd/system/
+    sudo mkdir -p /mnt/qemu-nbd/opt/myinit/bin
+    sudo cp myinit/myinit /mnt/qemu-nbd/opt/myinit/bin/myinit
+    sudo chroot /mnt/qemu-nbd systemctl enable myinit.service
+
+    sudo chroot /mnt/qemu-nbd apt remove -y cloud-init cloud-guest-utils cloud-initramfs-copymods cloud-initramfs-dyn-netconf
+
+    # admin userの作成
+    grep '^admin:' /mnt/qemu-nbd/etc/group || sudo chroot /mnt/qemu-nbd groupadd admin
+    sudo chroot /mnt/qemu-nbd useradd -g admin -s /bin/bash admin
+    echo 'admin:admin' | sudo chroot /mnt/qemu-nbd chpasswd
+    sudo mkdir -p /mnt/qemu-nbd/home/admin
+    sudo grep "%admin ALL=(ALL) ALL" /mnt/qemu-nbd/etc/sudoers || sudo sed -i '$ i %admin ALL=(ALL) ALL' /mnt/qemu-nbd/etc/sudoers
+
+    sudo umount /mnt/qemu-nbd/dev
+}
+
+function custom-img() {
+    set -ex
+    cp ~/.cache/setup-scripts/images/$1 ~/.cache/setup-scripts/images/$1_custom
+    name=$1_custom
+    isCentos7=false
+    isUbuntu20=false
+    if echo $1 | grep "centos"; then
+        isCentos7=true
+    fi
+    if echo $1 | grep "ubuntu"; then
+        isUbuntu20=true
+    fi
+
+    mount-qemu-nbd $name
+    if "${isUbuntu20}"; then
+        _init-ubuntu20-img
+    fi
+    if "${isCentos7}"; then
+        _init-centos7-img
+    fi
+    umount-qemu-nbd
 }
 
 $COMMAND

@@ -99,12 +99,17 @@ fi
 
 isUbuntu=false
 isUbuntu18=false
+isUbuntu20=false
 grep 'Ubuntu' /etc/os-release
 if [ \$? == 0 ]; then
   isUbuntu=true
   grep 'VERSION_ID="18' /etc/os-release
   if [ \$? == 0 ]; then
     isUbuntu18=true
+  fi
+  grep 'VERSION_ID="20' /etc/os-release
+  if [ \$? == 0 ]; then
+    isUbuntu20=true
   fi
 fi
 
@@ -141,9 +146,9 @@ fi
 
 
 # ------------------------------
-# Setup resolver for Ubuntu18
+# Setup resolver for Ubuntu18, Ubuntu20
 # ------------------------------
-if "\${isUbuntu18}"; then
+if [ "\${isUbuntu18}" = true -o "\${isUbuntu20}" = true ]; then
   mkdir -p /etc/systemd/resolved.conf.d/
   cat << 'EOT' > /etc/systemd/resolved.conf.d/goapp.conf
 [Resolve]

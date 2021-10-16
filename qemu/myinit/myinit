@@ -22,15 +22,6 @@ function retry() {
     return 0
 }
 
-# adduser実行時に以下のエラーで追加できない場合があるのでリトライする
-# adduser: cannot lock /etc/passwd; try again later.
-if ! grep '^admin:' /etc/passwd; then
-  retry 5 adduser admin
-  echo 'admin:admin' |chpasswd
-  groupadd admin
-  usermod -a -G admin admin
-  echo "%admin  ALL=(ALL:ALL) ALL" >> /etc/sudoers
-fi
 
 mkdir -p /mnt/cidata
 # mount実行時に以下のエラーで追加できない場合がるのでリトライする
@@ -54,8 +45,11 @@ grep "127.0.1.1 $host" /etc/hosts || echo "127.0.1.1 $host" >> /etc/hosts
 # Setup sshd
 # Enable password login by ssh
 sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+sudo ssh-keygen -A
 systemctl enable ssh
 systemctl enable sshd
+systemctl restart ssh
+systemctl restart sshd
 # ------------------------------
 
 

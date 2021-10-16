@@ -49,5 +49,6 @@ $ sudo mount -t nfs [server ip]:/ /mnt/nfs
 ```
 $ sudo apt install -y nfs-common
 
+$ sudo mkdir -p /mnt/nfs
 $ sudo mount -t nfs [server ip]:/ /mnt/nfs
 ```
