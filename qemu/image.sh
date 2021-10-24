@@ -134,6 +134,7 @@ function _init-ubuntu20-img() {
     sudo chroot /mnt/qemu-nbd useradd -g admin -s /bin/bash admin
     echo 'admin:admin' | sudo chroot /mnt/qemu-nbd chpasswd
     sudo mkdir -p /mnt/qemu-nbd/home/admin
+    sudo chroot /mnt/qemu-nbd chown -R admin:admin /home/admin
     sudo grep "%admin ALL=(ALL) ALL" /mnt/qemu-nbd/etc/sudoers || sudo sed -i '$ i %admin ALL=(ALL) ALL' /mnt/qemu-nbd/etc/sudoers
 
     sudo umount /mnt/qemu-nbd/dev
