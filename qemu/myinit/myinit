@@ -23,6 +23,46 @@ function retry() {
 }
 
 
+# OSの種別の特定
+export isCentos=false
+export isCentos7=false
+export isRocky8=false
+grep 'CentOS' /etc/os-release
+if [ \$? == 0 ]; then
+  export isCentos=true
+  grep 'VERSION_ID="7"' /etc/os-release
+  if [ \$? == 0 ]; then
+    export isCentos7=true
+  fi
+fi
+
+grep 'Rocky' /etc/os-release
+if [ \$? == 0 ]; then
+  export isRocky=true
+  grep 'VERSION_ID="8.' /etc/os-release
+  if [ \$? == 0 ]; then
+    export isRocky8=true
+  fi
+fi
+
+export isUbuntu=false
+export isUbuntu18=false
+export isUbuntu20=false
+grep 'Ubuntu' /etc/os-release
+if [ \$? == 0 ]; then
+  export isUbuntu=true
+  grep 'VERSION_ID="18' /etc/os-release
+  if [ \$? == 0 ]; then
+    export isUbuntu18=true
+  fi
+  grep 'VERSION_ID="20' /etc/os-release
+  if [ \$? == 0 ]; then
+    export isUbuntu20=true
+  fi
+fi
+
+
+# cidataをマウントして各種設定を行う
 mkdir -p /mnt/cidata
 # mount実行時に以下のエラーで追加できない場合がるのでリトライする
 # mount: special device /dev/disk/by-label/cidata does not exist
@@ -61,7 +101,7 @@ systemctl restart sshd
 # Run user-data
 # ------------------------------
 if [ -e /mnt/cidata/user-data ]; then
-    /bin/bash -x /mnt/cidata/user-data
+    /bin/bash -Ex /mnt/cidata/user-data
 fi
 
 

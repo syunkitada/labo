@@ -4,4 +4,5 @@ CACHE_DIR=~/.cache/setup-scripts
 IMAGE_DIR=$CACHE_DIR/images
 VM_DIR=$CACHE_DIR/vms
 CENTOS7_IMG=centos7
+ROCKY8_IMG=rocky8
 UBUNTU20_IMG=ubuntu20

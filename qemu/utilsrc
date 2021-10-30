@@ -84,36 +84,6 @@ EOS
 
 
     cat << EOS > $userdataPath
-#!/bin/sh -x
-
-isCentos=false
-isCentos7=false
-grep 'CentOS' /etc/os-release
-if [ \$? == 0 ]; then
-  isCentos=true
-  grep 'VERSION_ID="7"' /etc/os-release
-  if [ \$? == 0 ]; then
-    isCentos7=true
-  fi
-fi
-
-isUbuntu=false
-isUbuntu18=false
-isUbuntu20=false
-grep 'Ubuntu' /etc/os-release
-if [ \$? == 0 ]; then
-  isUbuntu=true
-  grep 'VERSION_ID="18' /etc/os-release
-  if [ \$? == 0 ]; then
-    isUbuntu18=true
-  fi
-  grep 'VERSION_ID="20' /etc/os-release
-  if [ \$? == 0 ]; then
-    isUbuntu20=true
-  fi
-fi
-
-
 ${setupNetScript}
 
 ip route add default via ${_vmdata[defaultGateway]}
@@ -123,12 +93,10 @@ ip route add default via ${_vmdata[defaultGateway]}
 # Setup resolver for Centos7
 # ------------------------------
 if "\${isCentos7}"; then
-  rpm -qa | grep dnsmasq
   if [ \$? != 0 ]; then
     cat << 'EOT' > /etc/resolv.conf
 nameserver ${_vmdata[resolver]}
 EOT
-    yum install dnsmasq -y
   fi
 
   cat << 'EOT' > /etc/dnsmasq.conf
@@ -143,6 +111,30 @@ EOT
 
 fi
 # End isCentos7
+
+
+# ------------------------------
+# Setup resolver for Rocky8
+# ------------------------------
+if "\${isRocky8}"; then
+  if [ \$? != 0 ]; then
+    cat << 'EOT' > /etc/resolv.conf
+nameserver ${_vmdata[resolver]}
+EOT
+  fi
+
+  cat << 'EOT' > /etc/dnsmasq.conf
+nameserver 127.0.0.53
+options edns0
+
+listen-address=::1,127.0.0.1
+cache-size=150
+port=53
+server=${_vmdata[resolver]}
+EOT
+
+fi
+# End isRocky8
 
 
 # ------------------------------
