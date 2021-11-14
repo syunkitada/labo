@@ -81,7 +81,7 @@ function delete() {
 
 function umount-qemu-nbd() {
     mount | grep $MOUNT_PATH && sudo umount $MOUNT_PATH || echo "already unmounted"
-    sudo qemu-nbd --disconnect /dev/nbd0
+    sudo qemu-nbd --disconnect /dev/nbd0 || echo "already disconnected"
     sudo rm -rf $MOUNT_PATH
 }
 
@@ -142,6 +142,7 @@ function _init-rocky8-img() {
     sudo mkdir -p /mnt/qemu-nbd/opt/myinit/bin
     sudo cp myinit/myinit /mnt/qemu-nbd/opt/myinit/bin/myinit
     sudo chroot /mnt/qemu-nbd systemctl enable myinit.service
+    sudo chroot /mnt/qemu-nbd systemctl disable NetworkManager
 
     sudo chroot /mnt/qemu-nbd yum remove -y cloud-init
 
