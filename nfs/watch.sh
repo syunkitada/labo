@@ -14,7 +14,9 @@ if echo $PWD | grep "/setup-scripts"; then
 fi
 
 function start() {
-    go run setup-scripts/nfs/watch.go --watch > /tmp/watch.log &
+    export GO111MODULE=off
+    go get -u gopkg.in/godo.v2/cmd/godo
+    /usr/loca/go/bin/go run setup-scripts/nfs/watch.go --watch > /tmp/watch.log &
 }
 
 function status() {

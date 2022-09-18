@@ -9,9 +9,11 @@ ETCD_NAME=$1
 NODE_IP=$2
 
 if [ ! -e /usr/local/bin/etcd ]; then
+    cd /tmp
     wget "https://github.com/etcd-io/etcd/releases/download/v3.4.15/etcd-v3.4.15-linux-amd64.tar.gz"
     tar -xvf etcd-v3.4.15-linux-amd64.tar.gz
     sudo mv etcd-v3.4.15-linux-amd64/etcd* /usr/local/bin/
+    cd -
 fi
 
 sudo mkdir -p /etc/etcd /var/lib/etcd

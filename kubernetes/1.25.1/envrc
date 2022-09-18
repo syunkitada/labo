@@ -1,0 +1,21 @@
+export VERSION=1.25.1
+export ETCD_VERSION=v3.4.15
+export CONTAINERD_VERSION=1.5.5
+
+export PJ_DIR=~/kubernetes_${VERSION}
+export SRC_DIR=${PJ_DIR}/kubernetes
+
+export ROOT_DIR=${HOME}/.cache/root
+export BIN_DIR=${ROOT_DIR}/bin
+export LOG_DIR=${ROOT_DIR}/var/log
+export K8S_ASSETS_DIR=${ROOT_DIR}/k8s-assets
+
+export VAR_DIR=$ROOT_DIR/var/lib/kubernetes
+export VAR_KUBELET_DIR=$ROOT_DIR/var/lib/kubelet
+export VAR_KUBE_PROXY_DIR=$ROOT_DIR/var/lib/kube-proxy
+export ETC_DIR=$ROOT_DIR/etc/kubernetes/config
+
+
+export KUBECONFIG=${K8S_ASSETS_DIR}/admin.kubeconfig
+
+export PATH=$BIN_DIR:$PATH

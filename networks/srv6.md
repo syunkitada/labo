@@ -126,3 +126,4 @@
 
 - [Segment Routing チュートリアル:20170718](https://www.janog.gr.jp/meeting/janog40/application/files/2415/0051/7614/janog40-sr-kamata-takeda-00.pdf)
 - [SONiC + P4 によるマルチテナント SRv6 サービスチェイニングの実現](https://www.janog.gr.jp/meeting/janog46/wp-content/uploads/2020/06/JANOG46_SONiCSRv6P4_v.0.14.pdf)
+- [Youtube:「LINE による SRv6 の挑戦に関して」城倉 弘樹 (LINE 株式会社)](https://www.youtube.com/watch?v=B6MqxXVD1aE)
