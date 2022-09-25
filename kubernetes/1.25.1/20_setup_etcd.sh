@@ -24,7 +24,7 @@ chmod 700 $ROOT_DIR/var/lib/etcd
 cp $K8S_ASSETS_DIR/ca.pem $K8S_ASSETS_DIR/kubernetes-key.pem $K8S_ASSETS_DIR/kubernetes.pem $ROOT_DIR/etc/etcd/
 
 sudo docker ps | grep " etcd$" || \
-sudo docker run -d -v $ROOT_DIR/etc/etcd:/etc/etcd --net host --rm \
+sudo docker run -d -v $ROOT_DIR/etc/etcd:/etc/etcd -v $ROOT_DIR/var/lib/etcd:/var/lib/etcd --net host --rm \
  --name etcd quay.io/coreos/etcd:${ETCD_VERSION} \
   etcd \
   --name ${ETCD_NAME} \

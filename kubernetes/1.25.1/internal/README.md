@@ -13,6 +13,12 @@
   - https://medium.com/analytics-vidhya/grpc-vs-rest-performance-comparison-1fe5fb14a01c
   - GRPC のほうがパフォーマンスがよい(json はデコードのコストが高い)
     - json でも codecgen 使うともう少しましになるかも？
+  - TTRPC
+    - containerd で使われている GRPC に近いやつ
+    - https://github.com/containerd/ttrpc
+    - GRPC よりもメモリの使用量が少ない（パフォーマンスも良い？）
+    - ローカル内部を想定している？
+    - containerd では ttrpc でモジュラ的に拡張できるようになってるため、このようなメモリ節約の仕組みがある?
 - スケーリングについて
   - コントローラはリーダエレクションで常に一つ
     - この処理能力が限界値になる
@@ -37,6 +43,27 @@
     - 例えば、Kubernetes API を利用するためのクライアントライブラリは以下のように、実態は stating/src/k8s.io で管理されるが、それ単体でも公開されていて単体でも利用できる
       - https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/client-go
       - https://github.com/kubernetes/client-go
+
+## cli の基本
+
+- 以下のフェーズで処理される
+  - options
+    - オプション定義
+  - complete
+    - options の初期値を補完する
+    - args を options に組み込んだりもする
+  - validate
+    - complete 済みの options を検証する
+  - run
+    - 処理を実施
+
+## make
+
+```
+$ make help
+
+$ make test WHAT=./cmd/kubectl
+```
 
 ## ジェネレータまわりのメモ
 

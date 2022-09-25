@@ -111,5 +111,197 @@
  99         Director:           director,
 100     }
 101 }
-1
+```
+
+- ServeHTTP: ハンドラの entrypoint
+
+```go:kubernetes/staging/src/k8s.io/apiserver/pkg/server/handler.go
+187 // ServeHTTP makes it an http.Handler
+188 func (a *APIServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+189     a.FullHandlerChain.ServeHTTP(w, r)
+190 }
+```
+
+- DefaultBuildHandlerChain に director を入れると、いろいろ設定されて返ってくる
+- 認証系やトレーサなどをここで仕込んでる？
+- ミドルウェアに近いと思う
+
+```go:kubernetes/staging/src/k8s.io/apiserver/pkg/server/config.go
+609     handlerChainBuilder := func(handler http.Handler) http.Handler {
+610         return c.BuildHandlerChainFunc(handler, c.Config)
+611     }
+...
+329     return &Config{
+330         Serializer:                  codecs,
+331         BuildHandlerChainFunc:       DefaultBuildHandlerChain,
+...
+808 func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler {
+809     handler := filterlatency.TrackCompleted(apiHandler)
+810     handler = genericapifilters.WithAuthorization(handler, c.Authorization.Authorizer, c.Serializer)
+811     handler = filterlatency.TrackStarted(handler, "authorization")
+...
+859     handler = genericfilters.WithHTTPLogging(handler)
+860     if utilfeature.DefaultFeatureGate.Enabled(genericfeatures.APIServerTracing) {
+861         handler = genericapifilters.WithTracing(handler, c.TracerProvider)
+862     }
+863     handler = genericapifilters.WithLatencyTrackers(handler)
+864     handler = genericapifilters.WithRequestInfo(handler, c.RequestInfoResolver)
+865     handler = genericapifilters.WithRequestReceivedTimestamp(handler)
+866     handler = genericapifilters.WithMuxAndDiscoveryComplete(handler, c.lifecycleSignals.MuxAndDiscoveryComplete.Signaled())
+867     handler = genericfilters.WithPanicRecovery(handler, c.RequestInfoResolver)
+868     handler = genericapifilters.WithAuditID(handler)
+869     return handler
+870 }
+```
+
+- ルーティングの本体は director の ServeHTTP
+
+```go:staging/src/k8s.io/apiserver/pkg/server/handler.go
+ 69 // HandlerChainBuilderFn is used to wrap the GoRestfulContainer handler using the provided handler chain.
+ 70 // It is normally used to apply filtering like authentication and authorization
+ 71 type HandlerChainBuilderFn func(apiHandler http.Handler) http.Handler
+
+116 type director struct {
+117     name               string
+118     goRestfulContainer *restful.Container
+119     nonGoRestfulMux    *mux.PathRecorderMux
+120 }
+121
+122 func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+123     path := req.URL.Path
+124
+125     // check to see if our webservices want to claim this path
+126     for _, ws := range d.goRestfulContainer.RegisteredWebServices() {
+127         switch {
+128         case ws.RootPath() == "/apis":
+129             // if we are exactly /apis or /apis/, then we need special handling in loop.
+130             // normally these are passed to the nonGoRestfulMux, but if discovery is enabled, it will go directly.
+131             // We can't rely on a prefix match since /apis matches everything (see the big comment on Director above)
+132             if path == "/apis" || path == "/apis/" {
+133                 klog.V(5).Infof("%v: %v %q satisfied by gorestful with webservice %v", d.name, req.Method, path, ws.RootPath())
+134                 // don't use servemux here because gorestful servemuxes get messed up when removing webservices
+135                 // TODO fix gorestful, remove TPRs, or stop using gorestful
+136                 d.goRestfulContainer.Dispatch(w, req)
+137                 return
+138             }
+139
+140         case strings.HasPrefix(path, ws.RootPath()):
+141             // ensure an exact match or a path boundary match
+// pathがws.RootPathを持ってれば、goresfulを呼んで、そうでなければnonGoRestfulを呼ぶ
+142             if len(path) == len(ws.RootPath()) || path[len(ws.RootPath())] == '/' {
+143                 klog.V(5).Infof("%v: %v %q satisfied by gorestful with webservice %v", d.name, req.Method, path, ws.RootPath())
+144                 // don't use servemux here because gorestful servemuxes get messed up when removing webservices
+145                 // TODO fix gorestful, remove TPRs, or stop using gorestful
+146                 d.goRestfulContainer.Dispatch(w, req)
+147                 return
+148             }
+149         }
+150     }
+151
+152     // if we didn't find a match, then we just skip gorestful altogether
+153     klog.V(5).Infof("%v: %v %q satisfied by nonGoRestful", d.name, req.Method, path)
+154     d.nonGoRestfulMux.ServeHTTP(w, req)
+155 }
+```
+
+RegisteredWebServices(goresful) の一覧
+
+director は 2 種類ある
+一回のリクエストでその 2 種類の director の ServeHTTP を通る
+
+```
+126     for _, ws := range d.goRestfulContainer.RegisteredWebServices() {
+            fmt.Println(ws.RootPath())
+```
+
+一つ目の RegisteredWebServices(goresful)
+
+```
+/version
+/apis/apiregistration.k8s.io/v1
+/apis/apiregistration.k8s.io
+```
+
+二つ目の RegisteredWebServices(goresful)
+
+```
+/version
+/apis
+/logs
+/.well-known/openid-configuration
+/openid/v1/jwks
+/api/v1
+/api
+/apis/authentication.k8s.io/v1
+/apis/authentication.k8s.io
+/apis/authorization.k8s.io/v1
+/apis/authorization.k8s.io
+/apis/autoscaling/v1
+/apis/autoscaling/v2
+/apis/autoscaling/v2beta2
+/apis/autoscaling
+/apis/batch/v1
+/apis/batch
+/apis/certificates.k8s.io/v1
+/apis/certificates.k8s.io
+/apis/coordination.k8s.io/v1
+/apis/coordination.k8s.io
+/apis/discovery.k8s.io/v1
+/apis/discovery.k8s.io
+/apis/networking.k8s.io/v1
+/apis/networking.k8s.io
+/apis/node.k8s.io/v1
+/apis/node.k8s.io
+/apis/policy/v1
+/apis/policy
+/apis/rbac.authorization.k8s.io/v1
+/apis/rbac.authorization.k8s.io
+/apis/scheduling.k8s.io/v1
+/apis/scheduling.k8s.io
+/apis/storage.k8s.io/v1
+/apis/storage.k8s.io/v1beta1
+/apis/storage.k8s.io
+/apis/flowcontrol.apiserver.k8s.io/v1beta1
+/apis/flowcontrol.apiserver.k8s.io/v1beta2
+/apis/flowcontrol.apiserver.k8s.io
+/apis/apps/v1
+/apis/apps
+/apis/admissionregistration.k8s.io/v1
+/apis/admissionregistration.k8s.io
+/apis/events.k8s.io/v1
+/apis/events.k8s.io
+```
+
+- openapi の path は以下でアクセスされる(nonGoRestful)
+- リクエストのたびに先にここをたたいて API の spec を拾ってる?
+
+```
+/openapi/v2
+/openapi/v3
+```
+
+```
+ 34 // PathRecorderMux wraps a mux object and records the registered exposedPaths.
+ 35 type PathRecorderMux struct {
+ 36     // name is used for logging so you can trace requests through
+ 37     name string
+ 38
+ 39     lock            sync.Mutex
+ 40     notFoundHandler http.Handler
+ 41     pathToHandler   map[string]http.Handler
+ 42     prefixToHandler map[string]http.Handler
+ 43
+ 44     // mux stores a pathHandler and is used to handle the actual serving.
+ 45     // Turns out, we want to accept trailing slashes, BUT we don't care about handling
+ 46     // everything under them.  This does exactly matches only unless its explicitly requested to
+ 47     // do something different
+ 48     mux atomic.Value
+ 49
+ 50     // exposedPaths is the list of paths that should be shown at /
+ 51     exposedPaths []string
+ 52
+ 53     // pathStacks holds the stacks of all registered paths.  This allows us to show a more helpful message
+ 54     // before the "http: multiple registrations for %s" panic.
+ 55     pathStacks map[string]string
+ 56 }
 ```

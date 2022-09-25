@@ -28,6 +28,9 @@ $ go run -mod vendor cmd/kube-apiserver/apiserver.go ...
  36 }
 ```
 
+- CreateServerChain で http.Handler の chain を組み立ててる
+  - リクエストがくると、apiExtensionsServer の director の ServeHTTP が呼ばれて、その後 kubeAPIServer の director の ServeHTTP が呼ばれる
+
 ```go:cmd/kube-apiserver/app/server.go
 91 // NewAPIServerCommand creates a *cobra.Command object with default parameters
 92 func NewAPIServerCommand() *cobra.Command {
@@ -79,6 +82,17 @@ $ go run -mod vendor cmd/kube-apiserver/apiserver.go ...
 178 // CreateServerChain creates the apiservers connected via delegation.
 179 func CreateServerChain(completedOptions completedServerRunOptions) (*aggregatorapiserver.APIAggregator, error) {
 ...
+192     notFoundHandler := notfoundhandler.New(kubeAPIServerConfig.GenericConfig.Serializer, genericapifilters.NoMuxAndDiscoveryIncompleteKey)
+193     apiExtensionsServer, err := createAPIExtensionsServer(apiExtensionsConfig, genericapiserver.NewEmptyDelegateWithCustomHandler(notFoundHandler))
+194     if err != nil {
+195         return nil, err
+196     }
+197
+198     kubeAPIServer, err := CreateKubeAPIServer(kubeAPIServerConfig, apiExtensionsServer.GenericAPIServer)
+199     if err != nil {
+200         return nil, err
+201     }
+202
 203     // aggregator comes last in the chain
 204     aggregatorConfig, err := createAggregatorConfig(*kubeAPIServerConfig.GenericConfig, completedOptions.ServerRunOptions, kubeAPIServerConfig.ExtraConfig    .VersionedInformers, serviceResolver, kubeAPIServerConfig.ExtraConfig.ProxyTransport, pluginInitializer)
 205     if err != nil {
@@ -92,6 +106,37 @@ $ go run -mod vendor cmd/kube-apiserver/apiserver.go ...
 213
 214     return aggregatorServer, nil
 215 }
+
+
+217 // CreateKubeAPIServer creates and wires a workable kube-apiserver
+218 func CreateKubeAPIServer(kubeAPIServerConfig *controlplane.Config, delegateAPIServer genericapiserver.DelegationTarget) (*controlplane.Instance, error) {
+219     kubeAPIServer, err := kubeAPIServerConfig.Complete().New(delegateAPIServer)
+220     if err != nil {
+221         return nil, err
+222     }
+223
+224     return kubeAPIServer, nil
+225 }
+```
+
+```go:kubernetes/pkg/controlplane/instance.go
+332 func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget) (*Instance, error) {
+333     if reflect.DeepEqual(c.ExtraConfig.KubeletClientConfig, kubeletclient.KubeletClientConfig{}) {
+334         return nil, fmt.Errorf("Master.New() called with empty config.KubeletClientConfig")
+335     }
+336
+337     s, err := c.GenericConfig.New("kube-apiserver", delegationTarget)
+338     if err != nil {
+339         return nil, err
+340     }
+...
+377     m := &Instance{
+378         GenericAPIServer:          s,
+379         ClusterAuthenticationInfo: c.ExtraConfig.ClusterAuthenticationInfo,
+380     }
+...
+498     return m, nil
+499 }
 ```
 
 ```go:cmd/kube-apiserver/app/aggregator.go
@@ -132,6 +177,33 @@ $ go run -mod vendor cmd/kube-apiserver/apiserver.go ...
 ```
 
 ```go:kubernetes/vendor/k8s.io/kube-aggregator/pkg/apiserver/apiserver.go
+181 // NewWithDelegate returns a new instance of APIAggregator from the given config.
+182 func (c completedConfig) NewWithDelegate(delegationTarget genericapiserver.DelegationTarget) (*APIAggregator, error) {
+183     genericServer, err := c.GenericConfig.New("kube-aggregator", delegationTarget)
+184     if err != nil {
+185         return nil, err
+186     }
+...
+207     s := &APIAggregator{
+208         GenericAPIServer:           genericServer,
+209         delegateHandler:            delegationTarget.UnprotectedHandler(),
+210         proxyTransport:             c.ExtraConfig.ProxyTransport,
+211         proxyHandlers:              map[string]*proxyHandler{},
+212         handledGroups:              sets.String{},
+213         lister:                     informerFactory.Apiregistration().V1().APIServices().Lister(),
+214         APIRegistrationInformers:   informerFactory,
+215         serviceResolver:            c.ExtraConfig.ServiceResolver,
+216         openAPIConfig:              c.GenericConfig.OpenAPIConfig,
+217         openAPIV3Config:            c.GenericConfig.OpenAPIV3Config,
+218         egressSelector:             c.GenericConfig.EgressSelector,
+219         proxyCurrentCertKeyContent: func() (bytes []byte, bytes2 []byte) { return nil, nil },
+220         rejectForwardingRedirects:  c.ExtraConfig.RejectForwardingRedirects,
+221     }
+...
+365     return s, nil
+366 }
+
+
 114 // preparedGenericAPIServer is a private wrapper that enforces a call of PrepareRun() before Run can be invoked.
 115 type preparedAPIAggregator struct {
 116     *APIAggregator
