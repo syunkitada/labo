@@ -80,6 +80,85 @@ unpacking docker.io/library/controller:latest (sha256:c7f2325a15d1c6b434c02d405a
 $ sudo ctr -n k8s.io image ls
 ```
 
-## 開発メモ
+## 手元で実行する
 
-- 開発時に docker のイメージを毎回ビルドしなおす必要があるのはどうにかならないのか？
+```
+# editでmanagerのimageをhaproxyにしてsleepさせる(プロキシできればhaproxyでなくてもよい)
+$ source ~/labo/kubernetes/1.25.1/envrc
+$ kubectl edit deploy -n markdown-view-system
+containers:
+  - command:
+      - sleep
+    args:
+      - "9999"
+    image: haproxy:2.6.6
+    name: manager
+
+$ make deploy
+
+
+$ mkdir -p /tmp/k8s-webhook-server/serving-certs/
+$ alias tmpcmd="kubectl exec -n markdown-view-system markdown-view-controller-manager-77b8d54774-wsrjs --"
+$ tmpcmd cat /tmp/k8s-webhook-server/serving-certs/ca.crt > /tmp/k8s-webhook-server/serving-certs/ca.crt
+$ tmpcmd cat /tmp/k8s-webhook-server/serving-certs/tls.crt > /tmp/k8s-webhook-server/serving-certs/tls.crt
+$ tmpcmd cat /tmp/k8s-webhook-server/serving-certs/tls.key > /tmp/k8s-webhook-server/serving-certs/tls.key
+
+$ go run . -metrics-bind-address :18080
+
+
+securityContext, readynessProve, livenessProve を消す
+
+
+
+cat << EOS > /tmp/haproxy.cfg
+defaults
+    timeout connect 10s
+    timeout client 30s
+    timeout server 30s
+    log stdout format raw local0
+    mode tcp
+    maxconn 3000
+
+frontend markdownview
+    bind 0.0.0.0:9443
+    default_backend web_servers
+
+backend web_servers
+    balance roundrobin
+    server server1 192.168.10.121:9443
+EOS
+
+$ kubectl cp /tmp/haproxy.cfg nginx-deployment-595cbd599d-jr9nm:/tmp/haproxy.cfg
+
+```
+
+```
+$ kubectl get markdownview
+NAME                  REPLICAS   STATUS
+markdownview-sample   1
+
+
+```
+
+```
+# crd
+$ kubectl get crd markdownviews.view.kubebuilder.example.com
+```
+
+```
+$ kubectl get svc -n markdown-view-system
+NAME                                               TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+markdown-view-controller-manager-metrics-service   ClusterIP   10.32.0.181   <none>        8443/TCP   7d1h
+markdown-view-webhook-service                      ClusterIP   10.32.0.225   <none>        443/TCP    7d1h
+```
+
+## Reconcile
+
+- Reconcile 処理は下記のタイミングで呼び出される
+  - コントローラの扱うリソースが作成、更新、削除されたとき
+  - Reconcile に失敗してリクエストがキューに積まれたとき
+  - コントローラの起動時
+  - 外部イベントが発生したとき
+  - キャッシュを再同期するとき（デフォルトでは 10 時間に一回）
+- Reconcile 処理はデフォルトでは１秒間に 10 回以上実行されないように制限されています
+  - また、これらのイベントが高い頻度で発生する場合は、Reconcile Loop を並列実行するように設定可能です

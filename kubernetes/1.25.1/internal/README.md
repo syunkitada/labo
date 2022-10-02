@@ -1,7 +1,14 @@
 # kubernetes
 
 - 参考になりそうなもの
-  - https://k8sinternal.connpass.com/
+  - [Working with Kubernetes API](https://iximiuz.com/en/series/working-with-kubernetes-api/)
+    - API サーバまわりの解説
+  - [ゼロから始める Kubernetes Controller / Under the Kubernetes Controller](https://speakerdeck.com/govargo/under-the-kubernetes-controller-36f9b71b-9781-4846-9625-23c31da93014)
+    - コントローラまわりの解説
+  - [Kubernetes Internal: 勉強会](https://k8sinternal.connpass.com/)
+    - 実装レベルでの話とか
+  - [つくって学ぶ Kubebuilder](https://zoetrope.github.io/kubebuilder-training/)
+  - [Kubernetes のコードリーディングをする上で知っておくと良さそうなこと](https://bells17.medium.com/things-you-should-know-about-reading-kubernetes-codes-933b0ee6181d)
 - コーディング規約
   - https://github.com/kubernetes/community/blob/master/contributors/guide/coding-conventions.md
 - API の規約
@@ -23,10 +30,8 @@
   - コントローラはリーダエレクションで常に一つ
     - この処理能力が限界値になる
   - シャーディングして複数コントローラでスケールするみたいなことはできない
-- 用語メモ
+- 雑メモ
   - virtual kubelet
-  - informer
-  - kubebuilder
   - https://github.com/kubernetes-sigs/apiserver-builder-alpha
   - kurustlet
     - https://github.com/krustlet/krustlet

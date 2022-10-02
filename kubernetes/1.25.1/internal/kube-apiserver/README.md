@@ -134,9 +134,53 @@ JWT_TOKEN_DEFAULT_DEFAULT=$(kubectl -n kube-system create token default)
 - Kubernetes Custom Controllers is a way to bind asynchronous handlers to API endpoints.
 - Kubernetes Admission Webhooks is a way to bind synchronous handlers to the same API endpoints.
 
-## controller
+## Controller
 
 - https://github.com/kubernetes/community/blob/2e3d491ca40d05233362b125a0e756ad3223a51f/contributors/devel/sig-api-machinery/controllers.md
+- Controller を支えるライブラリ
+  - client-go
+    - Kubernetes の公式クライアントライブラリ
+    - Kubernetes 本体の開発にも使われている
+    - Controller 作成には欠かせないライブラリ
+  - api-machinery:
+    - Kubernetes API Object & Kubernetes API like Object に必要な機能を備えたライブラリ
+    - Controller は API Object を扱うので、必要になる
+  - code-generator
+    - Informer, Linter, clientset, DeepCopy などのコードを生成
+- コンポーネント
+  - Informer
+    - Object の Event を監視し、in-memory-cache にデータを格納する
+    - Object の変更を監視するために、Controller が api-server に状態を毎回問い合わせると、api-server に負荷がかかる
+    - Informer が、Object を watch して im-memory-cache(Store) に Object のデータを格納し、Controller がその cache を参照することで api-server への負荷を軽減させている
+    - EventHandler を通じて、WorkQueue にアイテムを追加する
+    - in-memory-cache は Informer を使って非同期に etcd の情報をキャッシュしている
+      - キャッシュと etcd で情報がずれないかと思うかもしれないが、Kubernetes では resourceVersion という仕組みがある
+      - resourceVersion が異なるとエラーになって、Reconcile を再試行するのでずれていても問題はない
+    - 関連コンポーネント
+      - Reflector
+        - api-server の Event を監視する
+      - DeltaFIFO
+        - Object の Event が発生するたびに使う FIFO キュー
+      - Indexer
+        - in-memory-cache への書き込みや読み込みを行う
+    - ResyncPeriod
+      - Informer は起動時に Resync Period という引数を指定する
+      - Resync Period を過ぎると、なんの Event が発生していなくても UpdateFunc が呼び出されて Reconcile が実行される
+        - このとき Resync は in-memory-cache を参照する
+    - Relist
+      - Resync は cache 参照だが、Relist は api-server 参照
+  - Lister
+    - Object を取得したいとき、in-memory-cache からデータを取得する
+  - WorkQueue
+    - Contoller が処理するアイテムを登録しておくキュー
+    - このキューのアイテムが Reconcile の対象となります
+    - Reconcile が正常終了したら workQueue.Forgot、workQueue.Done を実施してアイテムを WorkQueue から削除する
+    - Reconcile がエラーの場合、workQueue.AddRateLimited を実施して、WorkQueue に Requeue して、Reconcile を再実行する
+  - runtime.Object
+    - すべての API Object 共通の Interface
+  - Scheme
+    - Kubernetes API と Go Type を紐づける機構
+    - Scheme は Go の struct と GroupVersionKind を相互に変換したり、異なるバージョン間での Scheme の変換をおこなったりします
 
 ## api
 
