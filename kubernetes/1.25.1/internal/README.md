@@ -9,6 +9,11 @@
     - 実装レベルでの話とか
   - [つくって学ぶ Kubebuilder](https://zoetrope.github.io/kubebuilder-training/)
   - [Kubernetes のコードリーディングをする上で知っておくと良さそうなこと](https://bells17.medium.com/things-you-should-know-about-reading-kubernetes-codes-933b0ee6181d)
+  - client-go について
+    - controller 目線の client-go
+      - https://github.com/kubernetes/sample-controller/blob/master/docs/controller-client-go.md
+    - client-go の examples がとても参考になる
+      - https://github.com/kubernetes/client-go/tree/master/examples
 - コーディング規約
   - https://github.com/kubernetes/community/blob/master/contributors/guide/coding-conventions.md
 - API の規約

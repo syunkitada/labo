@@ -128,8 +128,15 @@ backend web_servers
     server server1 192.168.10.121:9443
 EOS
 
-$ kubectl cp /tmp/haproxy.cfg nginx-deployment-595cbd599d-jr9nm:/tmp/haproxy.cfg
 
+$ pod=`kubectl -n markdown-view-system get pod | grep controller | awk '{print $1}'`
+$ kubectl -n markdown-view-system cp /tmp/haproxy.cfg $pod:/tmp/haproxy.cfg
+
+$ kubectl exec -n markdown-view-system $pod -c manager -- haproxy -f /tmp/haproxy.cfg
+```
+
+```
+$ go run . -metrics-bind-address :18080 -kubeconfig $KUBECONFIG
 ```
 
 ```
@@ -152,6 +159,11 @@ markdown-view-controller-manager-metrics-service   ClusterIP   10.32.0.181   <no
 markdown-view-webhook-service                      ClusterIP   10.32.0.225   <none>        443/TCP    7d1h
 ```
 
+```
+$ kubectl port-forward --address 0.0.0.0 svc/viewer-markdownview-sample 3000:80
+Forwarding from 0.0.0.0:3000 -> 3000
+```
+
 ## Reconcile
 
 - Reconcile 処理は下記のタイミングで呼び出される
@@ -162,3 +174,9 @@ markdown-view-webhook-service                      ClusterIP   10.32.0.225   <no
   - キャッシュを再同期するとき（デフォルトでは 10 時間に一回）
 - Reconcile 処理はデフォルトでは１秒間に 10 回以上実行されないように制限されています
   - また、これらのイベントが高い頻度で発生する場合は、Reconcile Loop を並列実行するように設定可能です
+
+## テスト
+
+envtest は etcd と kube-apiserver を立ち上げてテスト用の環境を構築します。 また環境変数 USE_EXISTING_CLUSTER を指定すれば、既存の Kubernetes クラスターを利用したテストをおこなうことも可能です。
+
+Envtest では、etcd と kube-apiserver のみを立ち上げており、controller-manager や scheduler は動いていません。 そのため、Deployment や CronJob リソースを作成しても、Pod は作成されないので注意してください。
