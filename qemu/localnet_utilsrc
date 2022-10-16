@@ -1,0 +1,257 @@
+#!/bin/bash
+
+function hoge() {
+    echo $1
+    shift
+    nicOption=""
+    for i in $@
+    do
+        declare -n port=$i
+        nicOption+=" -nic tap,ifname=${port[name]}-tap,model=virtio-net-pci,mac=${port[vmMap]},script=no,script=no,downscript=no "
+    done
+    echo "aaa" $nicOption
+}
+
+function prepareBridge() {
+    declare -n _data=$1
+
+    bridge=${_data[bridge]}
+    sudo ip link show $bridge || sudo ip link add $bridge type bridge
+    vmSubnet=${_data[vmSubnet]}
+    if ip a show $bridge | grep "$vmSubnet"; then
+        sudo ip addr add dev $bridge $vmSubnet
+        sudo ip link set $bridge up
+    fi
+
+
+    #
+    # Setup netns
+    #
+    # netns=${_data[name]}
+    # exLink=${netns}-ex
+    # inLink=${netns}-in
+
+    # ip netns | grep $netns || sudo ip netns add $netns
+
+    # ip link | grep $exLink || sudo ip link add $exLink type veth peer name $inLink
+
+    # sudo ip link set $exLink up
+    # sudo sysctl -w net.ipv4.conf.$exLink.forwarding=1
+    # sudo sysctl -w net.ipv4.conf.$exLink.proxy_arp=1
+    # ip route | grep ${_vmdata[vmIp]} || sudo ip route add ${_vmdata[vmIp]} dev $exLink
+    # ip route | grep ${_vmdata[netnsIp]} || sudo ip route add ${_vmdata[netnsIp]} dev $exLink
+
+    # sudo ip netns exec $netns ip link | grep $inLink || sudo ip link set $inLink netns $netns
+
+    # sudo ip netns exec $netns ip a | grep ${_vmdata[netnsIp]} || sudo ip netns exec $netns ip addr add dev $inLink ${_vmdata[netnsIp]}/32
+    # sudo ip netns exec $netns ip link set lo up
+    # sudo ip netns exec $netns ip link set $inLink up
+    # sudo ip netns exec $netns sysctl -w net.ipv4.conf.$inLink.proxy_arp=1
+
+    # sudo ip netns exec $netns ip route | grep ${_vmdata[netnsGateway]} || sudo ip netns exec $netns ip route add ${_vmdata[netnsGateway]} dev $inLink
+    # sudo ip netns exec $netns ip route | grep default || sudo ip netns exec $netns ip route add default via ${_vmdata[netnsGateway]}
+
+    # #
+    # # Setup NAT by iptables
+    # #
+    # iptables -t nat -L | grep MASQUERADE | grep "tcp  --  ${_vmdata[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -p TCP -s ${_vmdata[vmSubnet]} ! -d ${_vmdata[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
+    # iptables -t nat -L | grep MASQUERADE | grep "udp  --  ${_vmdata[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -p UDP -s ${_vmdata[vmSubnet]} ! -d ${_vmdata[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
+    # iptables -t nat -L | grep RETURN | grep "${_vmdata[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -s ${_vmdata[vmSubnet]} -d 255.255.255.255 -j RETURN
+
+
+    # sudo iptables -P FORWARD ACCEPT
+}
+
+function prepareConfigdrive() {
+    declare -n _vmdata=$1
+    shift
+
+    vmDir=$VM_DIR/${_vmdata[name]}
+    mkdir -p $vmDir
+
+    configImagePath=$vmDir/config.img
+    metadataPath=$vmDir/meta-data
+    userdataPath=$vmDir/user-data
+
+    cat << EOS > $metadataPath
+hostname: ${_vmdata[name]}
+EOS
+
+
+    setupNetScript=""
+    for i in $@
+    do
+        declare -n port=$i
+        setupNetScript+=$(cat << EOS
+dev${i}=\`grep ${port[vmMac]} /sys/class/net/*/address -l | awk -F '/' '{print \$5}'\`
+ip addr add ${port[vmIpSubnet]} dev \$dev${i}
+ip link set \$dev${i} up
+ip route add ${port[netnsIp]} via ${port[vmIp]}
+EOS
+
+)
+    done
+
+
+    cat << EOS > $userdataPath
+${setupNetScript}
+
+ip route add default via ${_vmdata[defaultGateway]}
+
+
+# ------------------------------
+# Setup resolver for Centos7
+# ------------------------------
+if "\${isCentos7}"; then
+  cat << 'EOT' > /etc/resolv.conf
+nameserver ${_vmdata[resolver]}
+EOT
+fi
+# End isCentos7
+
+
+# ------------------------------
+# Setup resolver for Rocky8
+# ------------------------------
+if "\${isRocky8}"; then
+  cat << 'EOT' > /etc/resolv.conf
+nameserver ${_vmdata[resolver]}
+EOT
+fi
+# End isRocky8
+
+
+# ------------------------------
+# Setup resolver for Ubuntu18, Ubuntu20
+# ------------------------------
+if [ "\${isUbuntu18}" = true -o "\${isUbuntu20}" = true ]; then
+  mkdir -p /etc/systemd/resolved.conf.d/
+  cat << 'EOT' > /etc/systemd/resolved.conf.d/goapp.conf
+[Resolve]
+DNS=${_vmdata[resolver]}
+# FallbackDNS=
+# Domains=
+LLMNR=no
+MulticastDNS=no
+DNSSEC=no
+Cache=yes
+DNSStubListener=yes
+EOT
+  systemctl enable systemd-resolved
+  systemctl restart systemd-resolved
+fi
+# End isUbuntu18
+EOS
+    genisoimage -o ${configImagePath} -V cidata -r -J $metadataPath $userdataPath
+}
+
+function startQemu() {
+    declare -n _vmdata=$1
+    shift
+
+    vmDir=$VM_DIR/${_vmdata[name]}
+    mkdir -p $vmDir
+
+    imagePath=$vmDir/img
+    srcImagePath=$IMAGE_DIR/${_vmdata[image]}
+    test -e ${imagePath} || cp ${srcImagePath} ${imagePath} && qemu-img resize ${imagePath} ${_vmdata[disk]}
+
+    configImagePath=$vmDir/config.img
+    monitorSocketPath=$vmDir/monitor.sock
+    serialSocketPath=$vmDir/serial.sock
+    serialLogPath=$vmDir/serial.log
+
+    nicOption=""
+    for i in $@
+    do
+        declare -n port=$i
+        nicOption+=" -nic tap,ifname=${port[name]}-tap,model=virtio-net-pci,mac=${port[vmMac]},script=no,script=no,downscript=no "
+    done
+
+    echo "debug vcpus" ${_vmdata[vcpus]}
+
+    sudo qemu-system-x86_64 \
+        -enable-kvm -machine q35,accel=kvm \
+        -cpu host \
+        -smp cores=${_vmdata[vcpus]} \
+        -m ${_vmdata[mem]}M,slots=64,maxmem=1024G \
+        -object memory-backend-file,id=mem1,size=${_vmdata[mem]}M,mem-path=/dev/hugepages/${_vmdata[name]},host-nodes=0,policy=bind \
+        -numa node,nodeid=0,memdev=mem1 \
+        -drive id=bootdisk1,file=${imagePath},if=none \
+        -device virtio-blk-pci,scsi=off,drive=bootdisk1,bootindex=1 \
+        -drive file=${configImagePath},format=raw,if=none,id=drive-ide0-1-0,readonly=on \
+        -device amd-iommu \
+        -device ide-cd,bus=ide.1,unit=0,drive=drive-ide0-1-0,id=ide0-1-0 \
+        $nicOption \
+        -monitor unix:${monitorSocketPath},server,nowait \
+        -serial unix:${serialSocketPath},server,nowait,logfile=${serialLogPath} \
+        -nographic \
+        &
+
+    pid=$!
+
+    sleep 2s
+
+    for i in $@
+    do
+        declare -n port=$i
+        netns=${port[name]}
+        vmIp=${port[vmIp]}
+        sudo ip link set ${netns}-tap netns ${netns}
+        sudo ip netns exec ${netns} ip link set ${netns}-tap up
+        sudo ip netns exec ${netns} ip route | grep ${vmIp} || sudo ip netns exec ${netns} ip route add ${vmIp} dev ${netns}-tap
+        sudo ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.forwarding=1
+        sudo ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.forwarding=1
+        sudo ip netns exec ${netns} sysctl -w net.ipv4.conf.${netns}-tap.proxy_arp=1
+    done
+
+    # jobs
+    # fg
+}
+
+
+function stopQemu() {
+    declare -n _vmdata=$1
+
+    pid=`ps ax | grep ${_vmdata[name]} | grep [q]emu-system | awk '{print $1}'`
+    if [ -n "$pid" ]; then
+        sudo kill $pid
+    fi
+}
+
+function destroyQemu() {
+    declare -n destroyQemuVmdata=$1
+    stopQemu destroyQemuVmdata
+
+    vmDir=$VM_DIR/${destroyQemuVmdata[name]}
+    sudo rm -rf $vmDir
+
+    ssh-keygen -R ${destroyQemuVmdata[name]}
+}
+
+function logQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    serialLogPath=$vmDir/serial.log
+    cat $serialLogPath
+}
+
+function consoleQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    serialSocketPath=$vmDir/serial.sock
+    sudo minicom -D unix\#${serialSocketPath}
+}
+
+function monitorQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    monitorSocketPath=$vmDir/monitor.sock
+    sudo minicom -D unix\#${monitorSocketPath}
+}
+
+function registerPdns() {
+    declare -n _vmdata=$1
+    declare -n _portdata=$2
+    ../pdns/record.sh create example.com ${_vmdata[name]} ${_portdata[vmIp]}
+}
