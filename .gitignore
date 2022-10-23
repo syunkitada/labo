@@ -1,1 +1,6 @@
 tmp
+
+# python
+venv
+.pytest_cache
+*.pyc

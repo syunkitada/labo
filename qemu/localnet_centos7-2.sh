@@ -4,7 +4,7 @@ source envrc
 source localnet_utilsrc
 
 declare -A vmdata=(
-	["name"]="centos7-1.example.com"
+	["name"]="centos7-2.local.example.com"
 	["vcpus"]="4"
 	["mem"]="4096"
 	["disk"]="40G"
@@ -15,9 +15,10 @@ declare -A vmdata=(
 
 declare -A port1=(
     ["bridge"]="vm-br"
-	["name"]="com-0"
-	["vmMac"]="02:17:bd:b7:9b:7e"
-	["vmIp"]="192.168.200.2"
+	["name"]="com-2"
+	["vmMac"]="52:54:00:b7:9b:02"
+	["vmIp"]="192.168.200.12"
+	["vmIpSubnet"]="192.168.200.12/24"
 	["vmSubnet"]="192.168.200.1/24"
 )
 
@@ -44,10 +45,9 @@ EOS
 
 function start() {
     prepareBridge port1
-    # prepareNetns port1
-    # prepareConfigdrive vmdata port1
-    # startQemu vmdata port1
-    # registerPdns vmdata port1
+    prepareConfigdrive vmdata port1
+    startQemu vmdata port1
+    registerPdns vmdata port1
 }
 
 function stop() {
