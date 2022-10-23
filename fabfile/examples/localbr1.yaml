@@ -1,0 +1,46 @@
+infra:
+  - kind: nfs
+    name: nfs1
+    path: /var/nfs/exports
+    local_path: /mnt/nfs
+    exports:
+      - 192.168.210.0/24
+  - kind: gw
+    name: gw1
+    ip: 192.168.210.1/24
+
+vm_spec:
+  spec1:
+    vcpus: 4
+    ram: 4096
+    disk: 40
+
+vm_image:
+  centos7:
+    url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2.xz
+    nfs: nfs1
+    path: centos7
+
+node:
+  - kind: vm
+    name: vm1
+    spec: spec1
+    ports:
+      - ip: 192.168.210.11/24
+        link: gw1
+      - link: gw1
+  - kind: vm
+    name: vm2
+    spec: spec1
+    ports:
+      - ip: 192.168.210.12/24
+        link: gw1
+      - link: gw1
+  - kind: vm
+    name: vm3
+    ip: 192.168.210.13
+    spec: spec1
+    ports:
+      - ip: 192.168.210.13/24
+        link: gw1
+      - link: gw1

@@ -2,5 +2,6 @@ tmp
 
 # python
 venv
+.venv
 .pytest_cache
 *.pyc
