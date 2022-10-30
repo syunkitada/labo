@@ -3,17 +3,17 @@
 import ipaddress
 
 
-def make_gw(c, spec):
+def make_gw(c, spec, rspec):
     # setup bridge
-    br = c.sudo(f"ip addr show '{spec['name']}'", hide=True, warn=True)
+    br = c.sudo(f"ip addr show '{rspec['name']}'", hide=True, warn=True)
     if br.failed:
-        c.sudo(f"ip link add {spec['name']} type bridge")
+        c.sudo(f"ip link add {rspec['name']} type bridge")
 
-    if spec["ip"] not in br.stdout:
-        c.sudo(f"ip addr add dev '{spec['name']}' {spec['ip']}")
-        c.sudo(f"ip link set '{spec['name']}' up")
+    if rspec["ip"] not in br.stdout:
+        c.sudo(f"ip addr add dev '{rspec['name']}' {rspec['ip']}")
+        c.sudo(f"ip link set '{rspec['name']}' up")
 
-    ip = ipaddress.ip_interface(spec["ip"])
+    ip = ipaddress.ip_interface(rspec["ip"])
 
     # setup iptables for NAT
     masqueradeTcpMap = {}
@@ -33,8 +33,8 @@ def make_gw(c, spec):
             returnMap[columns[3]] = True
 
     if masqueradeTcpMap.get(ip.network) is None:
-        c.sudo(f"iptables -t nat -A POSTROUTING -p TCP -s {spec['ip']} ! -d {spec['ip']} -j MASQUERADE --to-ports 30000-40000")
+        c.sudo(f"iptables -t nat -A POSTROUTING -p TCP -s {rspec['ip']} ! -d {rspec['ip']} -j MASQUERADE --to-ports 30000-40000")
     if masqueradeUdpMap.get(ip.network) is None:
-        c.sudo(f"iptables -t nat -A POSTROUTING -p UDP -s {spec['ip']} ! -d {spec['ip']} -j MASQUERADE --to-ports 30000-40000")
+        c.sudo(f"iptables -t nat -A POSTROUTING -p UDP -s {rspec['ip']} ! -d {rspec['ip']} -j MASQUERADE --to-ports 30000-40000")
     if returnMap.get(ip.network) is None:
-        c.sudo(f"iptables -t nat -A POSTROUTING -s {spec['ip']} -d 255.255.255.255 -j RETURN")
+        c.sudo(f"iptables -t nat -A POSTROUTING -s {rspec['ip']} -d 255.255.255.255 -j RETURN")

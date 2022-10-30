@@ -1,14 +1,14 @@
 # nfs utils
 
 
-def make_nfs(c, spec):
-    c.sudo(f"mkdir -p {spec['path']}", hide=True)
-    c.sudo(f"chown nobody.nogroup {spec['path']}", hide=True)
+def make(c, spec, rspec):
+    c.sudo(f"mkdir -p {rspec['path']}", hide=True)
+    c.sudo(f"chown nobody.nogroup {rspec['path']}", hide=True)
 
     exports_strs = []
-    exports_strs.append(f"{spec['path']} 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)")
-    for export in spec["exports"]:
-        exports_strs.append(f"{spec['path']} {export}(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)")
+    exports_strs.append(f"{rspec['path']} 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)")
+    for export in rspec["exports"]:
+        exports_strs.append(f"{rspec['path']} {export}(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)")
 
     c.sudo(
         """sh -c 'cat << EOS | sudo tee /etc/exports
@@ -36,4 +36,4 @@ EOS'""".format(
     # -r すべてのディレクトリを再exportする、/var/lib/nfs/xtabを/etc/exportsと同期させる
     c.sudo("exportfs -ra", hide=True)
 
-    c.sudo(f"mount -t nfs localhost:/ {spec['local_path']}", hide=True)
+    c.sudo(f"mount -t nfs localhost:/ {rspec['local_path']}", hide=True)

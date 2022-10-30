@@ -1,48 +1,98 @@
+import re
+import os
 import getpass
-import yaml
 from fabric import task, Config, Connection
 
-from lib.virt_utils import router, vm
+from lib.virt_utils import router, vm, vm_image
 from lib.nfs_utils import nfs
+from lib.ctx_utils import patch_ctx
+from lib.resolver_utils import pdns
+from lib.mysql_utils import mysql
+from lib.spec_utils import loader
 
 
 @task
-def make(_, file, target="all", host="localhost"):
-    with open(file) as f:
-        env_file = yaml.safe_load(f)
+def make(c, file, target="all", host="localhost"):
+    context_config = {}
+    context_config.update(
+        {
+            "run": {
+                "echo": True,
+                "echo_format": "{command}",
+            },
+            "sudo": {
+                "echo": True,
+                "echo_format": "{command}",
+            },
+            "local": {
+                "echo": True,
+                "echo_format": "{command}",
+            },
+        }
+    )
+    if os.environ.get("SUDO_USER") is None or host != "localhost":
+        sudo_pass = getpass.getpass("Input your sudo password > ")
+        context_config["sudo"] = {"password": sudo_pass}
+    if host != "localhost":
+        c = Connection(host, config=Config(context_config))
+    else:
+        c.config.update(context_config)
 
-    sudo_pass = getpass.getpass("Input your sudo password > ")
-    config = Config()
-    config["sudo"] = {"password": sudo_pass}
+    patch_ctx(c)
+    c.update_ctx()
 
-    conn = Connection(host, config=config)
+    spec = loader.load_spec(file)
+
+    re_targets = []
+    targets = target.split(":")
+    target_kind = targets[0]
+    if len(targets) > 1:
+        target_strs = targets[1].split(",")
+        for t in target_strs:
+            re_targets.append(re.compile(t))
 
     make_infra = False
+    make_image = False
     make_node = False
-    if target == "all" or target == "infra":
+    if target_kind == "all" or target_kind == "infra":
         make_infra = True
-    if target == "all" or target == "node":
+    if target_kind == "all" or target_kind == "image":
+        make_image = True
+    if target_kind == "all" or target_kind == "node":
         make_node = True
 
-    infra_map = {}
-    for node in env_file["infra"]:
-        infra_map[node["name"]] = node
-        if not make_infra:
-            continue
-        if node["kind"] == "nfs":
-            nfs.make_nfs(conn, node)
-        elif node["kind"] == "gw":
-            router.make_gw(conn, node)
-
-        if not make_infra:
-            continue
-
     if make_infra:
-        for name, image in env_file["vm_image"].items():
-            image["name"] = name
-            vm.make_image(conn, image, infra_map)
+        for rspec in spec.get("infras", []):
+            if not_target(rspec, re_targets):
+                continue
+            elif rspec["kind"] == "mysql":
+                mysql.make(c, spec, rspec)
+            elif rspec["kind"] == "pdns":
+                pdns.make(c, spec, rspec)
+            elif rspec["kind"] == "nfs":
+                nfs.make(c, spec, rspec)
+            elif rspec["kind"] == "gw":
+                router.make_gw(c, spec, rspec)
+
+    if make_image:
+        for rspec in spec.get("vm_images", []):
+            if not_target(rspec, re_targets):
+                continue
+            vm_image.make(c, spec, rspec)
 
     if make_node:
-        for node in env_file["node"]:
-            if node["kind"] == "vm":
-                vm.make_vm(conn, node)
+        for rspec in spec.get("nodes", []):
+            if not_target(rspec, re_targets):
+                continue
+            if rspec["kind"] == "vm":
+                vm.make(c, spec, rspec)
+
+
+def not_target(rspec, re_targets):
+    if len(re_targets) == 0:
+        return False
+    name = rspec["name"]
+    for r in re_targets:
+        if r.match(name):
+            return False
+    return True
