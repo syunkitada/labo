@@ -16,19 +16,22 @@ def load_spec(file):
 
 
 def complete_spec(spec):
+    spec["conf"] = load_conf(spec)
+
     template_map = {}
     for rspec in spec["templates"]:
         template_map[rspec["name"]] = rspec
 
     infra_map = {}
-    for rspec in spec["infras"]:
+    for rspec in spec.get("infras", []):
         infra_map[rspec["name"]] = rspec
+        if rspec["kind"] == "pdns":
+            for record in rspec.get("records", []):
+                record["fqdn"] = record["name"] + "." + spec["conf"]["domain"]
     spec["_infra_map"] = infra_map
 
-    spec["conf"] = load_conf(spec)
-
     vm_image_map = {}
-    for rspec in spec["vm_images"]:
+    for rspec in spec.get("vm_images", []):
         rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], rspec["name"])
         vm_image_map[rspec["name"]] = rspec
     spec["_vm_image_map"] = vm_image_map
@@ -49,7 +52,7 @@ def complete_spec(spec):
 
         if rspec["kind"] == "vm":
             vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])
-            rspec["_hostname"] = rspec["name"] + "." + rspec["domain"]
+            rspec["_hostname"] = rspec["name"] + "." + spec["conf"]["domain"]
             rspec["_image"] = vm_image_map[rspec["image"]]
             rspec["_vm_dir"] = vm_dir
             rspec["_image_path"] = os.path.join(vm_dir, "img")
@@ -79,10 +82,10 @@ def load_conf(spec):
         ),
     )
 
-    nfs_path = spec["_infra_map"]["nfs"]["path"]
     conf = {
-        "vm_images_dir": os.path.join(nfs_path, "vm_images"),
+        "domain": f"{spec['common']['namespace']}.example.com",
         "vms_dir": "/opt/labo/vms",
+        "vm_images_dir": "/var/nfs/exports/vm_images",
     }
 
     if os.path.exists(conf_path):

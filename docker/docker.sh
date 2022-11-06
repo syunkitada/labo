@@ -47,5 +47,15 @@ function setup() {
     sudo systemctl restart docker
 }
 
+function setup-registry() {
+    name=docker-registry
+    sudo docker ps | grep " ${name}$" || \
+        ( \
+            ((sudo docker ps --all | grep " ${name}$" && sudo docker rm ${name}) || echo "${name} not found") && \
+            sudo docker run -d --rm --net host --name ${name} \
+                -v "/var/lib/docker-registry":/var/lib/registry \
+                registry:2
+        )
+}
 
 $COMMAND

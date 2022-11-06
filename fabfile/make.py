@@ -1,6 +1,5 @@
 import re
 import os
-import getpass
 from fabric import task, Config, Connection
 
 from lib.virt_utils import router, container, vm, vm_image
@@ -9,10 +8,13 @@ from lib.ctx_utils import patch_ctx
 from lib.resolver_utils import pdns
 from lib.mysql_utils import mysql
 from lib.spec_utils import loader
+from lib import bootstrap_utils
 
 
 @task
-def make(c, file, target="all", host="localhost", cmd="make"):
+def make(c, file, target="all", cmd="make"):
+    spec = loader.load_spec(file)
+
     context_config = {}
     context_config.update(
         {
@@ -30,18 +32,32 @@ def make(c, file, target="all", host="localhost", cmd="make"):
             },
         }
     )
-    if os.environ.get("SUDO_USER") is None or host != "localhost":
-        sudo_pass = getpass.getpass("Input your sudo password > ")
-        context_config["sudo"] = {"password": sudo_pass}
-    if host != "localhost":
-        c = Connection(host, config=Config(context_config))
+    if os.environ.get("SUDO_USER") is None:
+        print("Use sudo")
+        exit(1)
+
+    common = spec.get("common")
+    host = None
+    connect_kwargs = {}
+    if common is not None:
+        host_pass = common.get("host_pass")
+        if host_pass is not None:
+            context_config["sudo"]["password"] = host_pass
+            connect_kwargs["password"] = host_pass
+        host_user = common.get("host_user")
+        if host_user is not None:
+            context_config["user"] = host_user
+        host = common.get("host")
+    if host is not None:
+        c = Connection(host, config=Config(context_config), connect_kwargs=connect_kwargs)
     else:
         c.config.update(context_config)
 
+    if cmd == "bootstrap":
+        bootstrap_utils.init(c, spec)
+
     patch_ctx(c)
     c.update_ctx()
-
-    spec = loader.load_spec(file)
 
     re_targets = []
     targets = target.split(":")
