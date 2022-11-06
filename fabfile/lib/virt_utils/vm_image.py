@@ -1,6 +1,16 @@
 import os
 
 
+def cmd(cmd, c, spec, rspec):
+    if cmd == "make":
+        make(c, spec, rspec)
+    elif cmd == "clean":
+        clean(c, rspec)
+    elif cmd == "remake":
+        clean(c, rspec)
+        make(c, spec, rspec)
+
+
 def make(c, spec, rspec):
     if os.path.exists(rspec["_path"]):
         return
@@ -8,6 +18,10 @@ def make(c, spec, rspec):
         download(c, spec, rspec)
     if "base" in rspec:
         custom(c, spec, rspec)
+
+
+def clean(c, rspec):
+    c.sudo(f"rm -rf {rspec['_path']}")
 
 
 def download(c, spec, rspec):
@@ -64,6 +78,13 @@ def custom(c, spec, rspec):
 
 def custom_common(c, _, rspec):
     root = rspec["_tmp_mount_path"]
+
+    # c.sudo(f"chroot {root} groupadd debugger")
+    # c.sudo(f"chroot {root} useradd -g debugger debugger")
+    # c.sudo(f"echo 'debugger:debugger' | chroot {root} chpasswd")
+    # c.sudo(f"mkdir -p {root}/home/debugger")
+    # c.sudo(f"sed -i '$ i %debugger ALL=(ALL) ALL' {root}/etc/sudoers")
+
     c.sudo(f"cp /etc/resolv.conf {root}/etc/resolv.conf")
     with open(f"{root}/etc/systemd/system/labo-init.service", "w") as f:
         f.write(
@@ -76,7 +97,7 @@ After=network.target
 Type=oneshot
 ExecStart=/opt/labo/bin/labo-init
 RemainAfterExit=yes
-TimeoutSec=0
+TimeoutSec=60
 
 # Output needs to appear in instance console output
 StandardOutput=journal+console
@@ -89,8 +110,7 @@ WantedBy=multi-user.target
 
     labo_init = []
     labo_init += [
-        """
-#!/bin/bash
+        """#!/bin/bash
 set +x
 echo "start labo-init"
 """
@@ -147,13 +167,14 @@ function retry() {
 
     with open(f"{root}/opt/labo/bin/labo-init", "w") as f:
         f.write("\n".join(labo_init))
+    c.sudo(f"chmod 755 {root}/opt/labo/bin/labo-init")
 
 
 def custom_centos7(c, _, rspec):
     root = rspec["_tmp_mount_path"]
     c.sudo(f"chroot {root} systemctl enable labo-init")
     c.sudo(f"chroot {root} yum remove -y cloud-init")
-    c.sudo(f"chroot {root} yum install -y dnsmasq")
+    c.sudo(f"chroot {root} yum install -y dnsmasq tcpdump")
     # selinuxを無効化しておく
     c.sudo(f"sed -i  's/^SELINUX=.*/SELINUX=disabled/g' {root}/etc/selinux/config")
     # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する

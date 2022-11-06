@@ -9,9 +9,6 @@ infras:
     local_path: /mnt/nfs
     exports:
       - 192.168.210.0/24
-  - kind: gw
-    name: gw1
-    ip: 192.168.210.1/24
 
 vm_images:
   - name: centos7
@@ -27,27 +24,26 @@ templates:
     ram: 4096
     disk: 40
     image: centos7_custom
+    domain: example.com
+    routes:
+      default: 192.168.210.1
+    resolvers:
+      - 192.168.210.1
 
 nodes:
+  - kind: gw
+    name: gw1
+    ip: 192.168.210.1/24
+    links:
+      - peer: vm1
+        peer_ips:
+          - inet: 192.168.210.11/24
+      - peer: vm2
+        peer_ips:
+          - inet: 192.168.210.12/24
   - kind: vm
     name: vm1
     templates: [vm1]
-    ports:
-      - ip: 192.168.210.11/24
-        link: gw1
-      - link: gw1
   - kind: vm
     name: vm2
     templates: [vm1]
-    ports:
-      - ip: 192.168.210.12/24
-        link: gw1
-      - link: gw1
-  - kind: vm
-    name: vm3
-    ip: 192.168.210.13
-    templates: [vm1]
-    ports:
-      - ip: 192.168.210.13/24
-        link: gw1
-      - link: gw1

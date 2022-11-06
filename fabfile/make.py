@@ -3,7 +3,7 @@ import os
 import getpass
 from fabric import task, Config, Connection
 
-from lib.virt_utils import router, vm, vm_image
+from lib.virt_utils import router, container, vm, vm_image
 from lib.nfs_utils import nfs
 from lib.ctx_utils import patch_ctx
 from lib.resolver_utils import pdns
@@ -12,7 +12,7 @@ from lib.spec_utils import loader
 
 
 @task
-def make(c, file, target="all", host="localhost"):
+def make(c, file, target="all", host="localhost", cmd="make"):
     context_config = {}
     context_config.update(
         {
@@ -56,36 +56,47 @@ def make(c, file, target="all", host="localhost"):
     make_node = False
     if target_kind == "all" or target_kind == "infra":
         make_infra = True
-    if target_kind == "all" or target_kind == "image":
-        make_image = True
     if target_kind == "all" or target_kind == "node":
         make_node = True
+    if target_kind == "image":
+        make_image = True
+
+    is_make = False
+    if cmd == "make":
+        is_make = True
 
     if make_infra:
         for rspec in spec.get("infras", []):
             if not_target(rspec, re_targets):
                 continue
             elif rspec["kind"] == "mysql":
-                mysql.make(c, spec, rspec)
+                if is_make:
+                    mysql.make(c, spec, rspec)
             elif rspec["kind"] == "pdns":
-                pdns.make(c, spec, rspec)
+                if is_make:
+                    pdns.make(c, spec, rspec)
             elif rspec["kind"] == "nfs":
-                nfs.make(c, spec, rspec)
-            elif rspec["kind"] == "gw":
-                router.make_gw(c, spec, rspec)
+                if is_make:
+                    nfs.make(c, spec, rspec)
 
     if make_image:
         for rspec in spec.get("vm_images", []):
             if not_target(rspec, re_targets):
                 continue
-            vm_image.make(c, spec, rspec)
+            vm_image.cmd(cmd, c, spec, rspec)
 
     if make_node:
         for rspec in spec.get("nodes", []):
             if not_target(rspec, re_targets):
                 continue
-            if rspec["kind"] == "vm":
-                vm.make(c, spec, rspec)
+            elif rspec["kind"] == "gw":
+                if is_make:
+                    router.make_gw(c, spec, rspec)
+            elif rspec["kind"] == "container":
+                if is_make:
+                    container.make(c, spec, rspec)
+            elif rspec["kind"] == "vm":
+                vm.cmd(cmd, c, spec, rspec)
 
 
 def not_target(rspec, re_targets):
