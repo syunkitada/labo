@@ -1,0 +1,33 @@
+imports:
+  - infra/common/local_spec.yaml
+
+common:
+  namespace: local
+
+templates:
+  - name: vm1
+    kind: vm
+    vcpus: 4
+    ram: 4096
+    disk: 40
+    image: ubuntu22_custom
+    routes:
+      default: 192.168.210.1
+    resolvers:
+      - 192.168.210.1
+
+nodes:
+  - kind: gw
+    name: gw1
+    ip: 192.168.210.1/24
+    links:
+      - peer: vm1
+        peer_ips:
+          - inet: 192.168.210.11/24
+      - peer: vm2
+        peer_ips:
+          - inet: 192.168.210.12/24
+  - name: vm1
+    templates: [vm1]
+  - name: vm2
+    templates: [vm1]

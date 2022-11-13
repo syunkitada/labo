@@ -70,6 +70,9 @@ def custom(c, spec, rspec):
     if rspec["base"] == "centos7":
         custom_common(c, spec, rspec)
         custom_centos7(c, spec, rspec)
+    elif rspec["base"] == "ubuntu20":
+        custom_common(c, spec, rspec)
+        custom_ubuntu20(c, spec, rspec)
 
     umount()
     c.sudo(f"cp {tmp_image_path} {rspec['_path']}")
@@ -85,7 +88,7 @@ def custom_common(c, _, rspec):
     # c.sudo(f"mkdir -p {root}/home/debugger")
     # c.sudo(f"sed -i '$ i %debugger ALL=(ALL) ALL' {root}/etc/sudoers")
 
-    c.sudo(f"cp /etc/resolv.conf {root}/etc/resolv.conf")
+    # c.sudo(f"cp /etc/resolv.conf {root}/etc/resolv.conf")
     with open(f"{root}/etc/systemd/system/labo-init.service", "w") as f:
         f.write(
             """
@@ -177,6 +180,17 @@ def custom_centos7(c, _, rspec):
     c.sudo(f"chroot {root} yum install -y dnsmasq tcpdump")
     # selinuxを無効化しておく
     c.sudo(f"sed -i  's/^SELINUX=.*/SELINUX=disabled/g' {root}/etc/selinux/config")
+    # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
+    # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
+    c.sudo(f"rm -rf {root}/lib/udev/rules.d/80-net-setup-link.rules")
+    # network-scripts/ifcfg-eth0(anacondaで作成された?)が残ってるので削除してく
+    c.sudo(f"rm -rf {root}/etc/sysconfig/network-scripts/ifcfg-eth0")
+
+
+def custom_ubuntu20(c, _, rspec):
+    root = rspec["_tmp_mount_path"]
+    c.sudo(f"chroot {root} systemctl enable labo-init")
+    c.sudo(f"chroot {root} apt remove -y cloud-init cloud-guest-utils cloud-initramfs-copymods cloud-initramfs-dyn-netconf")
     # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
     # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
     c.sudo(f"rm -rf {root}/lib/udev/rules.d/80-net-setup-link.rules")

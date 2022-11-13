@@ -19,12 +19,11 @@ infras:
       - 192.168.210.0/24
 
 vm_images:
-  - name: centos7
-    url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2.xz
+  - name: ubuntu20
+    url: https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img
     nfs: nfs1
-    path: centos7
-  - name: centos7_custom
-    base: centos7
+  - name: ubuntu20_custom
+    base: ubuntu20
 
 templates:
   - name: vm1
@@ -32,7 +31,7 @@ templates:
     vcpus: 4
     ram: 4096
     disk: 40
-    image: centos7_custom
+    image: ubuntu20_custom
     routes:
       default: 192.168.210.1
     resolvers:

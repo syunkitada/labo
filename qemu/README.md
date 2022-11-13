@@ -62,22 +62,22 @@ Number  Start   End     Size    File system  Name  Flags
          1      116MB   2361MB  2245MB  ext4
                  2361MB  21.5GB  19.1GB  Free Space
 
-                 (parted) resizepart 1
-                 Warning: Partition /dev/vda1 is being used. Are you sure you want to continue?
-                 Yes/No? yes
-                 End?  [2361MB]? 100%
-                 (parted) p free
-                 Model: Virtio Block Device (virtblk)
-                 Disk /dev/vda: 21.5GB
-                 Sector size (logical/physical): 512B/512B
-                 Partition Table: gpt
-                 Disk Flags:
+(parted) resizepart 1
+Warning: Partition /dev/vda1 is being used. Are you sure you want to continue?
+Yes/No? yes
+End?  [2361MB]? 100%
+(parted) p free
+Model: Virtio Block Device (virtblk)
+Disk /dev/vda: 21.5GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags:
 
-                 Number  Start   End     Size    File system  Name  Flags
-                         17.4kB  1049kB  1031kB  Free Space
-                         14      1049kB  5243kB  4194kB                     bios_grub
-                         15      5243kB  116MB   111MB   fat32              boot, esp
-                          1      116MB   21.5GB  21.4GB  ext4
+Number  Start   End     Size    File system  Name  Flags
+     17.4kB  1049kB  1031kB  Free Space
+     14      1049kB  5243kB  4194kB                     bios_grub
+     15      5243kB  116MB   111MB   fat32              boot, esp
+      1      116MB   21.5GB  21.4GB  ext4
 
 (parted) quit
 Information: You may need to update /etc/fstab.

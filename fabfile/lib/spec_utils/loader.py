@@ -9,7 +9,15 @@ MAC_OUI = [0x00, 0x16, 0x3E]
 
 def load_spec(file):
     with open(file) as f:
-        spec = yaml.safe_load(f)
+        tmp_spec = yaml.safe_load(f)
+
+    spec = {}
+    for spec_path in tmp_spec.get("imports", []):
+        with open(spec_path) as f:
+            imported_spec = yaml.safe_load(f)
+            spec.update(imported_spec)
+
+    spec.update(tmp_spec)
 
     complete_spec(spec)
     return spec

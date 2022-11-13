@@ -26,6 +26,22 @@ def cmd(cmd, c, spec, rspec):
         c.sudo(f"minicom -D unix#{rspec['_serial_socket_path']}", pty=True)
     elif cmd == "monitor":
         c.sudo(f"minicom -D unix#{rspec['_monitor_socket_path']}", pty=True)
+    else:
+        print(
+            """# vm help
+-t vm:{0} -c dump
+-t vm:{0} -c make
+-t vm:{0} -c clean
+-t vm:{0} -c remake
+-t vm:{0} -c stop
+-t vm:{0} -c restart
+-t vm:{0} -c log
+-t vm:{0} -c console
+-t vm:{0} -c monitor
+""".format(
+                rspec["name"]
+            )
+        )
 
 
 def make(c, spec, rspec):
@@ -60,6 +76,7 @@ def _make_config_drive(c, spec, rspec):
         "useradd -g admin admin",
         "echo 'admin:admin' | chpasswd",
         "mkdir -p /home/admin",
+        "chown -R admin:admin /home/admin",
         "sed -i '$ i %admin ALL=(ALL) ALL' /etc/sudoers",
     ]
 
@@ -71,19 +88,39 @@ def _make_config_drive(c, spec, rspec):
         for ip in link.get("peer_ips", []):
             userdata += [f"ip addr add {ip['inet']} dev $dev{i}"]
 
-    # osによって挙動を変える場合
-    if rspec["_image"]["base"] == "centos7":
-        pass
-
     # setup routes
     for to, route in rspec.get("routes", {}).items():
         userdata += [f"ip route add {to} via {route}"]
 
-    # setup resolver
-    userdata += ["cat << 'EOS' > /etc/resolv.conf"]
-    for resolver in rspec.get("resolvers", []):
-        userdata += [f"nameserver {resolver}"]
-    userdata += ["EOS"]
+    # osによって挙動を変える場合
+    if rspec["_image"]["base"] == "centos7":
+        # setup resolver
+        userdata += ["cat << 'EOS' > /etc/resolv.conf"]
+        for resolver in rspec.get("resolvers", []):
+            userdata += [f"nameserver {resolver}"]
+        userdata += ["EOS"]
+    elif rspec["_image"]["base"] in ["ubuntu20", "ubuntu22"]:
+        userdata += [
+            "mkdir -p /etc/systemd/resolved.conf.d/",
+            "cat << 'EOT' > /etc/systemd/resolved.conf.d/labo.conf",
+        ]
+        for resolver in rspec.get("resolvers", []):
+            userdata += [
+                "[Resolve]",
+                f"DNS={resolver}",
+                # FallbackDNS=
+                # Domains=
+                "LLMNR=no",
+                "MulticastDNS=no",
+                "DNSSEC=no",
+                "Cache=yes",
+                "DNSStubListener=yes",
+            ]
+        userdata += [
+            "EOT",
+            "systemctl enable systemd-resolved",
+            "systemctl restart systemd-resolved",
+        ]
 
     with open(rspec["_userdata_path"], "w") as f:
         f.write("\n".join(userdata))

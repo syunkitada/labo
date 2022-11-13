@@ -124,6 +124,25 @@
 
 ## 参考
 
-- [Segment Routing チュートリアル:20170718](https://www.janog.gr.jp/meeting/janog40/application/files/2415/0051/7614/janog40-sr-kamata-takeda-00.pdf)
-- [SONiC + P4 によるマルチテナント SRv6 サービスチェイニングの実現](https://www.janog.gr.jp/meeting/janog46/wp-content/uploads/2020/06/JANOG46_SONiCSRv6P4_v.0.14.pdf)
-- [Youtube:「LINE による SRv6 の挑戦に関して」城倉 弘樹 (LINE 株式会社)](https://www.youtube.com/watch?v=B6MqxXVD1aE)
+- [2017.07.18: Segment Routing チュートリアル](https://www.janog.gr.jp/meeting/janog40/application/files/2415/0051/7614/janog40-sr-kamata-takeda-00.pdf)
+  - 必読、とりあえずこれを読むのがよい
+- [2021.09.03: Youtube:「LINE による SRv6 の挑戦に関して」城倉 弘樹 (LINE 株式会社)](https://www.youtube.com/watch?v=B6MqxXVD1aE)
+  - LINE の事例ベースなので実利用のイメージができてとてもよかった
+  - 関連
+    - [2021.07.15: High Functional Cloud NFV System Design and Implementation at LINE Cloud](https://www.janog.gr.jp/meeting/janog48/linenfv/)
+      - NFV のコントローラ周りの話
+    - [2020.09.25: Hyperscale distributed NAT system and software engineering](https://www.youtube.com/watch?v=FV_TrlxnWQo)
+      - NAT 周りの話
+- [2020.08.27: SONiC + P4 によるマルチテナント SRv6 サービスチェイニングの実現](https://www.janog.gr.jp/meeting/janog46/wp-content/uploads/2020/06/JANOG46_SONiCSRv6P4_v.0.14.pdf)
+- [linux](https://www.segment-routing.net/open-software/linux/)
+  - SRv6 の Linux 実装について
+  - 関連
+    - [Lab 9: Introduction to Segment Routing over IPv6 (SRv6)](<http://ce.sc.edu/cyberinfra/workshops/wast_june_2021_WS1/Day5%20-%20Lab%209%20Introduction%20to%20Segment%20Routing%20over%20IPv6%20(SRv6).pdf>)
+    - [2017.12.16: Linux で IPv6 Segment Routing (SRv6)を試す](https://skjune12.hatenadiary.com/entry/2017/12/16/223455)
+      - 使ってみた系 その 1
+      - Linux で試せるサンプルコードあり
+    - [2021.01.17: SRv6 の Linux Kernel 実装](https://blog.bobuhiro11.net/2021/01-17-srv6linux.html)
+      - 使ってみた系 その 2
+      - Linux で試せるサンプルコードあり
+      - 使ってみた系 その 1 と同じような内容で少しブラシュアップされてる
+        - その 1 よりもこっちを読んだほうがよい

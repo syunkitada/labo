@@ -24,3 +24,27 @@ $ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml -c clean
 # 以下は、node:vm1のコンソールログを出力します
 $ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml -t node:vm1 -c log
 ```
+
+## yaml フォーマット
+
+```
+# 汎用設定
+common:
+  ...
+
+# vmのimage管理用
+vm_images:
+  ...
+
+# テンプレート
+templates:
+  ...
+
+# ユニークなリソースを定義する場所(kindが重複できない)
+infras:
+  ...
+
+# リソースを定義する場所(kindは重複してよい)
+nodes:
+  ...
+```
