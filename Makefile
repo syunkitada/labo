@@ -1,7 +1,7 @@
 env:
 	# for fabfile
 	test -e .venv || python3 -m venv .venv
-	.venv/bin/pip install -r fabfile/requirements.txt
+	.venv/bin/pip install -r requirements.txt
 
 docker-image-centos7-nwnode:
 	sudo docker build -t labo/centos7-nwnode ./docker/images/centos7-nwnode
