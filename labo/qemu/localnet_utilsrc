@@ -1,0 +1,238 @@
+#!/bin/bash
+
+function hoge() {
+    echo $1
+    shift
+    nicOption=""
+    for i in $@
+    do
+        declare -n port=$i
+        nicOption+=" -nic tap,ifname=${port[name]}-tap,model=virtio-net-pci,mac=${port[vmMap]},script=no,script=no,downscript=no "
+    done
+    echo "aaa" $nicOption
+}
+
+function prepareBridge() {
+    declare -n _port=$1
+
+    bridge=${_port[bridge]}
+    sudo ip link show $bridge || sudo ip link add $bridge type bridge
+    vmSubnet=${_port[vmSubnet]}
+    if ! ip a show $bridge | grep "$vmSubnet"; then
+        sudo ip addr add dev $bridge $vmSubnet
+        sudo ip link set $bridge up
+    fi
+
+
+    #
+    # Setup NAT by iptables
+    #
+    iptables -t nat -L | grep MASQUERADE | grep "tcp  --  ${_port[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -p TCP -s ${_port[vmSubnet]} ! -d ${_port[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
+    iptables -t nat -L | grep MASQUERADE | grep "udp  --  ${_port[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -p UDP -s ${_port[vmSubnet]} ! -d ${_port[vmSubnet]} -j MASQUERADE --to-ports 30000-40000
+    iptables -t nat -L | grep RETURN | grep "${_port[vmSubnet]}" || sudo iptables -t nat -A POSTROUTING -s ${_port[vmSubnet]} -d 255.255.255.255 -j RETURN
+
+
+    sudo iptables -P FORWARD ACCEPT
+}
+
+function prepareConfigdrive() {
+    declare -n _vmdata=$1
+    shift
+
+    vmDir=$VM_DIR/${_vmdata[name]}
+    mkdir -p $vmDir
+
+    configImagePath=$vmDir/config.img
+    metadataPath=$vmDir/meta-data
+    userdataPath=$vmDir/user-data
+
+    cat << EOS > $metadataPath
+hostname: ${_vmdata[name]}
+EOS
+
+
+    isCentos7=false
+    isRocky8=false
+    isUbuntu20=false
+    if echo ${_vmdata[image]} | grep "centos7"; then
+        isCentos7=true
+    fi
+    if echo ${_vmdata[image]} | grep "rocky8"; then
+        isRocky8=true
+    fi
+    if echo ${_vmdata[image]} | grep "ubuntu20"; then
+        isUbuntu20=true
+    fi
+
+    setupNetScript=""
+    for i in $@
+    do
+        declare -n port=$i
+        setupNetScript+=$(cat << EOS
+dev${i}=\`grep ${port[vmMac]} /sys/class/net/*/address -l | awk -F '/' '{print \$5}'\`
+ip addr add ${port[vmIpSubnet]} dev \$dev${i}
+ip link set \$dev${i} up
+EOS
+
+)
+    done
+
+    setupResolverScript=""
+    if "${isCentos7}"; then
+        setupResolverScript="
+cat << 'EOT' > /etc/resolv.conf
+nameserver ${_vmdata[resolver]}
+EOT
+        "
+    fi
+    if "${isRocky8}"; then
+        setupResolverScript="
+cat << 'EOT' > /etc/resolv.conf
+nameserver ${_vmdata[resolver]}
+EOT
+        "
+    fi
+    if "${isUbuntu20}"; then
+        setupResolverScript="
+mkdir -p /etc/systemd/resolved.conf.d/
+cat << 'EOT' > /etc/systemd/resolved.conf.d/goapp.conf
+[Resolve]
+DNS=${_vmdata[resolver]}
+# FallbackDNS=
+# Domains=
+LLMNR=no
+MulticastDNS=no
+DNSSEC=no
+Cache=yes
+DNSStubListener=yes
+EOT
+systemctl enable systemd-resolved
+systemctl restart systemd-resolved
+        "
+    fi
+
+    cat << EOS > $userdataPath
+${setupNetScript}
+
+ip route add default via ${_vmdata[defaultGateway]}
+
+${setupResolverScript}
+EOS
+    genisoimage -o ${configImagePath} -V cidata -r -J $metadataPath $userdataPath
+}
+
+function startQemu() {
+    declare -n _vmdata=$1
+    shift
+
+    vmDir=$VM_DIR/${_vmdata[name]}
+    mkdir -p $vmDir
+
+    imagePath=$vmDir/img
+    srcImagePath=$IMAGE_DIR/${_vmdata[image]}
+    test -e ${imagePath} || cp ${srcImagePath} ${imagePath} && qemu-img resize ${imagePath} ${_vmdata[disk]}
+
+    configImagePath=$vmDir/config.img
+    monitorSocketPath=$vmDir/monitor.sock
+    serialSocketPath=$vmDir/serial.sock
+    serialLogPath=$vmDir/serial.log
+
+    nicOption=""
+    for i in $@
+    do
+        declare -n port=$i
+        nicOption+=" -nic tap,ifname=${port[name]}-tap,model=virtio-net-pci,mac=${port[vmMac]},script=no,script=no,downscript=no "
+    done
+
+    echo "debug vcpus" ${_vmdata[vcpus]}
+
+    sudo qemu-system-x86_64 \
+        -enable-kvm -machine q35,accel=kvm \
+        -cpu host \
+        -smp cores=${_vmdata[vcpus]} \
+        -m ${_vmdata[mem]}M,slots=64,maxmem=1024G \
+        -object memory-backend-file,id=mem1,size=${_vmdata[mem]}M,mem-path=/dev/hugepages/${_vmdata[name]},host-nodes=0,policy=bind \
+        -numa node,nodeid=0,memdev=mem1 \
+        -drive id=bootdisk1,file=${imagePath},if=none \
+        -device virtio-blk-pci,scsi=off,drive=bootdisk1,bootindex=1 \
+        -drive file=${configImagePath},format=raw,if=none,id=drive-ide0-1-0,readonly=on \
+        -device amd-iommu \
+        -device ide-cd,bus=ide.1,unit=0,drive=drive-ide0-1-0,id=ide0-1-0 \
+        $nicOption \
+        -monitor unix:${monitorSocketPath},server,nowait \
+        -serial unix:${serialSocketPath},server,nowait,logfile=${serialLogPath} \
+        -nographic \
+        &
+
+    pid=$!
+
+    sleep 2s
+
+    for i in $@
+    do
+        declare -n port=$i
+        portName=${port[name]}
+        vmIp=${port[vmIp]}
+        bridge=${port[bridge]}
+        sudo ip link set ${portName}-tap up
+        sudo ip link set dev ${portName}-tap master ${bridge}
+        bridge link show ${bridge}
+    done
+
+    # jobs
+    # fg
+}
+
+
+function stopQemu() {
+    declare -n _vmdata=$1
+
+    pid=`ps ax | grep ${_vmdata[name]} | grep [q]emu-system | awk '{print $1}'`
+    if [ -n "$pid" ]; then
+        sudo kill $pid
+    fi
+}
+
+function destroyQemu() {
+    declare -n destroyQemuVmdata=$1
+    stopQemu destroyQemuVmdata
+
+    vmDir=$VM_DIR/${destroyQemuVmdata[name]}
+    sudo rm -rf $vmDir
+
+    ssh-keygen -R ${destroyQemuVmdata[name]}
+}
+
+function logQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    serialLogPath=$vmDir/serial.log
+    cat $serialLogPath
+}
+
+function consoleQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    serialSocketPath=$vmDir/serial.sock
+    # minicomを終了する場合は、 ^aq を入力します
+    sudo minicom -D unix\#${serialSocketPath}
+}
+
+function monitorQemu() {
+    declare -n _vmdata=$1
+    vmDir=$VM_DIR/${_vmdata[name]}
+    monitorSocketPath=$vmDir/monitor.sock
+    sudo minicom -D unix\#${monitorSocketPath}
+}
+
+function registerPdns() {
+    declare -n _vmdata=$1
+    declare -n _portdata=$2
+    ../pdns/record.sh create example.com ${_vmdata[name]} ${_portdata[vmIp]}
+}
+
+function dumpUserData() {
+    vmDir=$VM_DIR/${vmdata[name]}
+    userdataPath=$vmDir/user-data
+    cat $userdataPath
+}

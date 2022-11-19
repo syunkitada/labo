@@ -1,1 +1,8 @@
 tmp
+tmp.md
+
+# python
+venv
+.venv
+.pytest_cache
+*.pyc
