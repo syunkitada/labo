@@ -92,8 +92,7 @@ def make(c, file, target="all", cmd="make"):
                 if is_make:
                     pdns.make(c, spec, rspec)
             elif rspec["kind"] == "nfs":
-                if is_make:
-                    nfs.make(c, spec, rspec)
+                nfs.cmd(cmd, c, spec, rspec)
 
     if make_image:
         for rspec in spec.get("vm_images", []):

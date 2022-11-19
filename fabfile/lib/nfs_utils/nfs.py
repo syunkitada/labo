@@ -1,7 +1,20 @@
 # nfs utils
 
 
-def make(c, spec, rspec):
+def cmd(cmd, c, spec, rspec):
+    if cmd == "dump":
+        print(rspec)
+    elif cmd == "status":
+        _status(c, spec, rspec)
+    elif cmd == "make":
+        _make(c, spec, rspec)
+
+
+def _status(c, spec, rspec):
+    c.sudo("cat /etc/exports")
+
+
+def _make(c, spec, rspec):
     c.sudo(f"mkdir -p {rspec['path']}", hide=True)
     c.sudo(f"chown nobody.nogroup {rspec['path']}", hide=True)
 

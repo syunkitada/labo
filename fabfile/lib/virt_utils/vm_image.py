@@ -72,7 +72,10 @@ def custom(c, spec, rspec):
         custom_centos7(c, spec, rspec)
     elif rspec["base"] == "ubuntu20":
         custom_common(c, spec, rspec)
-        custom_ubuntu20(c, spec, rspec)
+        ubuntu_common(c, spec, rspec)
+    elif rspec["base"] == "ubuntu22":
+        custom_common(c, spec, rspec)
+        ubuntu_common(c, spec, rspec)
 
     umount()
     c.sudo(f"cp {tmp_image_path} {rspec['_path']}")
@@ -187,7 +190,7 @@ def custom_centos7(c, _, rspec):
     c.sudo(f"rm -rf {root}/etc/sysconfig/network-scripts/ifcfg-eth0")
 
 
-def custom_ubuntu20(c, _, rspec):
+def ubuntu_common(c, _, rspec):
     root = rspec["_tmp_mount_path"]
     c.sudo(f"chroot {root} systemctl enable labo-init")
     c.sudo(f"chroot {root} apt remove -y cloud-init cloud-guest-utils cloud-initramfs-copymods cloud-initramfs-dyn-netconf")
@@ -196,3 +199,7 @@ def custom_ubuntu20(c, _, rspec):
     c.sudo(f"rm -rf {root}/lib/udev/rules.d/80-net-setup-link.rules")
     # network-scripts/ifcfg-eth0(anacondaで作成された?)が残ってるので削除してく
     c.sudo(f"rm -rf {root}/etc/sysconfig/network-scripts/ifcfg-eth0")
+    c.sudo(f"mkdir -p {root}/run/systemd/resolve/")
+    c.sudo(f"cp /etc/resolv.conf {root}/run/systemd/resolve/stub-resolv.conf")
+    c.sudo(f"chroot {root} apt install -y nfs-common")
+    c.sudo(f"rm {root}/run/systemd/resolve/stub-resolv.conf")

@@ -15,6 +15,9 @@ templates:
       default: 192.168.210.1
     resolvers:
       - 192.168.210.1
+    nfs:
+      target: 192.168.210.1
+      path: /mnt/nfs
 
 nodes:
   - kind: gw

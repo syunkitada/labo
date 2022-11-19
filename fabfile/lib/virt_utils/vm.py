@@ -122,6 +122,13 @@ def _make_config_drive(c, spec, rspec):
             "systemctl restart systemd-resolved",
         ]
 
+    nfs = rspec.get("nfs")
+    if nfs is not None:
+        userdata += [
+            f"mkdir -p {nfs['path']}",
+            f"mount -t nfs {nfs['target']}:/ {nfs['path']}",
+        ]
+
     with open(rspec["_userdata_path"], "w") as f:
         f.write("\n".join(userdata))
 
