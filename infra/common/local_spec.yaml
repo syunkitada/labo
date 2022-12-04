@@ -1,39 +1,45 @@
 infras:
-  - kind: mysql
-    name: mysql
-  - kind: pdns
-    name: resolver
+  - name: docker
+    kind: docker
+  - name: mysql
+    kind: mysql
+    root_password: rootpass
+    admin_user: admin
+    admin_password: adminpass
+  - name: pdns
+    kind: pdns
+    local_address: 192.168.210.1
     ns: 192.168.210.1
     records:
       - type: a
         name: docker-registry
         content: 192.168.210.1
-  - kind: nfs
-    name: nfs
+  - name: nfs
+    kind: nfs
     path: /var/nfs/exports
     local_path: /mnt/nfs
     exports:
       - 192.168.210.0/24
 
-vm_images:
-  - name: centos7
+vm_image_map:
+  centos7:
     url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2.xz
     nfs: nfs1
-  - name: centos7_custom
+  centos7_custom:
     base: centos7
-  - name: ubuntu20
+  ubuntu20:
     url: https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img
     nfs: nfs1
-  - name: ubuntu20_custom
+  ubuntu20_custom:
     base: ubuntu20
-  - name: ubuntu22
+  ubuntu22:
     url: https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img
     nfs: nfs1
-  - name: ubuntu22_custom
+  ubuntu22_custom:
     base: ubuntu22
-  - name: rocky8
+  rocky8:
     url: https://download.rockylinux.org/pub/rocky/8.6/images/Rocky-8-GenericCloud-8.6.20220702.0.x86_64.qcow2
     nfs: nfs1
-  - name: rocky9
+  rocky9:
     url: https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2
     nfs: nfs1

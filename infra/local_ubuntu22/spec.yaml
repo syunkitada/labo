@@ -4,8 +4,8 @@ imports:
 common:
   namespace: local
 
-templates:
-  - name: vm1
+template_map:
+  vm1:
     kind: vm
     vcpus: 4
     ram: 4096

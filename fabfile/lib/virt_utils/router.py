@@ -3,7 +3,14 @@
 import ipaddress
 
 
-def make_gw(c, spec, rspec):
+def cmd(cmd, c, spec, rspec):
+    if cmd == "dump":
+        print(rspec)
+    elif cmd == "make":
+        make(c, spec, rspec)
+
+
+def make(c, spec, rspec):
     # setup bridge
     br = c.sudo(f"ip addr show '{rspec['name']}'", hide=True, warn=True)
     if br.failed:

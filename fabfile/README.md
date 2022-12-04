@@ -1,6 +1,9 @@
-# fabfile for Infra As Code
+# fabfile for Infra As A Code
 
 - fabric によって、yaml ファイルで定義した仕様書からローカルに実験環境を作成できます
+- 方針
+  - なるべくコードはシェルスクリプトに落とし込んでブラックボックス化を避ける
+  - なるべくシェルスクリプト単体でも実行できるようにする
 
 ## 使い方
 
@@ -33,15 +36,15 @@ common:
   ...
 
 # vmのimage管理用
-vm_images:
+vm_image_map:
   ...
 
 # テンプレート
-templates:
+template_map:
   ...
 
 # ユニークなリソースを定義する場所(kindが重複できない)
-infras:
+infra_map:
   ...
 
 # リソースを定義する場所(kindは重複してよい)

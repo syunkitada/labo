@@ -1,4 +1,4 @@
-def cmd(c, spec, rspec):
+def cmd(cmd, c, spec, rspec):
     if cmd == "dump":
         print(rspec)
     elif cmd == "make":

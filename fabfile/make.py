@@ -1,19 +1,32 @@
 import re
 import os
+import yaml
 from fabric import task, Config, Connection
 
 from lib.virt_utils import router, container, vm, vm_image
-from lib.nfs_utils import nfs
 from lib.ctx_utils import patch_ctx
-from lib.resolver_utils import pdns
-from lib.mysql_utils import mysql
-from lib.spec_utils import loader
-from lib import bootstrap_utils
+from lib.infra_utils import docker, mysql, pdns, nfs, envrc
+from lib import spec_utils
 
 
 @task
-def make(c, file, target="all", cmd="make"):
-    spec = loader.load_spec(file)
+def make(c, file, target="node", cmd="make"):
+    """make -f [spec_file] -t [kind]:[name_regex] -c [cmd]
+    # target オプション
+    コマンドの実行対象を限定するために使用します。
+    kindは、infra, image, node のいずれかを指定でき、実行対象の種別を限定します。（デフォルトはnodeです）
+    [kind]の後ろに、:[name_regex]を指定することで、正規表現により実行対象の名前で限定します。
+
+    # cmd オプション
+    実行対象のリソースに対するコマンドを指定するために使用します。
+    cmdは、make, dump などが指定でき、これはリソースによってサポートされるコマンドが異なります。（デフォルトはmakeです）
+    makeは、リソースのスペックに基づいてリソースを実体化するコマンドで、すべてのリソースでサポートされています。
+    """
+
+    spec = spec_utils.load_spec(file)
+    if cmd == "spec":
+        print(yaml.safe_dump(spec))
+        return
 
     context_config = {}
     context_config.update(
@@ -50,14 +63,12 @@ def make(c, file, target="all", cmd="make"):
         host = common.get("host")
     if host is not None:
         c = Connection(host, config=Config(context_config), connect_kwargs=connect_kwargs)
+        c.is_local = False
     else:
         c.config.update(context_config)
+        c.is_local = True
 
-    if cmd == "bootstrap":
-        bootstrap_utils.init(c, spec)
-
-    patch_ctx(c)
-    c.update_ctx()
+    envrc.cmd(cmd, c, spec)
 
     re_targets = []
     targets = target.split(":")
@@ -77,41 +88,53 @@ def make(c, file, target="all", cmd="make"):
     if target_kind == "image":
         make_image = True
 
-    is_make = False
-    if cmd == "make":
-        is_make = True
-
     if make_infra:
         for rspec in spec.get("infras", []):
+            print(f"make infra {rspec['name']}: start")
             if not_target(rspec, re_targets):
+                print(f"make infra {rspec['name']}: skipped")
                 continue
+            elif rspec["kind"] == "docker":
+                docker.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "mysql":
-                if is_make:
-                    mysql.make(c, spec, rspec)
+                mysql.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "pdns":
-                if is_make:
-                    pdns.make(c, spec, rspec)
+                pdns.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "nfs":
                 nfs.cmd(cmd, c, spec, rspec)
+            else:
+                print(f"unsupported kind: kind={rspec['kind']}")
+                exit(1)
+            print(f"make infra {rspec['name']}: completed")
 
     if make_image:
-        for rspec in spec.get("vm_images", []):
+        for name, rspec in spec.get("vm_image_map", {}).items():
+            print(f"make image {name}: start")
             if not_target(rspec, re_targets):
+                print(f"make image {name}: skipped")
                 continue
             vm_image.cmd(cmd, c, spec, rspec)
+            print(f"make image {name}: completed")
 
     if make_node:
+        patch_ctx(c)
+        c.update_ctx()
+
         for rspec in spec.get("nodes", []):
+            print(f"make node {rspec['name']}: start")
             if not_target(rspec, re_targets):
+                print(f"make node {rspec['name']}: skipped")
                 continue
             elif rspec["kind"] == "gw":
-                if is_make:
-                    router.make_gw(c, spec, rspec)
+                router.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "container":
-                if is_make:
-                    container.make(c, spec, rspec)
+                container.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "vm":
                 vm.cmd(cmd, c, spec, rspec)
+            else:
+                print(f"unsupported kind: kind={rspec['kind']}")
+                exit(1)
+            print(f"make node {rspec['name']}: completed")
 
 
 def not_target(rspec, re_targets):

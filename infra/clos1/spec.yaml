@@ -1,3 +1,6 @@
+imports:
+  - infra/common/remote_spec.yaml
+
 common:
   namespace: clos
   host: 192.168.210.11
