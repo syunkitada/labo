@@ -6,14 +6,47 @@ common:
   host: 192.168.210.11
   host_user: admin
   host_pass: admin
+  nfs_path: /mnt/nfs
   insecure_docker_registry: docker-registry.local.example.com:5000
 
-templates:
-  - name: nwnode1
+ipam:
+  outer_network1:
+    subnet: 10.10.0.0/24
+    kind: l2
+  sp_network1:
+    subnet: 10.10.1.0/24
+    kind: l3
+
+template_map:
+  nwnode1:
     kind: container
     image: docker-registry.local.example.com:5000/labo/centos7-nwnode:latest
+    mtu: 9000
+    sysctl_map:
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.conf.all.disable_ipv6: 0
 
 nodes:
-  - name: sp1
+  - name: CL1
     templates:
       - nwnode1
+    routes:
+      - dst: default
+        via: ${links.0.peer_ips.0.ip}
+    links:
+      - peer: SP1
+        ips:
+          - inet: ${assign_inet4(outer_network1)}
+          - inet: ${inet4_to_inet6(links.0.ips.0.inet)}
+  - name: SP1
+    templates:
+      - nwnode1
+    lo_ips:
+      - inet: "${assign_inet4(sp_network1)}"
+    frr:
+      id: "${lo_ips.0.ip}"
+      asn: "${ipv4_to_asn(lo_ips.0.ip)}"
+      ipv4_networks:
+        - "${_node_map.CL1.links.0.ips.0.network}"
+      ipv6_networks:
+        - "${_node_map.CL1.links.0.ips.1.network}"
