@@ -38,6 +38,15 @@ def assign_inet4(network_name, spec):
     return inet
 
 
+def gateway_inet4(network_name, spec):
+    network = spec["ipam"][network_name]
+    ip_network = ipaddress.ip_network(network["subnet"])
+    if network["kind"] != "l2":
+        raise Exception("gateway_inet4 is supported by l2")
+    inet = str(ip_network[1]) + "/" + str(ip_network.prefixlen)
+    return inet
+
+
 def ipv4_to_asn(ipv4):
     ip_address = ipaddress.ip_address(ipv4)
     asn = PRIVATE_ASN_START

@@ -20,7 +20,7 @@ def update_dict(d, u):
 def complete_spec(spec):
     template_map = spec.get("template_map", {})
 
-    for _, network in spec["ipam"].items():
+    for _, network in spec.get("ipam", {}).items():
         if network["kind"] == "l2":
             network.update({"_next_ip": 2})
         elif network["kind"] == "l3":
@@ -46,7 +46,7 @@ def complete_spec(spec):
 
     vm_image_map = spec.get("vm_image_map", {})
     for name, rspec in vm_image_map.items():
-        rspec["_name"] = name
+        rspec["name"] = name
         rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
 
     node_map = {}
@@ -95,6 +95,15 @@ def complete_spec(spec):
                 for route_map in frr.get("route_maps", []):
                     for i, value in enumerate(route_map.get("prefix_list", [])):
                         route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
+        else:
+            rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
+
+        for route in rspec.get("routes", []):
+            route["dst"] = _complete_value(route["dst"], spec, rspec)
+            route["via"] = _complete_value(route["via"], spec, rspec)
+        for route in rspec.get("routes6", []):
+            route["dst"] = _complete_value(route["dst"], spec, rspec)
+            route["via"] = _complete_value(route["via"], spec, rspec)
 
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
@@ -123,6 +132,8 @@ def _complete_value(value, spec, node, is_get_src=False):
             value = _get_src(value, spec, node)
         elif func == "assign_inet4":
             value = ipam.assign_inet4(arg, spec)
+        elif func == "gateway_inet4":
+            value = ipam.gateway_inet4(arg, spec)
         elif func == "inet4_to_inet6":
             value = ipam.inet4_to_inet6(_complete_value(arg, spec, node, True))
         elif func == "ipv4_to_asn":

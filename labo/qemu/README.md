@@ -85,6 +85,26 @@ Information: You may need to update /etc/fstab.
 $ sudo resize2fs /dev/vda1
 ```
 
+スクリプトでリサイズする
+
+```
+parted "/dev/vda" ---pretend-input-tty <<EOF
+resizepart
+Fix
+quit
+EOF
+
+parted "/dev/vda" ---pretend-input-tty <<EOF
+resizepart
+1
+Yes
+100%
+quit
+EOF
+
+resize2fs /dev/vda1
+```
+
 ## cidata のマウント
 
 ```

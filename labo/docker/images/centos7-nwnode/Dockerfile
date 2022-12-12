@@ -3,6 +3,13 @@ FROM centos:7
 ENV container docker
 ENV FRRVER="frr-stable"
 
+RUN yum install -y systemd
+
+
+# 参考: [Systemdを使えるCentOSをDockerコンテナで立ててみた](https://qiita.com/kaburankattara/items/22e63d3861fc2f4f021e)
+# 注意: 親のcgroupをマウントする必要があるが、cgroupのバージョンがv1である必要がある
+# v2を利用する場合は、systemdのバージョンが247以上である必要がある
+
 # setup for systemd
 RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
     systemd-tmpfiles-setup.service ] || rm -f $i; done); \

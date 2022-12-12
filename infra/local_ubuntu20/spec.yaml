@@ -1,41 +1,25 @@
+imports:
+  - infra/common/local_spec.yaml
+
 common:
   namespace: local
+  nfs_path: /mnt/nfs
 
-infras:
-  - kind: mysql
-    name: mysql
-  - kind: pdns
-    name: resolver
-    ns: 192.168.210.1
-    records:
-      - type: a
-        name: docker-registry
-        content: 192.168.210.1
-  - kind: nfs
-    name: nfs
-    path: /var/nfs/exports
-    local_path: /mnt/nfs
-    exports:
-      - 192.168.210.0/24
-
-vm_images:
-  - name: ubuntu20
-    url: https://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img
-    nfs: nfs1
-  - name: ubuntu20_custom
-    base: ubuntu20
-
-templates:
-  - name: vm1
+template_map:
+  vm1:
     kind: vm
     vcpus: 4
     ram: 4096
     disk: 40
     image: ubuntu20_custom
     routes:
-      default: 192.168.210.1
+      - dst: default
+        via: 192.168.210.1
     resolvers:
       - 192.168.210.1
+    nfs:
+      target: 192.168.210.1
+      path: /mnt/nfs
 
 nodes:
   - kind: gw
