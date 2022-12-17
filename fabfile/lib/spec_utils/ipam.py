@@ -47,6 +47,12 @@ def gateway_inet4(network_name, spec):
     return inet
 
 
+def gateway_ip(network):
+    ip_network = ipaddress.ip_network(network)
+    inet = str(ip_network[1])
+    return inet
+
+
 def ipv4_to_asn(ipv4):
     ip_address = ipaddress.ip_address(ipv4)
     asn = PRIVATE_ASN_START

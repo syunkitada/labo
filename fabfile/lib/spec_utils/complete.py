@@ -1,4 +1,4 @@
-import yaml
+import copy
 import os
 import ipaddress
 
@@ -51,7 +51,7 @@ def complete_spec(spec):
 
     node_map = {}
     spec["_node_map"] = node_map
-    links = []
+    tmp_links = []
     for i, rspec in enumerate(spec["nodes"]):
         node_map[rspec["name"]] = rspec
         tmp_spec = {}
@@ -59,14 +59,18 @@ def complete_spec(spec):
             if template not in template_map:
                 print(f"template is not found: name={template}, templates={template_map.keys()}")
                 exit(1)
-            template_spec = template_map[template]
+            template_spec = copy.deepcopy(template_map[template])
             update_dict(tmp_spec, template_spec)
         update_dict(tmp_spec, rspec)
         rspec.update(tmp_spec)
 
         _complete_links(i, spec, rspec, rspec.get("links", []))
-        links += rspec.get("links", [])
+
+        tmp_links += rspec.get("links", [])
         rspec["_links"] = []
+        for i, link in enumerate(tmp_links):
+            if link["peer"] == rspec["name"]:
+                rspec["_links"].append(tmp_links.pop(i))
 
         if rspec["kind"] == "vm":
             vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])
@@ -105,11 +109,16 @@ def complete_spec(spec):
             route["dst"] = _complete_value(route["dst"], spec, rspec)
             route["via"] = _complete_value(route["via"], spec, rspec)
 
+        for bridge in rspec.get("bridges", []):
+            if "mtu" not in bridge:
+                bridge["mtu"] = rspec.get("mtu", 1500)
+            _complete_ips(bridge.get("ips", []), spec, rspec)
+
+        for ip_rule in rspec.get("ip_rules", []):
+            ip_rule["rule"] = _complete_value(ip_rule["rule"], spec, rspec)
+
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
-
-    for link in links:
-        node_map[link["peer"]]["_links"].append(link)
 
     return
 
@@ -134,12 +143,14 @@ def _complete_value(value, spec, node, is_get_src=False):
             value = ipam.assign_inet4(arg, spec)
         elif func == "gateway_inet4":
             value = ipam.gateway_inet4(arg, spec)
+        elif func == "gateway_ip":
+            value = ipam.gateway_ip(_complete_value(arg, spec, node, True))
         elif func == "inet4_to_inet6":
             value = ipam.inet4_to_inet6(_complete_value(arg, spec, node, True))
         elif func == "ipv4_to_asn":
             value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
         else:
-            raise Exception("unexpected func: {func}")
+            raise Exception(f"unexpected func: {func}")
         return value_prefix + str(value) + value_suffix
     else:
         if is_get_src:
@@ -172,8 +183,8 @@ def _complete_links(i, spec, rspec, links):
         if "mtu" not in link:
             link["mtu"] = rspec.get("mtu", 1500)
         link["src_name"] = rspec["name"]
-        link["link_name"] = f"{rspec['name']}_{i}_{link['peer']}"
-        link["peer_name"] = f"{link['peer']}_{i}_{rspec['name']}"
+        link["link_name"] = f"{rspec['name']}_{j}_{link['peer']}"
+        link["peer_name"] = f"{link['peer']}_{j}_{rspec['name']}"
         if "link_mac" not in link:
             link["link_mac"] = ":".join(map(lambda x: "%02x" % x, MAC_OUI + [i, j, 0]))
         if "peer_mac" not in link:

@@ -13,12 +13,15 @@ ipam:
   outer_network1:
     subnet: 10.10.0.0/24
     kind: l2
-  spine_network1:
+  spine_network:
     subnet: 10.10.1.0/24
     kind: l3
-  leaf_network1:
-    subnet: 10.10.1.0/24
+  leaf_network:
+    subnet: 10.10.2.0/24
     kind: l3
+  leaf1_l2admin_network:
+    subnet: 10.10.3.0/27
+    kind: l2
 
 template_map:
   node:
@@ -30,9 +33,10 @@ template_map:
       net.ipv6.conf.all.disable_ipv6: 0
       net.ipv6.conf.default.accept_ra: 0
       net.ipv6.conf.all.accept_ra: 0
+      net.ipv4.conf.all.rp_filter: 0
   spine:
     lo_ips:
-      - inet: "${assign_inet4(spine_network1)}"
+      - inet: "${assign_inet4(spine_network)}"
     frr:
       id: "${lo_ips.0.ip}"
       asn: "${ipv4_to_asn(lo_ips.0.ip)}"
@@ -40,12 +44,19 @@ template_map:
         - name: ADMIN
   leaf:
     lo_ips:
-      - inet: "${assign_inet4(leaf_network1)}"
+      - inet: "${assign_inet4(leaf_network)}"
     frr:
       id: "${lo_ips.0.ip}"
       asn: "${ipv4_to_asn(lo_ips.0.ip)}"
       bgp_peer_groups:
         - name: ADMIN
+  hv:
+    routes:
+      - dst: default
+        via: ${gateway_ip(_links.0.peer_ips.0.network)}
+    ip_rules:
+      - prio: 20
+        rule: from ${_links.0.peer_ips.0.inet} table main
 
 nodes:
   - name: CL1
@@ -68,6 +79,7 @@ nodes:
     frr:
       ipv4_networks:
         - "${_node_map.CL1.links.0.ips.0.network}"
+        - ${lo_ips.0.inet}
       ipv6_networks:
         - "${_node_map.CL1.links.0.ips.1.network}"
     links:
@@ -77,3 +89,28 @@ nodes:
     templates:
       - node
       - leaf
+    bridges:
+      - name: l2-br
+        ips:
+          - inet: ${gateway_inet4(leaf1_l2admin_network)}
+    frr:
+      ipv4_networks:
+        - ${links.0.peer_ips.0.network}
+        - ${lo_ips.0.inet}
+    links:
+      - peer: HV1
+        bridge: l2-br
+        peer_ips:
+          - inet: ${assign_inet4(leaf1_l2admin_network)}
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br_dpdk
+              peer_name: bgp0
+  - name: HV1
+    templates:
+      - node
+      - hv

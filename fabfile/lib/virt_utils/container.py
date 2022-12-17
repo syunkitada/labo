@@ -118,6 +118,21 @@ def _link(c, cmds, rspec, link, is_peer=False):
         ]
 
 
+def _netns_setup_vlan(c, cmds, rspec, link, is_peer=False):
+    link_name = "link_name"
+    if is_peer:
+        link_name = "peer_name"
+    for vlan_id, _ in link.get("vlan_map", {}).items():
+        if rspec["_hostname"] not in c.netns_map or f"{link[link_name]}.{vlan_id}" not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
+            dryrun = False
+        else:
+            dryrun = True
+        cmds += [
+            (f"ip link add link {link[link_name]} name {link[link_name]}.{vlan_id} type vlan id {vlan_id}", dryrun),
+            (f"ip link set {link[link_name]}.{vlan_id} up", dryrun),
+        ]
+
+
 def _make(c, spec, rspec):
     os.makedirs(rspec["_script_dir"], exist_ok=True)
     c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
@@ -137,9 +152,34 @@ def _make(c, spec, rspec):
         dryrun = False
     _exec(c, rspec, cmds, title="prepare-docker", dryrun=dryrun)
 
+    cmds += [f"hostname {rspec['_hostname']}"]
     for key, value in rspec.get("sysctl_map", {}).items():
         cmds += [f"sysctl -w {key}={value}"]
-    _exec(c, rspec, cmds, title="docker-sysctl", docker=True)
+    for bridge in rspec.get("bridges", []):
+        dryrun = True
+        if rspec["_hostname"] not in c.netns_map or bridge["name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
+            dryrun = False
+        cmds += [
+            (f"ip link add {bridge['name']} type bridge", dryrun),
+            (f"ip link set {bridge['name']} up", dryrun),
+            (f"ip link set dev {bridge['name']} mtu {bridge['mtu']}", dryrun),
+        ]
+        for ip in bridge.get("ips", []):
+            if ip["version"] == 4:
+                if (
+                    rspec["_hostname"] not in c.netns_map
+                    or bridge["name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]
+                    or ip["inet"] not in c.netns_map[rspec["_hostname"]]["netdev_map"][bridge["name"]]["inet_map"]
+                ):
+                    cmds += [f"ip address add dev {bridge['name']} {ip['inet']}"]
+            elif ip["version"] == 6:
+                if (
+                    rspec["_hostname"] not in c.netns_map
+                    or bridge["name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]
+                    or ip["inet"] not in c.netns_map[rspec["_hostname"]]["netdev_map"][bridge["name"]]["inet6_map"]
+                ):
+                    cmds += [f"ip -6 address add dev {bridge['name']} {ip['inet']}"]
+    _exec(c, rspec, cmds, title="init-docker", docker=True)
 
     for link in rspec.get("links", []):
         _link(c, cmds, rspec, link)
@@ -147,17 +187,31 @@ def _make(c, spec, rspec):
         _link(c, cmds, rspec, link, is_peer=True)
     _exec(c, rspec, cmds, title="prepare-links")
 
-    ip_add_cmds = []
+    docker_setup_network_cmds = []
+    for link in rspec.get("links", []):
+        _netns_setup_vlan(c, docker_setup_network_cmds, rspec, link)
+        if "bridge" in link:
+            docker_setup_network_cmds += [
+                f"ip link set dev {link['link_name']} master {link['bridge']}",
+            ]
+    for link in rspec.get("_links", []):
+        _netns_setup_vlan(c, docker_setup_network_cmds, rspec, link, is_peer=True)
+
     for ip in rspec.get("lo_ips", []):
-        _netns_ip_addr_add(c, ip_add_cmds, rspec, ip, "lo")
+        _netns_ip_addr_add(c, docker_setup_network_cmds, rspec, ip, "lo")
     for link in rspec.get("links", []):
         for ip in link.get("ips", []):
-            _netns_ip_addr_add(c, ip_add_cmds, rspec, ip, link["link_name"])
+            _netns_ip_addr_add(c, docker_setup_network_cmds, rspec, ip, link["link_name"])
     for link in rspec.get("_links", []):
         for ip in link.get("peer_ips", []):
-            _netns_ip_addr_add(c, ip_add_cmds, rspec, ip, link["peer_name"])
-    _netns_ip_route_add(c, ip_add_cmds, rspec)
-    _exec(c, rspec, ip_add_cmds, title="set-ips", docker=True)
+            _netns_ip_addr_add(c, docker_setup_network_cmds, rspec, ip, link["peer_name"])
+
+    for ip_rule in rspec.get("ip_rules", []):
+        if rspec["_hostname"] not in c.netns_map or ip_rule["rule"] not in c.netns_map[rspec["_hostname"]]["rule_map"]:
+            docker_setup_network_cmds += [f"ip rule add {ip_rule['rule']} prio {ip_rule['prio']}"]
+
+    _netns_ip_route_add(c, docker_setup_network_cmds, rspec)
+    _exec(c, rspec, docker_setup_network_cmds, title="setup-networks", docker=True)
 
     if "frr" in rspec:
         frr(c, spec, rspec)
@@ -220,10 +274,26 @@ def frr(c, spec, rspec):
 
     vtysh_cmds = [
         "configure terminal",
-        f"hostname {rspec['_hostname']}",
         "log file /var/log/frr/frr.log",
+        "debug bgp keepalives",
+        "debug bgp neighbor-events",
+        "debug bgp updates",
+        "ip forwarding",
+        "ipv6 forwarding",
         "!",
     ]
+
+    for route_map in frr.get("route_maps", []):
+        name = route_map["name"]
+        for prefix in route_map.get("prefix_list", []):
+            vtysh_cmds += [f"ip prefix-list {name} {prefix}"]
+        vtysh_cmds += [f"route-map {name} {route_map['policy']} {route_map['order']}"]
+        if len(route_map.get("prefix_list", [])) > 0:
+            if route_map["version"] == 4:
+                vtysh_cmds += [f"match ip address prefix-list {name}"]
+            elif route_map["version"] == 0:
+                vtysh_cmds += [f"match ipv6 address prefix-list {name}"]
+        vtysh_cmds += ["exit"]
 
     # setup interfaces
     for link in rspec.get("links", []):
@@ -246,6 +316,10 @@ def frr(c, spec, rspec):
     # seup bgp
     vtysh_cmds += [
         f"router bgp {frr['asn']}",
+        f"bgp router-id {frr['id']}",
+        "bgp bestpath as-path multipath-relax",
+        "no bgp ebgp-requires-policy",
+        "no bgp network import-check",  # RIBにnetworkが存在するかをチェックするのを止める
     ]
 
     for bgp_peer_group in frr.get("bgp_peer_groups", []):
@@ -272,7 +346,9 @@ def frr(c, spec, rspec):
     vtysh_cmds += ["exit-address-family"]
 
     vtysh_cmds += [
-        "exit",
+        "!",
+        "line vty",
+        "!",
     ]
     vtysh_cmds_str = "\n".join(vtysh_cmds)
     cmds = [f'vtysh -c "{vtysh_cmds_str}"']
