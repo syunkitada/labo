@@ -70,7 +70,10 @@ def complete_spec(spec):
         rspec["_links"] = []
         for i, link in enumerate(tmp_links):
             if link["peer"] == rspec["name"]:
-                rspec["_links"].append(tmp_links.pop(i))
+                rspec["_links"].append(link)
+
+        if "l3admin" in rspec:
+            _complete_ips(rspec["l3admin"].get("ips", []), spec, rspec)
 
         if rspec["kind"] == "vm":
             vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])

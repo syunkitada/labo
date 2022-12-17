@@ -2,7 +2,7 @@ imports:
   - infra/common/remote_spec.yaml
 
 common:
-  namespace: clos
+  namespace: clos1
   host: 192.168.210.11
   host_user: admin
   host_pass: admin
@@ -50,6 +50,7 @@ template_map:
       asn: "${ipv4_to_asn(lo_ips.0.ip)}"
       bgp_peer_groups:
         - name: ADMIN
+        - name: VM
   hv:
     routes:
       - dst: default
@@ -85,6 +86,8 @@ nodes:
     links:
       - peer: L11
         bgp_peer_group: ADMIN
+      - peer: L12
+        bgp_peer_group: ADMIN
   - name: L11
     templates:
       - node
@@ -108,8 +111,25 @@ nodes:
           200:
             bgp_peer_group: VM
             peer_ovs:
-              peer: br_dpdk
+              peer: br-ex
               peer_name: bgp0
+  - name: L12
+    templates:
+      - node
+      - leaf
+    frr:
+      ipv4_networks:
+        - ${lo_ips.0.inet}
+    links:
+      - peer: HV1
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp1
   - name: HV1
     templates:
       - node

@@ -2,3 +2,7 @@ infras:
   - name: docker
     kind: docker
     insecure_docker_registry: docker-registry.local.example.com:5000
+  - name: modprob
+    kind: shell
+    cmds:
+      - modprobe openvswitch

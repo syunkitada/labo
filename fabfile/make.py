@@ -5,7 +5,7 @@ from fabric import task, Config, Connection
 
 from lib.virt_utils import router, container, vm, vm_image
 from lib.ctx_utils import patch_ctx
-from lib.infra_utils import docker, mysql, pdns, nfs, envrc
+from lib.infra_utils import docker, mysql, pdns, nfs, envrc, shell
 from lib import spec_utils
 
 
@@ -102,6 +102,8 @@ def make(c, file, target="node", cmd="make"):
                 pdns.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "nfs":
                 nfs.cmd(cmd, c, spec, rspec)
+            elif rspec["kind"] == "shell":
+                shell.cmd(cmd, c, spec, rspec)
             else:
                 print(f"unsupported kind: kind={rspec['kind']}")
                 exit(1)
