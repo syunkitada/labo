@@ -120,6 +120,20 @@ def complete_spec(spec):
         for ip_rule in rspec.get("ip_rules", []):
             ip_rule["rule"] = _complete_value(ip_rule["rule"], spec, rspec)
 
+        ovs = rspec.get("ovs")
+        if ovs is not None:
+            ovs_links = []
+            for bridge in ovs.get("bridges", []):
+                br_name = bridge["name"]
+                for link in bridge.get("links", []):
+                    link["link_name"] = f"{br_name}_{link['peer']}"
+                    link["peer_name"] = f"{link['peer']}_{br_name}"
+                    ovs_links.append(link)
+                bridge["_links"] = []
+                for i, link in enumerate(ovs_links):
+                    if link["peer"] == br_name:
+                        bridge["_links"].append(link)
+
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
 

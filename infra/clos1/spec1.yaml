@@ -15,7 +15,7 @@ template_map:
     ovs:
       bridges:
         - name: br-ex
-          kind: external
+          kind: external-ha
     frr:
       id: "${l3admin.ips.0.ip}"
       asn: "${ipv4_to_asn(l3admin.ips.0.ip)}"

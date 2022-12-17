@@ -268,19 +268,19 @@ def ovs(c, spec, rspec):
     ]
 
     for bridge in ovs["bridges"]:
-        if bridge["kind"] == "external":
-            br_name = bridge["name"]
-            cmds += [
-                f"ovs-vsctl --may-exist add-br {br_name}",
-                f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
-                f"ip link set up {br_name}",
-            ]
-
+        br_name = bridge["name"]
+        br_flows = []
+        cmds += [
+            f"ovs-vsctl --may-exist add-br {br_name}",
+            f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
+            f"ip link set up {br_name}",
+        ]
+        if bridge["kind"] == "external-ha":
             for link in rspec["_links"]:
                 for vlan_id, vlan in link["vlan_map"].items():
                     peer_ovs = vlan.get("peer_ovs")
                     if peer_ovs is not None and peer_ovs["peer"] == br_name:
-                        cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {link['peer_name']}.{vlan_id}"]
+                        cmds += [f"ovs-vsctl --may-exist add-port {br_name} {link['peer_name']}.{vlan_id}"]
                         link_name = f"{br_name}-{peer_ovs['peer_name']}"
                         if (
                             rspec["_hostname"] not in c.netns_map
@@ -296,7 +296,6 @@ def ovs(c, spec, rspec):
                             ]
                         cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {link_name}"]
 
-            br_ex_flows = []
             group1_ports = []
             for link in rspec["_links"]:
                 for vlan_id, vlan in link["vlan_map"].items():
@@ -304,7 +303,7 @@ def ovs(c, spec, rspec):
                     if peer_ovs is not None and peer_ovs["peer"] == br_name:
                         ex_peer_name = f"{link['peer_name']}.{vlan_id}"
                         bgp_link_name = f"{br_name}-{peer_ovs['peer_name']}"
-                        br_ex_flows += [
+                        br_flows += [
                             # linklocalのbgp用の通信のingress
                             f"priority=800,ipv6,in_port={ex_peer_name},ipv6_src=fe80::/10,ipv6_dst=fe80::/10 actions=output:{bgp_link_name}",
                             f"priority=800,ipv6,in_port={ex_peer_name},ipv6_dst=ff02::/16 actions=output:{bgp_link_name}",
@@ -320,15 +319,28 @@ def ovs(c, spec, rspec):
                     + buckets
                     + '"'
                 ]
+        elif bridge["kind"] == "internal-vm":
+            pass
 
-            if len(br_ex_flows) > 0:
-                br_ex_flows += [
-                    "priority=0,actions=drop",
-                ]
-                flows_filepath = os.path.join(rspec["_script_dir"], "br-ex.flows")
-                with open(flows_filepath, "w") as f:
-                    f.write("\n".join(br_ex_flows))
-                cmds += [f"ovs-ofctl -O OpenFlow15 replace-flows br-ex {flows_filepath}"]
+        for link in bridge.get("links", []):
+            cmds += [
+                f"ovs-vsctl --may-exist add-port {br_name} {link['link_name']}"
+                + f" -- set interface {link['link_name']} type=patch options:peer={link['peer_name']}"
+            ]
+        for link in bridge.get("_links", []):
+            cmds += [
+                f"ovs-vsctl --may-exist add-port {br_name} {link['peer_name']}"
+                + f" -- set interface {link['peer_name']} type=patch options:peer={link['link_name']}"
+            ]
+
+        if len(br_flows) > 0:
+            br_flows += [
+                "priority=0,actions=drop",
+            ]
+            flows_filepath = os.path.join(rspec["_script_dir"], f"{br_name}.flows")
+            with open(flows_filepath, "w") as f:
+                f.write("\n".join(br_flows))
+            cmds += [f"ovs-ofctl -O OpenFlow15 replace-flows {br_name} {flows_filepath}"]
 
     _exec(c, rspec, cmds, title="ovs", docker=True)
 

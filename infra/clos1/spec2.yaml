@@ -1,0 +1,33 @@
+imports:
+  - infra/common/remote_spec.yaml
+  - infra/clos1/spec0.yaml
+  - infra/clos1/spec1.yaml
+
+ipam:
+  vm_network1:
+    subnet: 10.100.0.0/24
+    kind: l3
+
+template_map:
+  hv:
+    ovs:
+      bridges:
+        - name: br-ex
+          kind: external-ha
+          links:
+            - peer: br-int
+        - name: br-int
+          kind: internal-vm
+  vm: {}
+
+node_map:
+  HV1:
+    vm_links:
+      - peer: vm1
+        peer_ips:
+          - inet: ${assign_inet4(vm_network1)}
+    vms:
+      - name: vm1
+        templates:
+          - node
+          - vm
