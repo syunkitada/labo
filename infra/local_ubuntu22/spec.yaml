@@ -3,6 +3,7 @@ imports:
 
 common:
   namespace: local
+  nfs_path: /mnt/nfs
 
 template_map:
   vm1:
@@ -12,7 +13,8 @@ template_map:
     disk: 40
     image: ubuntu22_custom
     routes:
-      default: 192.168.210.1
+      - dst: default
+        via: 192.168.210.1
     resolvers:
       - 192.168.210.1
     nfs:

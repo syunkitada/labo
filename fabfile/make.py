@@ -5,7 +5,7 @@ from fabric import task, Config, Connection
 
 from lib.virt_utils import router, container, vm, vm_image
 from lib.ctx_utils import patch_ctx
-from lib.infra_utils import docker, mysql, pdns, nfs, envrc
+from lib.infra_utils import docker, mysql, pdns, nfs, envrc, shell
 from lib import spec_utils
 
 
@@ -24,7 +24,7 @@ def make(c, file, target="node", cmd="make"):
     """
 
     spec = spec_utils.load_spec(file)
-    if cmd == "spec":
+    if cmd == "dump-spec":
         print(yaml.safe_dump(spec))
         return
 
@@ -90,9 +90,9 @@ def make(c, file, target="node", cmd="make"):
 
     if make_infra:
         for rspec in spec.get("infras", []):
-            print(f"make infra {rspec['name']}: start")
+            print(f"{cmd} infra {rspec['name']}: start")
             if not_target(rspec, re_targets):
-                print(f"make infra {rspec['name']}: skipped")
+                print(f"{cmd} infra {rspec['name']}: skipped")
                 continue
             elif rspec["kind"] == "docker":
                 docker.cmd(cmd, c, spec, rspec)
@@ -102,19 +102,21 @@ def make(c, file, target="node", cmd="make"):
                 pdns.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "nfs":
                 nfs.cmd(cmd, c, spec, rspec)
+            elif rspec["kind"] == "shell":
+                shell.cmd(cmd, c, spec, rspec)
             else:
                 print(f"unsupported kind: kind={rspec['kind']}")
                 exit(1)
-            print(f"make infra {rspec['name']}: completed")
+            print(f"{cmd} infra {rspec['name']}: completed")
 
     if make_image:
         for name, rspec in spec.get("vm_image_map", {}).items():
-            print(f"make image {name}: start")
+            print(f"{cmd} image {name}: start")
             if not_target(rspec, re_targets):
-                print(f"make image {name}: skipped")
+                print(f"{cmd} image {name}: skipped")
                 continue
             vm_image.cmd(cmd, c, spec, rspec)
-            print(f"make image {name}: completed")
+            print(f"{cmd} image {name}: completed")
 
     if make_node:
         patch_ctx(c)
@@ -123,7 +125,7 @@ def make(c, file, target="node", cmd="make"):
         for rspec in spec.get("nodes", []):
             print(f"make node {rspec['name']}: start")
             if not_target(rspec, re_targets):
-                print(f"make node {rspec['name']}: skipped")
+                print(f"{cmd} node {rspec['name']}: skipped")
                 continue
             elif rspec["kind"] == "gw":
                 router.cmd(cmd, c, spec, rspec)
@@ -134,7 +136,7 @@ def make(c, file, target="node", cmd="make"):
             else:
                 print(f"unsupported kind: kind={rspec['kind']}")
                 exit(1)
-            print(f"make node {rspec['name']}: completed")
+            print(f"{cmd} node {rspec['name']}: completed")
 
 
 def not_target(rspec, re_targets):

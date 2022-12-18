@@ -1,0 +1,41 @@
+imports:
+  - infra/common/remote_spec.yaml
+  - infra/clos1/spec0.yaml
+
+ipam:
+  l3admin_network1:
+    subnet: 10.10.10.0/24
+    kind: l3
+
+template_map:
+  hv:
+    l3admin:
+      ips:
+        - inet: ${assign_inet4(l3admin_network1)}
+    ovs:
+      bridges:
+        - name: br-ex
+          kind: external-ha
+    frr:
+      id: "${l3admin.ips.0.ip}"
+      asn: "${ipv4_to_asn(l3admin.ips.0.ip)}"
+      route_maps:
+        - name: ADMIN-v4
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit ${l3admin.ips.0.network} le 32
+        - name: DENY-ANY-v4
+          policy: deny
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 deny 0.0.0.0/0
+      bgp_peer_groups:
+        - name: ADMIN
+          route_map_v4_out: ADMIN-v4
+        - name: VM
+          route_map_v4_out: DENY-ANY-v4
+      ipv4_networks:
+        - ${l3admin.ips.0.inet}

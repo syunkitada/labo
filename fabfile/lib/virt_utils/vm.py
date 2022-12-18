@@ -1,12 +1,13 @@
 # qemu utils
 
+import yaml
 import time
 import os
 
 
 def cmd(cmd, c, spec, rspec):
     if cmd == "dump":
-        print(rspec)
+        print(yaml.safe_dump(rspec))
     elif cmd == "make":
         make(c, spec, rspec)
     elif cmd == "clean":
@@ -89,8 +90,8 @@ def _make_config_drive(c, spec, rspec):
             userdata += [f"ip addr add {ip['inet']} dev $dev{i}"]
 
     # setup routes
-    for to, route in rspec.get("routes", {}).items():
-        userdata += [f"ip route add {to} via {route}"]
+    for route in rspec.get("routes", []):
+        userdata += [f"ip route add {route['dst']} via {route['via']}"]
 
     # osによって挙動を変える場合
     if rspec["_image"]["base"] == "centos7":
@@ -120,6 +121,27 @@ def _make_config_drive(c, spec, rspec):
             "EOT",
             "systemctl enable systemd-resolved",
             "systemctl restart systemd-resolved",
+        ]
+
+        # resize ext4
+        userdata += [
+            # 初回起動時は実際のスペースが異なるのでFixする必要がある
+            # Warning: Not all of the space available to /dev/vda appears to be used, ... Fix/Ignore?
+            "parted '/dev/vda' ---pretend-input-tty <<EOF",
+            "resizepart",
+            "Fix",
+            "quit",
+            "EOF",
+            # 空きをすべて割り当てる
+            "parted '/dev/vda' ---pretend-input-tty <<EOF",
+            "resizepart",
+            "1",
+            "Yes",
+            "100%",
+            "quit",
+            "EOF",
+            # ext4のオンラインリサイズ
+            "resize2fs /dev/vda1",
         ]
 
     nfs = rspec.get("nfs")

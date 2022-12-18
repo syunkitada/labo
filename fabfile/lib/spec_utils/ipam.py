@@ -24,12 +24,40 @@ ASN_IP_NETWORKS = [ipaddress.ip_network(net) for net in ASN_NETWORKS]
 #         break
 
 
+def assign_inet4(network_name, spec):
+    network = spec["ipam"][network_name]
+    ip_network = ipaddress.ip_network(network["subnet"])
+    if network["kind"] == "l2":
+        inet = str(ip_network[network["_next_ip"]]) + "/" + str(ip_network.prefixlen)
+    else:
+        if ip_network.version == 4:
+            inet = str(ip_network[network["_next_ip"]]) + "/32"
+        else:
+            inet = str(ip_network[network["_next_ip"]]) + "/128"
+    network["_next_ip"] += 1
+    return inet
+
+
+def gateway_inet4(network_name, spec):
+    network = spec["ipam"][network_name]
+    ip_network = ipaddress.ip_network(network["subnet"])
+    if network["kind"] != "l2":
+        raise Exception("gateway_inet4 is supported by l2")
+    inet = str(ip_network[1]) + "/" + str(ip_network.prefixlen)
+    return inet
+
+
+def gateway_ip(network):
+    ip_network = ipaddress.ip_network(network)
+    inet = str(ip_network[1])
+    return inet
+
+
 def ipv4_to_asn(ipv4):
     ip_address = ipaddress.ip_address(ipv4)
     asn = PRIVATE_ASN_START
     for ip_network in ASN_IP_NETWORKS:
         if ip_address in ip_network:
-            print(ip_address, ip_network.network_address)
             asn += int(ip_address) - int(ip_network.network_address)
             break
         asn += ip_network.num_addresses
@@ -51,15 +79,9 @@ def asn_to_ipv4(asn):
     raise Exception(f"Invalid asn: asn={asn}")
 
 
-def ipv4_to_ipv6():
-    return 111
-
-
-def ipv4_to_srv6sid():
-    return 111
-
-
-asn = ipv4_to_asn("10.255.255.255")
-print(asn)
-ip = asn_to_ipv4(asn)
-print(ip)
+def inet4_to_inet6(inet):
+    inets = inet.split("/")
+    ip = inets[0]
+    ipv6 = "fc00:0000:0000:0000:" + ip.replace(".", ":")
+    ip_interface = ipaddress.ip_interface(ipv6 + "/" + str(int(inets[1]) * 2 + 64))
+    return ip_interface.exploded
