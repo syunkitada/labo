@@ -18,7 +18,8 @@ template_map:
             - peer: br-int
         - name: br-int
           kind: internal-vm
-  vm: {}
+  vm:
+    mtu: 1500
 
 node_map:
   HV1:

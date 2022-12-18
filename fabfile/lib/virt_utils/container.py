@@ -109,7 +109,7 @@ def _link(c, cmds, rspec, link, is_peer=False):
             (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
             (f"ip link set dev {link['link_name']} netns {rspec['_hostname']} up", dryrun),
         ]
-    else:
+    elif is_peer:
         if rspec["_hostname"] not in c.netns_map or link["peer_name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
             dryrun = False
         cmds += [
@@ -185,6 +185,8 @@ def _make(c, spec, rspec):
         _link(c, cmds, rspec, link)
     for link in rspec.get("_links", []):
         _link(c, cmds, rspec, link, is_peer=True)
+    for link in rspec.get("vm_links", []):
+        _link(c, cmds, rspec, link)
     _exec(c, rspec, cmds, title="prepare-links")
 
     docker_setup_network_cmds = []
@@ -258,7 +260,8 @@ def _make(c, spec, rspec):
                     cmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
         _exec(c, rspec, cmds, title="setup-l3admin", docker=True)
 
-    print("script_dir", rspec["_script_dir"])
+    for vm in rspec.get("vms", []):
+        _make(c, spec, vm)
 
 
 def ovs(c, spec, rspec):
@@ -319,8 +322,10 @@ def ovs(c, spec, rspec):
                     + buckets
                     + '"'
                 ]
+
         elif bridge["kind"] == "internal-vm":
-            pass
+            for link in rspec["vm_links"]:
+                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {link['link_name']}"]
 
         for link in bridge.get("links", []):
             cmds += [

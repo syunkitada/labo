@@ -19,6 +19,7 @@ def update_dict(d, u):
 
 def complete_spec(spec):
     template_map = spec.get("template_map", {})
+    node_map = spec.get("node_map", {})
 
     for _, network in spec.get("ipam", {}).items():
         if network["kind"] == "l2":
@@ -49,11 +50,14 @@ def complete_spec(spec):
         rspec["name"] = name
         rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
 
-    node_map = {}
-    spec["_node_map"] = node_map
-    tmp_links = []
-    for i, rspec in enumerate(spec["nodes"]):
-        node_map[rspec["name"]] = rspec
+    _node_map = {}
+    spec["_node_map"] = _node_map
+    peer_links_map = {}
+    for rspec in spec.get("nodes", []):
+        peer_links_map[rspec["name"]] = []
+
+    def _complete_node(i, rspec):
+        _node_map[rspec["name"]] = rspec
         tmp_spec = {}
         for template in rspec.get("templates", []):
             if template not in template_map:
@@ -62,15 +66,18 @@ def complete_spec(spec):
             template_spec = copy.deepcopy(template_map[template])
             update_dict(tmp_spec, template_spec)
         update_dict(tmp_spec, rspec)
+        update_dict(tmp_spec, node_map.get(rspec["name"], {}))
         rspec.update(tmp_spec)
 
         _complete_links(i, spec, rspec, rspec.get("links", []))
 
-        tmp_links += rspec.get("links", [])
-        rspec["_links"] = []
-        for i, link in enumerate(tmp_links):
-            if link["peer"] == rspec["name"]:
-                rspec["_links"].append(link)
+        for link in rspec.get("links", []):
+            peer_links_map[link["peer"]].append(link)
+        rspec["_links"] = peer_links_map.get(rspec["name"], [])
+        for link in rspec["_links"]:
+            if "mtu" in rspec:
+                if rspec["mtu"] < link["mtu"]:
+                    link["mtu"] = rspec["mtu"]
 
         if "l3admin" in rspec:
             _complete_ips(rspec["l3admin"].get("ips", []), spec, rspec)
@@ -102,6 +109,36 @@ def complete_spec(spec):
                 for route_map in frr.get("route_maps", []):
                     for i, value in enumerate(route_map.get("prefix_list", [])):
                         route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
+            for bridge in rspec.get("bridges", []):
+                if "mtu" not in bridge:
+                    bridge["mtu"] = rspec.get("mtu", 1500)
+                _complete_ips(bridge.get("ips", []), spec, rspec)
+
+            for ip_rule in rspec.get("ip_rules", []):
+                ip_rule["rule"] = _complete_value(ip_rule["rule"], spec, rspec)
+
+            ovs = rspec.get("ovs")
+            if ovs is not None:
+                ovs_peer_links_map = {}
+                for bridge in ovs.get("bridges", []):
+                    ovs_peer_links_map[bridge["name"]] = []
+                for bridge in ovs.get("bridges", []):
+                    br_name = bridge["name"]
+                    for link in bridge.get("links", []):
+                        link["link_name"] = f"{br_name}_{link['peer']}"
+                        link["peer_name"] = f"{link['peer']}_{br_name}"
+                        ovs_peer_links_map[link["peer"]].append(link)
+                    bridge["_links"] = ovs_peer_links_map.get(br_name, [])
+
+            _complete_links(i, spec, rspec, rspec.get("vm_links", []))
+            for vm in rspec.get("vms", []):
+                peer_links_map[vm["name"]] = []
+            for link in rspec.get("vm_links", []):
+                peer_links_map[link["peer"]].append(link)
+            for vmi, vm in enumerate(rspec.get("vms", [])):
+                _complete_node(vmi, vm)
+
+        # end if rspec["kind"] == "container":
         else:
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
 
@@ -112,30 +149,11 @@ def complete_spec(spec):
             route["dst"] = _complete_value(route["dst"], spec, rspec)
             route["via"] = _complete_value(route["via"], spec, rspec)
 
-        for bridge in rspec.get("bridges", []):
-            if "mtu" not in bridge:
-                bridge["mtu"] = rspec.get("mtu", 1500)
-            _complete_ips(bridge.get("ips", []), spec, rspec)
-
-        for ip_rule in rspec.get("ip_rules", []):
-            ip_rule["rule"] = _complete_value(ip_rule["rule"], spec, rspec)
-
-        ovs = rspec.get("ovs")
-        if ovs is not None:
-            ovs_links = []
-            for bridge in ovs.get("bridges", []):
-                br_name = bridge["name"]
-                for link in bridge.get("links", []):
-                    link["link_name"] = f"{br_name}_{link['peer']}"
-                    link["peer_name"] = f"{link['peer']}_{br_name}"
-                    ovs_links.append(link)
-                bridge["_links"] = []
-                for i, link in enumerate(ovs_links):
-                    if link["peer"] == br_name:
-                        bridge["_links"].append(link)
-
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
+
+    for i, rspec in enumerate(spec.get("nodes", [])):
+        _complete_node(i, rspec)
 
     return
 
