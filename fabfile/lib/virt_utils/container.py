@@ -1,141 +1,66 @@
 import yaml
-import json
-import time
 import os
+from . import context
 
 
-def cmd(cmd, c, spec, rspec):
+def cmd(cmd, c):
     if cmd == "dump":
-        print(yaml.safe_dump(rspec))
+        print(yaml.safe_dump(c.rspec))
     elif cmd == "make":
-        _make(c, spec, rspec)
+        _make(c)
     elif cmd == "clean":
-        _clean(c, spec, rspec)
+        _clean(c)
 
 
-def _clean(c, spec, rspec):
-    if rspec["_hostname"] in c.docker_ps_map:
-        c.sudo(f"docker kill {rspec['_hostname']}")
-    if rspec["_hostname"] in c.netns_map:
-        c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}")
+def _clean(c):
+    rspec = c.rspec
+    if rspec["_hostname"] in c.gctx.docker_ps_map:
+        c.gctx.c.sudo(f"docker kill {rspec['_hostname']}")
+    if rspec["_hostname"] in c.gctx.netns_map:
+        c.gctx.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}")
 
 
-def _exec(c, rspec, cmds, title="", dryrun=False, netns=False, docker=False):
-    exec_filepath = os.path.join(rspec["_script_dir"], f"{rspec['_script_index']}_{title}_exec.sh")
-    full_filepath = os.path.join(rspec["_script_dir"], f"{rspec['_script_index']}_{title}_full.sh")
-    rspec["_script_index"] += 1
-
-    exec_cmds = []
-    full_cmds = []
-    for cmd in cmds:
-        if isinstance(cmd, tuple):
-            print("cmd", cmd[0], cmd[1], dryrun)
-            if not cmd[1] and not dryrun:
-                exec_cmds.append(cmd[0])
-            full_cmds.append(cmd[0])
-        else:
-            if not dryrun:
-                exec_cmds.append(cmd)
-            full_cmds.append(cmd)
-
-    with open(exec_filepath, "w") as f:
-        if docker:
-            cmds_str = "\n".join(exec_cmds)
-            f.write(f"docker exec {rspec['_hostname']} bash -ex -c '\n{cmds_str}'\n")
-        elif netns:
-            cmds_str = "\n".join(exec_cmds)
-            f.write(f"ip netns exec {rspec['_hostname']} bash -ex -c '\n{cmds_str}'\n")
-        else:
-            f.write("\n".join(exec_cmds))
-    if len(exec_cmds) > 0:
-        c.sudo(f"bash -ex {exec_filepath}")
-
-    with open(full_filepath, "w") as f:
-        if docker:
-            cmds_str = "\n".join(full_cmds)
-            f.write(f"docker exec {rspec['_hostname']} bash -ex -c '\n{cmds_str}\n'\n")
-        elif netns:
-            cmds_str = "\n".join(full_cmds)
-            f.write(f"ip netns exec {rspec['_hostname']} bash -ex -c '\n{cmds_str}\n'\n")
-        else:
-            f.write("\n".join(full_cmds))
-
-    cmds.clear()
-
-
-def _netns_ip_addr_add(c, cmds, rspec, ip, dev):
+def append_cmds_ip_addr_add(c, cmds, ip, dev):
     if ip["version"] == 4:
-        dryrun = True
-        if (
-            rspec["_hostname"] not in c.netns_map
-            or dev not in c.netns_map[rspec["_hostname"]]["netdev_map"]
-            or ip["inet"] not in c.netns_map[rspec["_hostname"]]["netdev_map"][dev]["inet_map"]
-        ):
-            dryrun = False
+        dryrun = c.exist_netdev(dev) and ip["inet"] in c.gctx.netns_map[c.rspec["_hostname"]]["netdev_map"][dev]["inet_map"]
         cmds += [(f"ip addr add {ip['inet']} dev {dev}", dryrun)]
     elif ip["version"] == 6:
-        dryrun = True
-        if (
-            rspec["_hostname"] not in c.netns_map
-            or dev not in c.netns_map[rspec["_hostname"]]["netdev_map"]
-            or ip["inet"] not in c.netns_map[rspec["_hostname"]]["netdev_map"][dev]["inet6_map"]
-        ):
-            dryrun = False
+        dryrun = c.exist_netdev(dev) and ip["inet"] in c.gctx.netns_map[c.rspec["_hostname"]]["netdev_map"][dev]["inet6_map"]
         cmds += [(f"ip addr add {ip['inet']} dev {dev}", dryrun)]
 
 
-def _netns_ip_route_add(c, cmds, rspec):
-    for route in rspec.get("routes", []):
-        dryrun = True
-        if rspec["_hostname"] not in c.netns_map or route["dst"] not in c.netns_map[rspec["_hostname"]]["route_map"]:
-            dryrun = False
-        cmds += [(f"ip route add {route['dst']} via {route['via']}", dryrun)]
-    for route in rspec.get("routes6", []):
-        dryrun = True
-        if rspec["_hostname"] not in c.netns_map or route["dst"] not in c.netns_map[rspec["_hostname"]]["route6_map"]:
-            dryrun = False
-        cmds += [(f"ip -6 route add {route['dst']} via {route['via']}", dryrun)]
+def append_local_cmds_add_link(c, cmds, link):
+    dryrun = c.exist_netdev(link["link_name"])
+    cmds += [
+        (f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", dryrun),
+        (f"ethtool -K {link['link_name']} tso off tx off", dryrun),
+        (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
+        (f"ip link set dev {link['link_name']} netns {c.rspec['_hostname']} up", dryrun),
+    ]
 
 
-def _link(c, cmds, rspec, link, is_peer=False):
-    dryrun = True
-    if not is_peer:
-        if rspec["_hostname"] not in c.netns_map or link["link_name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
-            dryrun = False
-        cmds += [
-            (f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", dryrun),
-            (f"ethtool -K {link['link_name']} tso off tx off", dryrun),
-            (f"ethtool -K {link['peer_name']} tso off tx off", dryrun),
-            (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
-            (f"ip link set dev {link['link_name']} netns {rspec['_hostname']} up", dryrun),
-        ]
-    elif is_peer:
-        if rspec["_hostname"] not in c.netns_map or link["peer_name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
-            dryrun = False
-        cmds += [
-            (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", dryrun),
-            (f"ip link set dev {link['peer_name']} netns {rspec['_hostname']} up", dryrun),
-        ]
+def append_local_cmds_add_peer(c, cmds, link):
+    dryrun = c.exist_netdev(link["peer_name"])
+    cmds += [
+        (f"ethtool -K {link['peer_name']} tso off tx off", dryrun),
+        (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", dryrun),
+        (f"ip link set dev {link['peer_name']} netns {c.rspec['_hostname']} up", dryrun),
+    ]
 
 
-def _netns_setup_vlan(c, cmds, rspec, link, is_peer=False):
-    link_name = "link_name"
-    if is_peer:
-        link_name = "peer_name"
-    for vlan_id, _ in link.get("vlan_map", {}).items():
-        if rspec["_hostname"] not in c.netns_map or f"{link[link_name]}.{vlan_id}" not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
-            dryrun = False
-        else:
-            dryrun = True
-        cmds += [
-            (f"ip link add link {link[link_name]} name {link[link_name]}.{vlan_id} type vlan id {vlan_id}", dryrun),
-            (f"ip link set {link[link_name]}.{vlan_id} up", dryrun),
-        ]
+def append_cmds_add_vlan(c, cmds, netdev, vlan_id):
+    netdev_vlan = f"{netdev}.{vlan_id}"
+    dryrun = c.exist_netdev(netdev_vlan)
+    cmds += [
+        (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", dryrun),
+        (f"ip link set {netdev_vlan} up", dryrun),
+    ]
 
 
-def _make(c, spec, rspec):
+def _make(c):
+    rspec = c.rspec
     os.makedirs(rspec["_script_dir"], exist_ok=True)
-    c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
+    c.gctx.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
 
     dryrun = True
     docker_options = [
@@ -143,110 +68,96 @@ def _make(c, spec, rspec):
         "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
         f"-v {rspec['_script_dir']}:{rspec['_script_dir']}",
     ]
-    cmds = [
+    lcmds = [
         f"docker run {' '.join(docker_options)} {rspec['image']}",
         f"pid=`docker inspect {rspec['_hostname']}" + " --format '{{.State.Pid}}'`",
         "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{rspec['_hostname']}",
     ]
-    if rspec["_hostname"] not in c.docker_ps_map:
+    if rspec["_hostname"] not in c.gctx.docker_ps_map:
         dryrun = False
-    _exec(c, rspec, cmds, title="prepare-docker", dryrun=dryrun)
+    c.exec(lcmds, title="prepare-docker", dryrun=dryrun, is_local=True)
 
-    cmds += [f"hostname {rspec['_hostname']}"]
+    dcmds = []
+    dcmds += [f"hostname {rspec['_hostname']}"]
     for key, value in rspec.get("sysctl_map", {}).items():
-        cmds += [f"sysctl -w {key}={value}"]
+        dcmds += [f"sysctl -w {key}={value}"]
     for bridge in rspec.get("bridges", []):
-        dryrun = True
-        if rspec["_hostname"] not in c.netns_map or bridge["name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
-            dryrun = False
-        cmds += [
+        dryrun = c.exist_netdev(bridge["name"])
+        dcmds += [
             (f"ip link add {bridge['name']} type bridge", dryrun),
             (f"ip link set {bridge['name']} up", dryrun),
             (f"ip link set dev {bridge['name']} mtu {bridge['mtu']}", dryrun),
         ]
         for ip in bridge.get("ips", []):
-            if ip["version"] == 4:
-                if (
-                    rspec["_hostname"] not in c.netns_map
-                    or bridge["name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]
-                    or ip["inet"] not in c.netns_map[rspec["_hostname"]]["netdev_map"][bridge["name"]]["inet_map"]
-                ):
-                    cmds += [f"ip address add dev {bridge['name']} {ip['inet']}"]
-            elif ip["version"] == 6:
-                if (
-                    rspec["_hostname"] not in c.netns_map
-                    or bridge["name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]
-                    or ip["inet"] not in c.netns_map[rspec["_hostname"]]["netdev_map"][bridge["name"]]["inet6_map"]
-                ):
-                    cmds += [f"ip -6 address add dev {bridge['name']} {ip['inet']}"]
-    _exec(c, rspec, cmds, title="init-docker", docker=True)
+            append_cmds_ip_addr_add(c, dcmds, ip, bridge["name"])
+    c.exec(dcmds, title="init-docker")
 
     for link in rspec.get("links", []):
-        _link(c, cmds, rspec, link)
+        append_local_cmds_add_link(c, lcmds, link)
     for link in rspec.get("_links", []):
-        _link(c, cmds, rspec, link, is_peer=True)
+        append_local_cmds_add_peer(c, lcmds, link)
     for link in rspec.get("vm_links", []):
-        _link(c, cmds, rspec, link)
-    _exec(c, rspec, cmds, title="prepare-links")
+        append_local_cmds_add_link(c, lcmds, link)
+    c.exec(lcmds, title="prepare-links", is_local=True)
 
-    docker_setup_network_cmds = []
     for link in rspec.get("links", []):
-        _netns_setup_vlan(c, docker_setup_network_cmds, rspec, link)
+        for vlan_id, _ in link.get("vlan_map", {}).items():
+            append_cmds_add_vlan(c, dcmds, link["link_name"], vlan_id)
         if "bridge" in link:
-            docker_setup_network_cmds += [
+            dcmds += [
                 f"ip link set dev {link['link_name']} master {link['bridge']}",
             ]
     for link in rspec.get("_links", []):
-        _netns_setup_vlan(c, docker_setup_network_cmds, rspec, link, is_peer=True)
+        for vlan_id, _ in link.get("vlan_map", {}).items():
+            append_cmds_add_vlan(c, dcmds, link["peer_name"], vlan_id)
 
     for ip in rspec.get("lo_ips", []):
-        _netns_ip_addr_add(c, docker_setup_network_cmds, rspec, ip, "lo")
+        append_cmds_ip_addr_add(c, dcmds, ip, "lo")
     for link in rspec.get("links", []):
         for ip in link.get("ips", []):
-            _netns_ip_addr_add(c, docker_setup_network_cmds, rspec, ip, link["link_name"])
+            append_cmds_ip_addr_add(c, dcmds, ip, link["link_name"])
     for link in rspec.get("_links", []):
         for ip in link.get("peer_ips", []):
-            _netns_ip_addr_add(c, docker_setup_network_cmds, rspec, ip, link["peer_name"])
+            append_cmds_ip_addr_add(c, dcmds, ip, link["peer_name"])
 
-    for ip_rule in rspec.get("ip_rules", []):
-        if rspec["_hostname"] not in c.netns_map or ip_rule["rule"] not in c.netns_map[rspec["_hostname"]]["rule_map"]:
-            docker_setup_network_cmds += [f"ip rule add {ip_rule['rule']} prio {ip_rule['prio']}"]
+    for iprule in rspec.get("ip_rules", []):
+        dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", c.exist_iprule(iprule["rule"]))]
 
-    _netns_ip_route_add(c, docker_setup_network_cmds, rspec)
-    _exec(c, rspec, docker_setup_network_cmds, title="setup-networks", docker=True)
+    for route in rspec.get("routes", []):
+        dryrun = c.exist_route(route)
+        dcmds += [(f"ip route add {route['dst']} via {route['via']}", dryrun)]
+    for route in rspec.get("routes6", []):
+        dryrun = c.exist_route6(route)
+        dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", dryrun)]
+
+    c.exec(dcmds, title="setup-networks")
 
     if "ovs" in rspec:
-        ovs(c, spec, rspec)
+        ovs(c)
 
     if "frr" in rspec:
-        frr(c, spec, rspec)
+        frr(c)
 
     l3admin = rspec.get("l3admin")
     if l3admin is not None:
-        if rspec["_hostname"] not in c.netns_map or "l3admin" not in c.netns_map[rspec["_hostname"]]["netdev_map"]:
-            dryrun = False
-        else:
-            dryrun = True
-        cmds += [
+        dryrun = c.exist_netdev("l3admin")
+        dcmds += [
             ("ip link add l3admin type dummy", dryrun),
             ("ip link set up l3admin", dryrun),
         ]
 
-        ip_rule = "from all table 300"
-        if rspec["_hostname"] not in c.netns_map or ip_rule not in c.netns_map[rspec["_hostname"]]["rule_map"]:
-            dryrun = False
-        else:
-            dryrun = True
-        cmds += [(f"ip rule add {ip_rule} prio 30", dryrun)]
+        iprule = "from all table 300"
+        dryrun = c.exist_iprule(iprule)
+        dcmds += [(f"ip rule add {iprule} prio 30", dryrun)]
 
         for ip in l3admin.get("ips", []):
-            _netns_ip_addr_add(c, cmds, rspec, ip, "l3admin")
+            append_cmds_ip_addr_add(c, dcmds, ip, "l3admin")
 
         routes = []
         for link in rspec.get("_links", []):
             for vlan_id, vlan in link.get("vlan_map", {}).items():
                 if vlan.get("bgp_peer_group", "") == "ADMIN":
-                    cmds += [
+                    dcmds += [
                         # frrが以下の設定を入れてくれるので、169.254.0.1をgatewayとして使える
                         # 169.254.0.1 dev HV1_0_L11.100 lladdr 5e:de:b2:b4:98:4f PERMANENT proto zebra
                         # ルートを設定するために、仮で169.254.0.2/24を各インターフェイスに付ける
@@ -257,14 +168,16 @@ def _make(c, spec, rspec):
         if len(routes) > 0:
             for ip in l3admin.get("ips", []):
                 if ip["version"] == 4:
-                    cmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
-        _exec(c, rspec, cmds, title="setup-l3admin", docker=True)
+                    dcmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
+        c.exec(dcmds, title="setup-l3admin")
 
     for vm in rspec.get("vms", []):
-        _make(c, spec, vm)
+        c = context.ContainerContext(c.gctx, vm)
+        _make(c)
 
 
-def ovs(c, spec, rspec):
+def ovs(c):
+    rspec = c.rspec
     ovs = rspec["ovs"]
     cmds = [
         "systemctl start openvswitch",
@@ -284,19 +197,16 @@ def ovs(c, spec, rspec):
                     peer_ovs = vlan.get("peer_ovs")
                     if peer_ovs is not None and peer_ovs["peer"] == br_name:
                         cmds += [f"ovs-vsctl --may-exist add-port {br_name} {link['peer_name']}.{vlan_id}"]
+                        dryrun = c.exist_netdev(peer_ovs["peer_name"])
                         link_name = f"{br_name}-{peer_ovs['peer_name']}"
-                        if (
-                            rspec["_hostname"] not in c.netns_map
-                            or peer_ovs["peer_name"] not in c.netns_map[rspec["_hostname"]]["netdev_map"]
-                        ):
-                            cmds += [
-                                f"ip link add {link_name} type veth peer name {peer_ovs['peer_name']}",
-                                f"ip link set dev {link_name} mtu {link['mtu']}",
-                                f"ip link set {link_name} up",
-                                f"ethtool -K {link_name} tso off tx off",
-                                f"ip link set dev {peer_ovs['peer_name']} up",
-                                f"ethtool -K {peer_ovs['peer_name']} tso off tx off",
-                            ]
+                        cmds += [
+                            (f"ip link add {link_name} type veth peer name {peer_ovs['peer_name']}", dryrun),
+                            (f"ip link set dev {link_name} mtu {link['mtu']}", dryrun),
+                            (f"ip link set {link_name} up", dryrun),
+                            (f"ethtool -K {link_name} tso off tx off", dryrun),
+                            (f"ip link set dev {peer_ovs['peer_name']} up", dryrun),
+                            (f"ethtool -K {peer_ovs['peer_name']} tso off tx off", dryrun),
+                        ]
                         cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {link_name}"]
 
             group1_ports = []
@@ -347,10 +257,11 @@ def ovs(c, spec, rspec):
                 f.write("\n".join(br_flows))
             cmds += [f"ovs-ofctl -O OpenFlow15 replace-flows {br_name} {flows_filepath}"]
 
-    _exec(c, rspec, cmds, title="ovs", docker=True)
+    c.exec(cmds, title="ovs")
 
 
-def frr(c, spec, rspec):
+def frr(c):
+    rspec = c.rspec
     frr = rspec["frr"]
     daemons = [
         # daemons
@@ -401,7 +312,7 @@ def frr(c, spec, rspec):
         "systemctl daemon-reload",
         "systemctl restart frr",
     ]
-    _exec(c, rspec, cmds, title="frr_daemons", docker=True)
+    c.exec(cmds, title="frr_daemons")
 
     vtysh_cmds = [
         "configure terminal",
@@ -527,4 +438,4 @@ def frr(c, spec, rspec):
     ]
     vtysh_cmds_str = "\n".join(vtysh_cmds)
     cmds = [f'vtysh -c "{vtysh_cmds_str}"']
-    _exec(c, rspec, cmds, title="frr_vtysh", docker=True)
+    c.exec(cmds, title="frr_vtysh")

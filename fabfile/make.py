@@ -3,7 +3,7 @@ import os
 import yaml
 from fabric import task, Config, Connection
 
-from lib.virt_utils import router, container, vm, vm_image
+from lib.virt_utils import context, router, container, vm, vm_image
 from lib.ctx_utils import patch_ctx
 from lib.infra_utils import docker, mysql, pdns, nfs, envrc, shell
 from lib import spec_utils
@@ -121,6 +121,8 @@ def make(c, file, target="node", cmd="make"):
     if make_node:
         patch_ctx(c)
         c.update_ctx()
+        gctx = context.GlobalContext(c, spec)
+        gctx.update()
 
         for rspec in spec.get("nodes", []):
             print(f"make node {rspec['name']}: start")
@@ -130,7 +132,8 @@ def make(c, file, target="node", cmd="make"):
             elif rspec["kind"] == "gw":
                 router.cmd(cmd, c, spec, rspec)
             elif rspec["kind"] == "container":
-                container.cmd(cmd, c, spec, rspec)
+                nctx = context.ContainerContext(gctx, rspec)
+                container.cmd(cmd, nctx)
             elif rspec["kind"] == "vm":
                 vm.cmd(cmd, c, spec, rspec)
             else:
