@@ -225,6 +225,18 @@ def ovs(c):
                             f"priority=800,ipv6,in_port={bgp_link_name},ipv6_dst=ff02::/16 actions=output:{ex_peer_name}",
                         ]
                         group1_ports += [f"bucket=watch_port:{ex_peer_name},actions=mod_dl_dst:{link['link_mac']},output:{ex_peer_name}"]
+
+                        for link in bridge.get("links", []):
+                            for flow in link.get("flows", []):
+                                if flow["kind"] == "ingress":
+                                    br_flows += [
+                                        f"priority=700,ip,in_port={ex_peer_name} actions=output:{link['link_name']}",
+                                    ]
+                                elif flow["kind"] == "egress":
+                                    br_flows += [
+                                        f"priority=700,ip,in_port={link['link_name']} actions=group:1",
+                                    ]
+
                 buckets = ",".join(group1_ports)
                 # egressの通信を冗長化させる
                 cmds += [
@@ -234,8 +246,28 @@ def ovs(c):
                 ]
 
         elif bridge["kind"] == "internal-vm":
-            for link in rspec["vm_links"]:
-                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {link['link_name']}"]
+            for vm_link in rspec["vm_links"]:
+                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
+                vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
+                for ip in vm_link.get("peer_ips", []):
+                    for _link in bridge.get("_links", []):
+                        br_flows += [
+                            # ingress
+                            # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
+                            f"priority=700,ip,in_port={_link['peer_name']},nw_dst={ip['ip']}"
+                            + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+                            # egress
+                            f"priority=700,ip,in_port={vm_link['link_name']},nw_src={ip['ip']} actions=output:{_link['peer_name']}",
+                        ]
+
+                        # VMのインターフェイスからARP要求(arp_op=1)が飛んできたとき、dummy_macを返却します
+                        dummy_mac = "0x00163e000001"
+                        br_flows += [
+                            f"priority=800,arp,in_port={_link['peer_name']},arp_op=1 actions="
+                            + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{dummy_mac}->NXM_OF_ETH_SRC[],"
+                            + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{dummy_mac}->NXM_NX_ARP_SHA[],"
+                            + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],load:0x2->NXM_OF_ARP_OP[],IN_PORT"
+                        ]
 
         for link in bridge.get("links", []):
             cmds += [

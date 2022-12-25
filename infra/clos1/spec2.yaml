@@ -6,7 +6,7 @@ imports:
 ipam:
   vm_network1:
     subnet: 10.100.0.0/24
-    kind: l3
+    kind: l2
 
 template_map:
   hv:
@@ -16,10 +16,16 @@ template_map:
           kind: external-ha
           links:
             - peer: br-int
+              flows:
+                - kind: ingress
+                - kind: egress
         - name: br-int
           kind: internal-vm
   vm:
     mtu: 1500
+    routes:
+      - dst: default
+        via: ${_links.0.peer_ips.0.ip}
 
 node_map:
   HV1:
