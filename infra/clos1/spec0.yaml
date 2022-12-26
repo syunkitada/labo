@@ -36,28 +36,28 @@ template_map:
       net.ipv4.conf.all.rp_filter: 0
   spine:
     lo_ips:
-      - inet: "${assign_inet4(spine_network)}"
+      - inet: "<%=assign_inet4(spine_network)%>"
     frr:
-      id: "${lo_ips.0.ip}"
-      asn: "${ipv4_to_asn(lo_ips.0.ip)}"
+      id: "<%=lo_ips.0.ip%>"
+      asn: "<%=ipv4_to_asn(lo_ips.0.ip)%>"
       bgp_peer_groups:
         - name: ADMIN
   leaf:
     lo_ips:
-      - inet: "${assign_inet4(leaf_network)}"
+      - inet: "<%=assign_inet4(leaf_network)%>"
     frr:
-      id: "${lo_ips.0.ip}"
-      asn: "${ipv4_to_asn(lo_ips.0.ip)}"
+      id: "<%=lo_ips.0.ip%>"
+      asn: "<%=ipv4_to_asn(lo_ips.0.ip)%>"
       bgp_peer_groups:
         - name: ADMIN
         - name: VM
   hv:
     routes:
       - dst: default
-        via: ${gateway_ip(_links.0.peer_ips.0.network)}
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
     ip_rules:
       - prio: 20
-        rule: from ${_links.0.peer_ips.0.inet} table main
+        rule: from <%=_links.0.peer_ips.0.inet%> table main
 
 nodes:
   - name: CL1
@@ -65,24 +65,24 @@ nodes:
       - node
     routes:
       - dst: default
-        via: ${links.0.peer_ips.0.ip}
+        via: <%=links.0.peer_ips.0.ip%>
     links:
       - peer: SP1
         ips:
-          - inet: ${assign_inet4(outer_network1)}
-          - inet: ${inet4_to_inet6(links.0.ips.0.inet)}
+          - inet: <%=assign_inet4(outer_network1)%>
+          - inet: <%=inet4_to_inet6(links.0.ips.0.inet)%>
         peer_ips:
-          - inet: ${gateway_inet4(outer_network1)}
+          - inet: <%=gateway_inet4(outer_network1)%>
   - name: SP1
     templates:
       - node
       - spine
     frr:
       ipv4_networks:
-        - "${_node_map.CL1.links.0.ips.0.network}"
-        - ${lo_ips.0.inet}
+        - "<%=_node_map.CL1.links.0.ips.0.network%>"
+        - <%=lo_ips.0.inet%>
       ipv6_networks:
-        - "${_node_map.CL1.links.0.ips.1.network}"
+        - "<%=_node_map.CL1.links.0.ips.1.network%>"
     links:
       - peer: L11
         bgp_peer_group: ADMIN
@@ -95,16 +95,16 @@ nodes:
     bridges:
       - name: l2-br
         ips:
-          - inet: ${gateway_inet4(leaf1_l2admin_network)}
+          - inet: <%=gateway_inet4(leaf1_l2admin_network)%>
     frr:
       ipv4_networks:
-        - ${links.0.peer_ips.0.network}
-        - ${lo_ips.0.inet}
+        - <%=links.0.peer_ips.0.network%>
+        - <%=lo_ips.0.inet%>
     links:
       - peer: HV1
         bridge: l2-br
         peer_ips:
-          - inet: ${assign_inet4(leaf1_l2admin_network)}
+          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
         vlan_map:
           100:
             bgp_peer_group: ADMIN
@@ -119,7 +119,7 @@ nodes:
       - leaf
     frr:
       ipv4_networks:
-        - ${lo_ips.0.inet}
+        - <%=lo_ips.0.inet%>
     links:
       - peer: HV1
         vlan_map:

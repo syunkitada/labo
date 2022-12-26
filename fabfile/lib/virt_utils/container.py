@@ -134,6 +134,9 @@ def _make(c):
                     dcmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
         c.exec(dcmds, title="setup-l3admin")
 
+    if "cmds" in rspec:
+        c.exec(rspec.get("cmds", []), title="cmds")
+
     for vm in rspec.get("vms", []):
         c = context.ContainerContext(c.gctx, vm)
         _make(c)

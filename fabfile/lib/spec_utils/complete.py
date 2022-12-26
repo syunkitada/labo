@@ -152,8 +152,18 @@ def complete_spec(spec):
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
 
+        for key, value in rspec.get("var_map", {}).items():
+            rspec["var_map"][key] = _complete_value(value, spec, rspec)
+
+    def _complete_node_at_last(_, rspec):
+        for j, cmd in enumerate(rspec.get("cmds", [])):
+            rspec["cmds"][j] = _complete_value(cmd, spec, rspec)
+
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
+
+    for i, rspec in enumerate(spec.get("nodes", [])):
+        _complete_node_at_last(i, rspec)
 
     return
 
@@ -162,12 +172,13 @@ def _complete_value(value, spec, node, is_get_src=False):
     if not isinstance(value, str):
         return value
 
-    compi = value.find("${")
-    compri = value.rfind("}")
+    compi = value.find("<%=")
+    compri = value.find("%>", compi)
     if compi >= 0 and compri > 1:
         value_prefix = value[0:compi]
-        value_suffix = value[compri + 1 :]  # noqa
-        value = value[compi + 2 : compri]  # noqa
+        value_suffix = value[compri + 2 :]  # noqa
+        value = value[compi + 3 : compri]  # noqa
+        value = value.strip()
         funci = value.find("(")
         funcri = value.rfind(")")
         func = value[:funci]
@@ -186,7 +197,7 @@ def _complete_value(value, spec, node, is_get_src=False):
             value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
         else:
             raise Exception(f"unexpected func: {func}")
-        return value_prefix + str(value) + value_suffix
+        return _complete_value(value_prefix + str(value) + value_suffix, spec, node)
     else:
         if is_get_src:
             return _get_src(value, spec, node)

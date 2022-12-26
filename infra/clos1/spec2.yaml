@@ -25,14 +25,14 @@ template_map:
     mtu: 1500
     routes:
       - dst: default
-        via: ${_links.0.peer_ips.0.ip}
+        via: <%=_links.0.peer_ips.0.ip%>
 
 node_map:
   HV1:
     vm_links:
       - peer: vm1
         peer_ips:
-          - inet: ${assign_inet4(vm_network1)}
+          - inet: <%=assign_inet4(vm_network1)%>
     vms:
       - name: vm1
         templates:

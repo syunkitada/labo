@@ -11,21 +11,21 @@ template_map:
   hv:
     l3admin:
       ips:
-        - inet: ${assign_inet4(l3admin_network1)}
+        - inet: <%=assign_inet4(l3admin_network1)%>
     ovs:
       bridges:
         - name: br-ex
           kind: external-ha
     frr:
-      id: "${l3admin.ips.0.ip}"
-      asn: "${ipv4_to_asn(l3admin.ips.0.ip)}"
+      id: "<%=l3admin.ips.0.ip%>"
+      asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
       route_maps:
         - name: ADMIN-v4
           policy: permit
           order: 5
           version: 4
           prefix_list:
-            - seq 5 permit ${l3admin.ips.0.network} le 32
+            - seq 5 permit <%=l3admin.ips.0.network%> le 32
         - name: DENY-ANY-v4
           policy: deny
           order: 5
@@ -38,4 +38,4 @@ template_map:
         - name: VM
           route_map_v4_out: DENY-ANY-v4
       ipv4_networks:
-        - ${l3admin.ips.0.inet}
+        - <%=l3admin.ips.0.inet%>
