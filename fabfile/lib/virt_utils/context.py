@@ -165,3 +165,36 @@ class ContainerContext:
 
     def exist_route6(self, route):
         return self.rspec["_hostname"] in self.gctx.netns_map and route["dst"] in self.gctx.netns_map[self.rspec["_hostname"]]["route6_map"]
+
+    def append_cmds_ip_addr_add(self, cmds, ip, dev):
+        if ip["version"] == 4:
+            dryrun = self.exist_netdev(dev) and ip["inet"] in self.gctx.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet_map"]
+            cmds += [(f"ip addr add {ip['inet']} dev {dev}", dryrun)]
+        elif ip["version"] == 6:
+            dryrun = self.exist_netdev(dev) and ip["inet"] in self.gctx.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet6_map"]
+            cmds += [(f"ip addr add {ip['inet']} dev {dev}", dryrun)]
+
+    def append_local_cmds_add_link(self, cmds, link):
+        dryrun = self.exist_netdev(link["link_name"])
+        cmds += [
+            (f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", dryrun),
+            (f"ethtool -K {link['link_name']} tso off tx off", dryrun),
+            (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
+            (f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up", dryrun),
+        ]
+
+    def append_local_cmds_add_peer(self, cmds, link):
+        dryrun = self.exist_netdev(link["peer_name"])
+        cmds += [
+            (f"ethtool -K {link['peer_name']} tso off tx off", dryrun),
+            (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", dryrun),
+            (f"ip link set dev {link['peer_name']} netns {self.rspec['_hostname']} up", dryrun),
+        ]
+
+    def append_cmds_add_vlan(self, cmds, netdev, vlan_id):
+        netdev_vlan = f"{netdev}.{vlan_id}"
+        dryrun = self.exist_netdev(netdev_vlan)
+        cmds += [
+            (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", dryrun),
+            (f"ip link set {netdev_vlan} up", dryrun),
+        ]
