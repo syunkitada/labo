@@ -18,3 +18,11 @@ def make(c, _, rspec):
         c.run(f"echo '{json.dumps(daemon_json)}'> /tmp/daemon.json")
         c.sudo("cp /tmp/daemon.json /etc/docker/daemon.json")
         c.sudo("systemctl restart docker")
+
+
+def get_docker_ps_map(c):
+    docker_ps = json.loads("[" + ",".join(c.sudo("docker ps --format='{{json .}}'", hide=True).stdout.splitlines()) + "]")
+    docker_ps_map = {}
+    for ps in docker_ps:
+        docker_ps_map[ps["Names"]] = ps
+    return docker_ps_map

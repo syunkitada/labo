@@ -3,27 +3,36 @@ import os
 from . import context, container_ovs, container_frr
 
 
-def cmd(cmd, c):
-    if cmd == "dump":
-        print(yaml.safe_dump(c.rspec))
-    elif cmd == "make":
-        _make(c)
-    elif cmd == "clean":
-        _clean(c)
+def cmd(t):
+    if t.cmd == "dump":
+        print(yaml.safe_dump(t.rspec))
+    elif t.cmd == "make":
+        if t.next == 0:
+            _make_prepare(t.ctx)
+            t.next = 1
+        elif t.next == 1:
+            _make(t.ctx)
+            t.next = -1
+    elif t.cmd == "clean":
+        _clean(t.ctx)
 
 
 def _clean(c):
     rspec = c.rspec
-    if rspec["_hostname"] in c.gctx.docker_ps_map:
-        c.gctx.c.sudo(f"docker kill {rspec['_hostname']}")
-    if rspec["_hostname"] in c.gctx.netns_map:
-        c.gctx.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}")
+    if rspec["_hostname"] in c.docker_ps_map:
+        c.c.sudo(f"docker kill {rspec['_hostname']}")
+    if rspec["_hostname"] in c.netns_map:
+        c.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}")
+
+
+def _make_prepare(c):
+    print("make prapare debug")
 
 
 def _make(c):
     rspec = c.rspec
     os.makedirs(rspec["_script_dir"], exist_ok=True)
-    c.gctx.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
+    c.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
 
     dryrun = True
     docker_options = [
@@ -36,7 +45,7 @@ def _make(c):
         f"pid=`docker inspect {rspec['_hostname']}" + " --format '{{.State.Pid}}'`",
         "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{rspec['_hostname']}",
     ]
-    if rspec["_hostname"] not in c.gctx.docker_ps_map:
+    if rspec["_hostname"] not in c.docker_ps_map:
         dryrun = False
     c.exec(lcmds, title="prepare-docker", dryrun=dryrun, is_local=True)
 
@@ -138,5 +147,5 @@ def _make(c):
         c.exec(rspec.get("cmds", []), title="cmds")
 
     for vm in rspec.get("vms", []):
-        c = context.ContainerContext(c.gctx, vm)
+        c = context.ContainerContext(c.c, vm)
         _make(c)

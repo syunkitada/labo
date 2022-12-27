@@ -41,7 +41,7 @@ nodes:
       - node
     routes:
       - dst: default
-        via: <%=_links.0.ips.0.ip%>
+        via: <%=links.0.ips.0.ip%>
     var_map:
       vlan_inet4: <%=assign_inet4(network_vlan1)%>
     cmds:
