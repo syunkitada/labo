@@ -159,6 +159,11 @@ def complete_spec(spec):
         for j, cmd in enumerate(rspec.get("cmds", [])):
             rspec["cmds"][j] = _complete_value(cmd, spec, rspec)
 
+        for j, test in enumerate(rspec.get("tests", [])):
+            if test["kind"] == "ping":
+                for target in test["targets"]:
+                    target["dst"] = _complete_value(target["dst"], spec, rspec)
+
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
 
@@ -189,6 +194,8 @@ def _complete_value(value, spec, node, is_get_src=False):
             value = ipam.assign_inet4(arg, spec)
         elif func == "gateway_inet4":
             value = ipam.gateway_inet4(arg, spec)
+        elif func == "inet_to_ip":
+            value = ipam.inet_to_ip(_complete_value(arg, spec, node, True))
         elif func == "gateway_ip":
             value = ipam.gateway_ip(_complete_value(arg, spec, node, True))
         elif func == "inet4_to_inet6":

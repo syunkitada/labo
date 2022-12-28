@@ -1,6 +1,7 @@
 import yaml
 import os
 from . import context, container_ovs, container_frr
+from lib import colors
 
 
 def cmd(t):
@@ -15,24 +16,72 @@ def cmd(t):
             t.next = -1
     elif t.cmd == "clean":
         _clean(t.ctx)
+    elif t.cmd == "test":
+        return _test(t.ctx)
 
 
 def _clean(c):
     rspec = c.rspec
     if rspec["_hostname"] in c.docker_ps_map:
-        c.c.sudo(f"docker kill {rspec['_hostname']}")
+        c.c.sudo(f"docker kill {rspec['_hostname']}", hide=True)
     if rspec["_hostname"] in c.netns_map:
-        c.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}")
+        c.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
+
+
+def _test(c):
+    rspec = c.rspec
+    status = 0
+    msgs = []
+    ok_targets = []
+    ng_targets = []
+    for test in rspec.get("tests", []):
+        if test["kind"] == "ping":
+            for target in test["targets"]:
+                err = _ping(c, target)
+                if err is None:
+                    ok_targets.append(target)
+                else:
+                    status += 1
+                    target["err"] = err
+                    ng_targets.append(target)
+    if len(ok_targets) > 0:
+        ok_msgs = ["ok_results"]
+        for target in ok_targets:
+            ok_msgs.append(f"ping to {target['name']}(dst={target['dst']})")
+        msgs.append(colors.ok("\n".join(ok_msgs)))
+    if len(ng_targets) > 0:
+        ng_msgs = ["ng_results"]
+        for target in ng_targets:
+            ng_msgs.append(f"ping to {target['name']}(dst={target['dst']},err={target['err']})")
+        msgs.append(colors.crit("\n".join(ng_msgs)))
+    msgs.append("")
+    return {
+        "status": status,
+        "msg": "\n".join(msgs),
+    }
+
+
+def _ping(c, target):
+    result = c.dexec(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
+    if result.return_code == 0:
+        return
+    else:
+        return result.stdout + result.stderr
 
 
 def _make_prepare(c):
-    print("make prapare debug")
+    rspec = c.rspec
+    os.makedirs(rspec["_script_dir"], exist_ok=True)
+    c.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
+
+    lcmds = []
+    for link in rspec.get("links", []):
+        c.append_local_cmds_add_link(lcmds, link)
+    c.exec(lcmds, title="prepare-links", is_local=True)
 
 
 def _make(c):
     rspec = c.rspec
-    os.makedirs(rspec["_script_dir"], exist_ok=True)
-    c.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
 
     dryrun = True
     docker_options = [
@@ -65,11 +114,11 @@ def _make(c):
     c.exec(dcmds, title="init-docker")
 
     for link in rspec.get("links", []):
-        c.append_local_cmds_add_link(lcmds, link)
+        c.append_local_cmds_set_link(lcmds, link)
     for link in rspec.get("_links", []):
-        c.append_local_cmds_add_peer(lcmds, link)
+        c.append_local_cmds_set_peer(lcmds, link)
     for link in rspec.get("vm_links", []):
-        c.append_local_cmds_add_link(lcmds, link)
+        c.append_local_cmds_set_link(lcmds, link)
     c.exec(lcmds, title="prepare-links", is_local=True)
 
     for link in rspec.get("links", []):

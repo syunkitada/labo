@@ -2,7 +2,7 @@ imports:
   - infra/common/remote_spec.yaml
 
 common:
-  namespace: vxlan1ovs
+  namespace: vxlan1_ovs
 
 ipam:
   network1:
@@ -28,9 +28,9 @@ nodes:
     links:
       - peer: n1
         ips:
-          - inet: <%=gateway_inet4(network2)%>
+          - inet: <%=gateway_inet4(network1)%>
         peer_ips:
-          - inet: <%=assign_inet4(network2)%>
+          - inet: <%=assign_inet4(network1)%>
       - peer: n2
         ips:
           - inet: <%=gateway_inet4(network2)%>
@@ -41,7 +41,7 @@ nodes:
       - node
     routes:
       - dst: default
-        via: <%=links.0.ips.0.ip%>
+        via: <%=_links.0.ips.0.ip%>
     var_map:
       vlan_inet4: <%=assign_inet4(network_vlan1)%>
     cmds:
@@ -49,6 +49,13 @@ nodes:
       - ip link add test-vxlan1 type vxlan id 100 remote <%=_node_map.n2._links.0.peer_ips.0.ip%> dstport 4789 dev <%=_links.0.peer_name%>
       - ip address add <%=var_map.vlan_inet4%> dev test-vxlan1
       - ip link set test-vxlan1 up
+    tests:
+      - kind: ping
+        targets:
+          - name: n2_under
+            dst: <%=_node_map.n2._links.0.peer_ips.0.ip%>
+          - name: n2_over_vxlan
+            dst: <%=inet_to_ip(_node_map.n2.var_map.vlan_inet4)%>
   - name: n2
     templates:
       - node

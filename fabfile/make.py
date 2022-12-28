@@ -4,27 +4,32 @@ import yaml
 from invoke.context import Context
 from fabric import task, Config, Connection
 from concurrent.futures import ThreadPoolExecutor
-from itertools import product
-from functools import partial
+from collections import OrderedDict
 
 from lib.virt_utils import context, router, container, vm, vm_image
-from lib.ctx_utils import patch_ctx
 from lib.infra_utils import docker, mysql, pdns, nfs, envrc, shell
-from lib import spec_utils, os_utils
+from lib import spec_utils, os_utils, colors
 
 
 @task
-def make(c, file, target="node", cmd="make"):
-    """make -f [spec_file] -t [kind]:[name_regex] -c [cmd]
-    # target オプション
+def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
+    """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])
+
+    # target (default=node)
     コマンドの実行対象を限定するために使用します。
     kindは、infra, image, node のいずれかを指定でき、実行対象の種別を限定します。（デフォルトはnodeです）
     [kind]の後ろに、:[name_regex]を指定することで、正規表現により実行対象の名前で限定します。
 
-    # cmd オプション
+    # cmd (default=make)
     実行対象のリソースに対するコマンドを指定するために使用します。
     cmdは、make, dump などが指定でき、これはリソースによってサポートされるコマンドが異なります。（デフォルトはmakeです）
     makeは、リソースのスペックに基づいてリソースを実体化するコマンドで、すべてのリソースでサポートされています。
+
+    # debug (default=False)
+    実行ログを詳細化します。
+
+    # parallel_pool_size (default=5)
+    並列実行のプールサイズです。
     """
 
     spec = spec_utils.load_spec(file)
@@ -53,7 +58,7 @@ def make(c, file, target="node", cmd="make"):
         print("Use sudo")
         exit(1)
 
-    c = _new_context(context_config, spec)
+    c = _new_runtime_context(context_config, spec)
     envrc.cmd(cmd, c, spec)
 
     re_targets = []
@@ -77,7 +82,7 @@ def make(c, file, target="node", cmd="make"):
     if make_infra:
         for rspec in spec.get("infras", []):
             print(f"{cmd} infra {rspec['name']}: start")
-            if not_target(rspec, re_targets):
+            if _not_target(rspec, re_targets):
                 print(f"{cmd} infra {rspec['name']}: skipped")
                 continue
             elif rspec["kind"] == "docker":
@@ -98,7 +103,7 @@ def make(c, file, target="node", cmd="make"):
     if make_image:
         for name, rspec in spec.get("vm_image_map", {}).items():
             print(f"{cmd} image {name}: start")
-            if not_target(rspec, re_targets):
+            if _not_target(rspec, re_targets):
                 print(f"{cmd} image {name}: skipped")
                 continue
             vm_image.cmd(cmd, c, spec, rspec)
@@ -110,19 +115,20 @@ def make(c, file, target="node", cmd="make"):
             "docker_ps_map": docker.get_docker_ps_map(c),
         }
 
+        results = OrderedDict()
         tasks = []
         for rspec in spec.get("nodes", []):
-            if not_target(rspec, re_targets):
+            if _not_target(rspec, re_targets):
                 print(f"{cmd} node {rspec['name']}: skipped")
                 continue
-            tasks.append(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, ctx_data=ctx_data))
+            tasks.append(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, ctx_data=ctx_data, debug=debug))
+            results[rspec["name"]] = []
 
-        pool_size = 5
         while True:
-            with ThreadPoolExecutor(max_workers=pool_size) as pool:
-                results = pool.map(_make, tasks)
-            for result in results:
-                print(result)
+            with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
+                tmp_results = pool.map(_make, tasks)
+            for result in tmp_results:
+                results[result["name"]].append(result["result"])
 
             next_tasks = []
             for t in tasks:
@@ -133,21 +139,46 @@ def make(c, file, target="node", cmd="make"):
                 break
             tasks = next_tasks
 
+        print("# results ----------------------------------------")
+        msgs = []
+        for name, results in results.items():
+            last_result = results[-1]
+            last_status = 0
+            if last_result is None:
+                msgs.append(colors.ok(f"{name}: success"))
+            else:
+                last_status = last_result.get("status", 0)
+                if last_status == 0:
+                    msgs.append(colors.ok(f"{name}: success"))
+                else:
+                    msgs.append(colors.crit(f"{name}: failed"))
+
+            for result in results:
+                if result is not None:
+                    msgs.append(result.get("msg", ""))
+        msg = "\n".join(msgs)
+        print(msg)
+
         return
 
 
 class Task:
-    def __init__(self, context_config, ctx_data, spec, cmd, rspec):
-        self.c = _new_context(context_config, spec)
+    def __init__(self, context_config, ctx_data, spec, cmd, rspec, debug):
+        self.c = _new_runtime_context(context_config, spec)
         self.cmd = cmd
         self.spec = spec
         self.rspec = rspec
         self.ctx_data = ctx_data
         self.next = 0
         self.ctx = None
+        self.debug = debug
 
 
-def _new_context(context_config, spec):
+def _new_runtime_context(context_config, spec):
+    """
+    new_runtime_contextは、ローカルでの実行の場合はinvokeのContextを返し、リモートでの実行の場合はfabricのConnectionを返します。
+    fabricはinvokeを利用されて実装されているので、ある程度の互換性を持っており、どちらを利用してるかを意識せずに実装できます。
+    """
     common = spec.get("common")
     host = None
     connect_kwargs = {}
@@ -170,29 +201,37 @@ def _new_context(context_config, spec):
     return c
 
 
-# def _make(cmd, c, spec, rspec):
 def _make(t):
     print(f"{t.cmd} node {t.rspec['name']}: start {t.next}")
-
+    result = None
     if t.rspec["kind"] == "gw":
-        router.cmd(t.cmd, t.c, t.spec, t.rspec)
+        result = router.cmd(t.cmd, t.c, t.spec, t.rspec)
     elif t.rspec["kind"] == "container":
         if t.ctx is None:
-            t.ctx = context.ContainerContext(t.c, t.rspec, t.ctx_data)
-        container.cmd(t)
+            t.ctx = context.ContainerContext(t)
+        result = container.cmd(t)
     elif t.rspec["kind"] == "vm":
-        vm.cmd(t.cmd, t.c, t.spec, t.rspec)
+        result = vm.cmd(t.cmd, t.c, t.spec, t.rspec)
     else:
         print(f"unsupported kind: kind={t.rspec['kind']}")
         exit(1)
 
     if t.next > 0:
-        print(f"{t.cmd} node {t.rspec['name']}: next")
+        print(f"{t.cmd} node {t.rspec['name']}: next {t.next}")
     else:
         print(f"{t.cmd} node {t.rspec['name']}: completed")
 
+        # fabricのConnectionの場合は、使い終わったら閉じる
+        if type(t.c) is Connection:
+            t.c.close()
 
-def not_target(rspec, re_targets):
+    return {
+        "name": t.rspec["name"],
+        "result": result,
+    }
+
+
+def _not_target(rspec, re_targets):
     if len(re_targets) == 0:
         return False
     name = rspec["name"]

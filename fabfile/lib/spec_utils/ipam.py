@@ -53,6 +53,10 @@ def gateway_ip(network):
     return inet
 
 
+def inet_to_ip(inet):
+    return inet.split("/")[0]
+
+
 def ipv4_to_asn(ipv4):
     ip_address = ipaddress.ip_address(ipv4)
     asn = PRIVATE_ASN_START

@@ -2,23 +2,27 @@ import os
 
 
 class ContainerContext:
-    def __init__(self, c, rspec, ctx_data=None):
-        self.c = c
-        self.rspec = rspec
-        if ctx_data is not None:
-            self.netns_map = ctx_data["netns_map"]
-            self.docker_ps_map = ctx_data["docker_ps_map"]
+    def __init__(self, t):
+        self.c = t.c
+        self.rspec = t.rspec
+        self.debug = t.debug
+        if t.ctx_data is not None:
+            self.netns_map = t.ctx_data["netns_map"]
+            self.docker_ps_map = t.ctx_data["docker_ps_map"]
+
+    def dexec(self, cmd, *args, **kwargs):
+        return self.c.sudo(f"docker exec {self.rspec['_hostname']} {cmd}", *args, **kwargs)
 
     def exec(self, cmds, title="", dryrun=False, is_local=False):
         exec_filepath = os.path.join(self.rspec["_script_dir"], f"{self.rspec['_script_index']}_{title}_exec.sh")
         full_filepath = os.path.join(self.rspec["_script_dir"], f"{self.rspec['_script_index']}_{title}_full.sh")
+        log_filepath = os.path.join(self.rspec["_script_dir"], f"{self.rspec['_script_index']}_{title}.log")
         self.rspec["_script_index"] += 1
 
         exec_cmds = []
         full_cmds = []
         for cmd in cmds:
             if isinstance(cmd, tuple):
-                print("cmd", cmd[0], cmd[1], dryrun)
                 if not cmd[1] and not dryrun:
                     exec_cmds.append(cmd[0])
                 full_cmds.append(cmd[0])
@@ -29,12 +33,15 @@ class ContainerContext:
 
         with open(exec_filepath, "w") as f:
             if is_local:
-                f.write("\n".join(exec_cmds))
+                f.write("\n".join(exec_cmds) + "\n")
             else:
                 cmds_str = "\n".join(exec_cmds)
-                f.write(f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{cmds_str}'\n")
+                f.write(f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{cmds_str}\n'\n")
         if len(exec_cmds) > 0:
-            self.c.sudo(f"bash -ex {exec_filepath}")
+            if self.debug:
+                self.c.sudo(f"bash -c 'bash -ex {exec_filepath} 2>&1 | tee {log_filepath}'")
+            else:
+                self.c.sudo(f"bash -c 'bash -ex {exec_filepath} &> {log_filepath}'")
 
         with open(full_filepath, "w") as f:
             if is_local:
@@ -67,14 +74,17 @@ class ContainerContext:
 
     def append_local_cmds_add_link(self, cmds, link):
         dryrun = self.exist_netdev(link["link_name"])
+        cmds += [(f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", dryrun)]
+
+    def append_local_cmds_set_link(self, cmds, link):
+        dryrun = self.exist_netdev(link["link_name"])
         cmds += [
-            (f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", dryrun),
             (f"ethtool -K {link['link_name']} tso off tx off", dryrun),
             (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
             (f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up", dryrun),
         ]
 
-    def append_local_cmds_add_peer(self, cmds, link):
+    def append_local_cmds_set_peer(self, cmds, link):
         dryrun = self.exist_netdev(link["peer_name"])
         cmds += [
             (f"ethtool -K {link['peer_name']} tso off tx off", dryrun),
