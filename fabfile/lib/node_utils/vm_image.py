@@ -1,30 +1,34 @@
 import os
 
 
-def cmd(cmd, c, spec, rspec):
-    if cmd == "make":
-        make(c, spec, rspec)
-    elif cmd == "clean":
-        clean(c, rspec)
-    elif cmd == "remake":
-        clean(c, rspec)
-        make(c, spec, rspec)
+def cmd(t):
+    if t.cmd == "make":
+        _make(t)
+    elif t.cmd == "clean":
+        _clean(t)
+    elif t.cmd == "remake":
+        _clean(t)
+        _make(t)
 
 
-def make(c, spec, rspec):
-    if os.path.exists(rspec["_path"]):
+def _make(t):
+    if os.path.exists(t.rspec["_path"]):
         return
-    if "url" in rspec:
-        download(c, spec, rspec)
-    if "base" in rspec:
-        custom(c, spec, rspec)
+    if "url" in t.rspec:
+        _download(t)
+    if "base" in t.rspec:
+        _custom(t)
 
 
-def clean(c, rspec):
-    c.sudo(f"rm -rf {rspec['_path']}")
+def _clean(t):
+    t.c.sudo(f"rm -rf {t.rspec['_path']}")
 
 
-def download(c, spec, rspec):
+def _download(t):
+    c = t.c
+    spec = t.spec
+    rspec = t.rspec
+
     tmp_image_path = f"/tmp/{rspec['name']}.tmp"
     if not os.path.exists(tmp_image_path):
         c.run(f"wget -O {tmp_image_path} {rspec['url']}")
@@ -42,7 +46,11 @@ def download(c, spec, rspec):
         raise Exception(f"Unsupported image format: {rspec['name']}")
 
 
-def custom(c, spec, rspec):
+def _custom(t):
+    c = t.c
+    spec = t.spec
+    rspec = t.rspec
+
     tmp_image_path = f"/tmp/{rspec['name']}.tmp"
     tmp_mount_path = f"/tmp/{rspec['name']}.tmp.mount"
     base_image_path = os.path.join(spec["conf"]["vm_images_dir"], rspec["base"])
@@ -68,21 +76,21 @@ def custom(c, spec, rspec):
 
     rspec["_tmp_mount_path"] = tmp_mount_path
     if rspec["base"] == "centos7":
-        custom_common(c, spec, rspec)
-        custom_centos7(c, spec, rspec)
+        _custom_common(c, spec, rspec)
+        _custom_centos7(c, spec, rspec)
     elif rspec["base"] == "ubuntu20":
-        custom_common(c, spec, rspec)
-        ubuntu_common(c, spec, rspec)
+        _custom_common(c, spec, rspec)
+        _ubuntu_common(c, spec, rspec)
     elif rspec["base"] == "ubuntu22":
-        custom_common(c, spec, rspec)
-        ubuntu_common(c, spec, rspec)
+        _custom_common(c, spec, rspec)
+        _ubuntu_common(c, spec, rspec)
 
     umount()
     c.sudo(f"cp {tmp_image_path} {rspec['_path']}")
     return
 
 
-def custom_common(c, _, rspec):
+def _custom_common(c, _, rspec):
     root = rspec["_tmp_mount_path"]
 
     # c.sudo(f"chroot {root} groupadd debugger")
@@ -176,7 +184,7 @@ function retry() {
     c.sudo(f"chmod 755 {root}/opt/labo/bin/labo-init")
 
 
-def custom_centos7(c, _, rspec):
+def _custom_centos7(c, _, rspec):
     root = rspec["_tmp_mount_path"]
     c.sudo(f"chroot {root} systemctl enable labo-init")
     c.sudo(f"chroot {root} yum remove -y cloud-init")
@@ -190,7 +198,7 @@ def custom_centos7(c, _, rspec):
     c.sudo(f"rm -rf {root}/etc/sysconfig/network-scripts/ifcfg-eth0")
 
 
-def ubuntu_common(c, _, rspec):
+def _ubuntu_common(c, _, rspec):
     root = rspec["_tmp_mount_path"]
     c.sudo(f"chroot {root} systemctl enable labo-init")
     c.sudo(f"chroot {root} apt remove -y cloud-init cloud-guest-utils cloud-initramfs-copymods cloud-initramfs-dyn-netconf")

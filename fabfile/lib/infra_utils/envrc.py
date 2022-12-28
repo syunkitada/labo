@@ -1,6 +1,11 @@
-def cmd(cmd, c, spec):
-    if cmd == "make":
-        make(c, spec)
+"""
+envrc は、環境変数を扱うためのリソースです。
+"""
+
+
+def cmd(t):
+    if t.cmd == "make":
+        make(t.c, t.spec)
 
 
 def make(c, spec):

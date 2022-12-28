@@ -1,7 +1,7 @@
 import os
 
 
-class ContainerContext:
+class Context:
     def __init__(self, t):
         self.c = t.c
         self.rspec = t.rspec

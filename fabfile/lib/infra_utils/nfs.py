@@ -1,20 +1,23 @@
 # nfs utils
 
 
-def cmd(cmd, c, spec, rspec):
-    if cmd == "dump":
-        print(rspec)
-    elif cmd == "status":
-        _status(c, spec, rspec)
-    elif cmd == "make":
-        _make(c, spec, rspec)
+def cmd(t):
+    if t.cmd == "dump":
+        print(t.rspec)
+    elif t.cmd == "status":
+        _status(t)
+    elif t.cmd == "make":
+        _make(t)
 
 
-def _status(c, spec, rspec):
-    c.sudo("cat /etc/exports")
+def _status(t):
+    t.c.sudo("cat /etc/exports")
 
 
-def _make(c, spec, rspec):
+def _make(t):
+    c = t.c
+    rspec = t.rspec
+
     c.sudo(f"mkdir -p {rspec['path']}", hide=True)
     c.sudo(f"chown nobody.nogroup {rspec['path']}", hide=True)
 
