@@ -2,7 +2,7 @@ imports:
   - infra/common/remote_spec.yaml
 
 common:
-  namespace: vxlan1_ovs
+  namespace: vxlan1-ovs
 
 ipam:
   network1:
