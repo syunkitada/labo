@@ -98,17 +98,6 @@ def complete_spec(spec):
         if rspec["kind"] == "container":
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
             _complete_ips(rspec.get("lo_ips", []), spec, rspec)
-            frr = rspec.get("frr")
-            if frr is not None:
-                frr["id"] = _complete_value(frr["id"], spec, rspec)
-                frr["asn"] = _complete_value(frr["asn"], spec, rspec)
-                for i, value in enumerate(frr.get("ipv4_networks", [])):
-                    frr["ipv4_networks"][i] = _complete_value(value, spec, rspec)
-                for i, value in enumerate(frr.get("ipv6_networks", [])):
-                    frr["ipv6_networks"][i] = _complete_value(value, spec, rspec)
-                for route_map in frr.get("route_maps", []):
-                    for i, value in enumerate(route_map.get("prefix_list", [])):
-                        route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
             for bridge in rspec.get("bridges", []):
                 if "mtu" not in bridge:
                     bridge["mtu"] = rspec.get("mtu", 1500)
@@ -137,6 +126,18 @@ def complete_spec(spec):
                 peer_links_map[link["peer"]].append(link)
             for vmi, vm in enumerate(rspec.get("vms", [])):
                 _complete_node(vmi, vm)
+
+            frr = rspec.get("frr")
+            if frr is not None:
+                frr["id"] = _complete_value(frr["id"], spec, rspec)
+                frr["asn"] = _complete_value(frr["asn"], spec, rspec)
+                for i, value in enumerate(frr.get("ipv4_networks", [])):
+                    frr["ipv4_networks"][i] = _complete_value(value, spec, rspec)
+                for i, value in enumerate(frr.get("ipv6_networks", [])):
+                    frr["ipv6_networks"][i] = _complete_value(value, spec, rspec)
+                for route_map in frr.get("route_maps", []):
+                    for i, value in enumerate(route_map.get("prefix_list", [])):
+                        route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
 
         # end if rspec["kind"] == "container":
         else:

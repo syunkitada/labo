@@ -21,13 +21,41 @@ template_map:
                 - kind: egress
         - name: br-int
           kind: internal-vm
+    frr:
+      route_maps:
+        - name: ADMIN-v4
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=l3admin.ips.0.network%> le 32
+        - name: VM-v4
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=ipam.vm_network1.subnet%> le 32
+      bgp_peer_groups:
+        - name: ADMIN
+          route_map_v4_out: ADMIN-v4
+        - name: VM
+          route_map_v4_out: VM-v4
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+        - <%=vm_links.0.peer_ips.0.ip%>/32
   vm:
     mtu: 1500
     routes:
       - dst: default
-        via: <%=_links.0.peer_ips.0.ip%>
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 node_map:
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          - name: vm1
+            dst: <%=_node_map.vm1._links.0.peer_ips.0.ip%>
   HV1:
     vm_links:
       - peer: vm1

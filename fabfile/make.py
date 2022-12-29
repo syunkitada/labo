@@ -58,7 +58,7 @@ def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
 
     c = _new_runtime_context(context_config, spec)
 
-    infra_utils.envrc.cmd(cmd, c, spec)
+    infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug))
 
     re_targets = []
     targets = target.split(":")
@@ -153,8 +153,8 @@ class Task:
         self.rspec = rspec
         self.ctx_data = ctx_data
         self.next = 0
-        self.ctx = None
         self.debug = debug
+        self.rc = None
 
 
 def _new_runtime_context(context_config, spec):

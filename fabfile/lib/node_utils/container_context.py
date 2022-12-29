@@ -81,6 +81,7 @@ class Context:
         cmds += [
             (f"ethtool -K {link['link_name']} tso off tx off", dryrun),
             (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
+            (f"ip link set dev {link['link_name']} address {link['link_mac']}", dryrun),
             (f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up", dryrun),
         ]
 
@@ -89,6 +90,7 @@ class Context:
         cmds += [
             (f"ethtool -K {link['peer_name']} tso off tx off", dryrun),
             (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", dryrun),
+            (f"ip link set dev {link['peer_name']} address {link['peer_mac']}", dryrun),
             (f"ip link set dev {link['peer_name']} netns {self.rspec['_hostname']} up", dryrun),
         ]
 

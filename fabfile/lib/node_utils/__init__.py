@@ -9,8 +9,8 @@ def make(t):
     if t.rspec["kind"] == "gw":
         result = router.cmd(t.cmd, t.c, t.spec, t.rspec)
     elif t.rspec["kind"] == "container":
-        if t.ctx is None:
-            t.ctx = container_context.Context(t)
+        if t.rc is None:
+            t.rc = container_context.Context(t)
         result = container.cmd(t)
     elif t.rspec["kind"] == "vm":
         result = vm.cmd(t.cmd, t.c, t.spec, t.rspec)

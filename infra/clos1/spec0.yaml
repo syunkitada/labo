@@ -73,6 +73,17 @@ nodes:
           - inet: <%=inet4_to_inet6(links.0.ips.0.inet)%>
         peer_ips:
           - inet: <%=gateway_inet4(outer_network1)%>
+    tests:
+      - kind: ping
+        targets:
+          - name: SP1
+            dst: <%=_node_map.SP1.lo_ips.0.ip%>
+          - name: L11
+            dst: <%=_node_map.L11.lo_ips.0.ip%>
+          - name: L12
+            dst: <%=_node_map.L12.lo_ips.0.ip%>
+          - name: HV1-L2
+            dst: <%=_node_map.HV1._links.0.peer_ips.0.ip%>
   - name: SP1
     templates:
       - node

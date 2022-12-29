@@ -1,6 +1,7 @@
 import yaml
 import os
-from . import context, container_ovs, container_frr
+import copy
+from . import container_context, container_ovs, container_frr
 from lib import colors
 
 
@@ -9,27 +10,31 @@ def cmd(t):
         print(yaml.safe_dump(t.rspec))
     elif t.cmd == "make":
         if t.next == 0:
-            _make_prepare(t.ctx)
+            _make_prepare(t.rc)
             t.next = 1
         elif t.next == 1:
-            _make(t.ctx)
+            _make(t.rc)
             t.next = -1
     elif t.cmd == "clean":
-        _clean(t.ctx)
+        _clean(t.rc)
     elif t.cmd == "test":
-        return _test(t.ctx)
+        return _test(t.rc)
 
 
-def _clean(c):
-    rspec = c.rspec
-    if rspec["_hostname"] in c.docker_ps_map:
-        c.c.sudo(f"docker kill {rspec['_hostname']}", hide=True)
-    if rspec["_hostname"] in c.netns_map:
-        c.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
+def _clean(rc):
+    rspec = rc.rspec
+    if rspec["_hostname"] in rc.docker_ps_map:
+        rc.c.sudo(f"docker kill {rspec['_hostname']}", hide=True)
+    if rspec["_hostname"] in rc.netns_map:
+        rc.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
+
+    for vm in rspec.get("vms", []):
+        rc.rspec = vm
+        _clean(rc)
 
 
-def _test(c):
-    rspec = c.rspec
+def _test(rc):
+    rspec = rc.rspec
     status = 0
     msgs = []
     ok_targets = []
@@ -37,7 +42,7 @@ def _test(c):
     for test in rspec.get("tests", []):
         if test["kind"] == "ping":
             for target in test["targets"]:
-                err = _ping(c, target)
+                err = _ping(rc, target)
                 if err is None:
                     ok_targets.append(target)
                 else:
@@ -61,27 +66,30 @@ def _test(c):
     }
 
 
-def _ping(c, target):
-    result = c.dexec(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
+def _ping(rc, target):
+    result = rc.dexec(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
     if result.return_code == 0:
         return
     else:
         return result.stdout + result.stderr
 
 
-def _make_prepare(c):
-    rspec = c.rspec
+def _make_prepare(rc):
+    rspec = rc.rspec
     os.makedirs(rspec["_script_dir"], exist_ok=True)
-    c.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
+    rc.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
 
     lcmds = []
     for link in rspec.get("links", []):
-        c.append_local_cmds_add_link(lcmds, link)
-    c.exec(lcmds, title="prepare-links", is_local=True)
+        rc.append_local_cmds_add_link(lcmds, link)
+    for link in rspec.get("vm_links", []):
+        rc.append_local_cmds_add_link(lcmds, link)
+    rc.exec(lcmds, title="prepare-links", is_local=True)
 
 
-def _make(c):
-    rspec = c.rspec
+def _make(rc):
+    rspec = rc.rspec
+    print("debug make0")
 
     dryrun = True
     docker_options = [
@@ -94,85 +102,86 @@ def _make(c):
         f"pid=`docker inspect {rspec['_hostname']}" + " --format '{{.State.Pid}}'`",
         "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{rspec['_hostname']}",
     ]
-    if rspec["_hostname"] not in c.docker_ps_map:
+    if rspec["_hostname"] not in rc.docker_ps_map:
         dryrun = False
-    c.exec(lcmds, title="prepare-docker", dryrun=dryrun, is_local=True)
+    rc.exec(lcmds, title="prepare-docker", dryrun=dryrun, is_local=True)
 
     dcmds = []
     dcmds += [f"hostname {rspec['_hostname']}"]
     for key, value in rspec.get("sysctl_map", {}).items():
         dcmds += [f"sysctl -w {key}={value}"]
     for bridge in rspec.get("bridges", []):
-        dryrun = c.exist_netdev(bridge["name"])
+        dryrun = rc.exist_netdev(bridge["name"])
         dcmds += [
             (f"ip link add {bridge['name']} type bridge", dryrun),
             (f"ip link set {bridge['name']} up", dryrun),
             (f"ip link set dev {bridge['name']} mtu {bridge['mtu']}", dryrun),
         ]
         for ip in bridge.get("ips", []):
-            c.append_cmds_ip_addr_add(dcmds, ip, bridge["name"])
-    c.exec(dcmds, title="init-docker")
+            rc.append_cmds_ip_addr_add(dcmds, ip, bridge["name"])
+    rc.exec(dcmds, title="init-docker")
 
     for link in rspec.get("links", []):
-        c.append_local_cmds_set_link(lcmds, link)
+        rc.append_local_cmds_set_link(lcmds, link)
     for link in rspec.get("_links", []):
-        c.append_local_cmds_set_peer(lcmds, link)
+        rc.append_local_cmds_set_peer(lcmds, link)
     for link in rspec.get("vm_links", []):
-        c.append_local_cmds_set_link(lcmds, link)
-    c.exec(lcmds, title="prepare-links", is_local=True)
+        rc.append_local_cmds_set_link(lcmds, link)
+    rc.exec(lcmds, title="prepare-links", is_local=True)
 
     for link in rspec.get("links", []):
         for vlan_id, _ in link.get("vlan_map", {}).items():
-            c.append_cmds_add_vlan(dcmds, link["link_name"], vlan_id)
+            rc.append_cmds_add_vlan(dcmds, link["link_name"], vlan_id)
         if "bridge" in link:
             dcmds += [
                 f"ip link set dev {link['link_name']} master {link['bridge']}",
             ]
     for link in rspec.get("_links", []):
         for vlan_id, _ in link.get("vlan_map", {}).items():
-            c.append_cmds_add_vlan(dcmds, link["peer_name"], vlan_id)
+            rc.append_cmds_add_vlan(dcmds, link["peer_name"], vlan_id)
 
     for ip in rspec.get("lo_ips", []):
-        c.append_cmds_ip_addr_add(dcmds, ip, "lo")
+        rc.append_cmds_ip_addr_add(dcmds, ip, "lo")
     for link in rspec.get("links", []):
         for ip in link.get("ips", []):
-            c.append_cmds_ip_addr_add(dcmds, ip, link["link_name"])
+            rc.append_cmds_ip_addr_add(dcmds, ip, link["link_name"])
     for link in rspec.get("_links", []):
         for ip in link.get("peer_ips", []):
-            c.append_cmds_ip_addr_add(dcmds, ip, link["peer_name"])
+            rc.append_cmds_ip_addr_add(dcmds, ip, link["peer_name"])
 
     for iprule in rspec.get("ip_rules", []):
-        dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", c.exist_iprule(iprule["rule"]))]
+        dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", rc.exist_iprule(iprule["rule"]))]
 
     for route in rspec.get("routes", []):
-        dryrun = c.exist_route(route)
+        dryrun = rc.exist_route(route)
         dcmds += [(f"ip route add {route['dst']} via {route['via']}", dryrun)]
     for route in rspec.get("routes6", []):
-        dryrun = c.exist_route6(route)
+        dryrun = rc.exist_route6(route)
         dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", dryrun)]
 
-    c.exec(dcmds, title="setup-networks")
+    rc.exec(dcmds, title="setup-networks")
+    print("debug make2")
 
     if "ovs" in rspec:
-        container_ovs.make(c)
+        container_ovs.make(rc)
 
     if "frr" in rspec:
-        container_frr.make(c)
+        container_frr.make(rc)
 
     l3admin = rspec.get("l3admin")
     if l3admin is not None:
-        dryrun = c.exist_netdev("l3admin")
+        dryrun = rc.exist_netdev("l3admin")
         dcmds += [
             ("ip link add l3admin type dummy", dryrun),
             ("ip link set up l3admin", dryrun),
         ]
 
         iprule = "from all table 300"
-        dryrun = c.exist_iprule(iprule)
+        dryrun = rc.exist_iprule(iprule)
         dcmds += [(f"ip rule add {iprule} prio 30", dryrun)]
 
         for ip in l3admin.get("ips", []):
-            c.append_cmds_ip_addr_add(dcmds, ip, "l3admin")
+            rc.append_cmds_ip_addr_add(dcmds, ip, "l3admin")
 
         routes = []
         for link in rspec.get("_links", []):
@@ -190,11 +199,12 @@ def _make(c):
             for ip in l3admin.get("ips", []):
                 if ip["version"] == 4:
                     dcmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
-        c.exec(dcmds, title="setup-l3admin")
+        rc.exec(dcmds, title="setup-l3admin")
 
     if "cmds" in rspec:
-        c.exec(rspec.get("cmds", []), title="cmds")
+        rc.exec(rspec.get("cmds", []), title="cmds")
 
+    print("debug make6")
     for vm in rspec.get("vms", []):
-        c = context.ContainerContext(c.c, vm)
-        _make(c)
+        rc.rspec = vm
+        _make(rc)

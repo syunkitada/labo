@@ -39,3 +39,11 @@ template_map:
           route_map_v4_out: DENY-ANY-v4
       ipv4_networks:
         - <%=l3admin.ips.0.inet%>
+
+node_map:
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          - name: HV1-L3
+            dst: <%=_node_map.HV1.l3admin.ips.0.ip%>

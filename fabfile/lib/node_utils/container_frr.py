@@ -1,8 +1,9 @@
 # container_frr
 
 
-def make(c):
-    rspec = c.rspec
+def make(rc):
+    rspec = rc.rspec
+
     frr = rspec["frr"]
     daemons = [
         # daemons
@@ -53,7 +54,7 @@ def make(c):
         "systemctl daemon-reload",
         "systemctl restart frr",
     ]
-    c.exec(cmds, title="frr_daemons")
+    rc.exec(cmds, title="frr_daemons")
 
     vtysh_cmds = [
         "configure terminal",
@@ -179,4 +180,4 @@ def make(c):
     ]
     vtysh_cmds_str = "\n".join(vtysh_cmds)
     cmds = [f'vtysh -c "{vtysh_cmds_str}"']
-    c.exec(cmds, title="frr_vtysh")
+    rc.exec(cmds, title="frr_vtysh")
