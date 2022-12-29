@@ -1,20 +1,5 @@
 # CLI コマンド一覧
 
-## ヘルプ
-
-```
-# ovs-vsctlは、ブリッジ構成を確認したり、変更するためのCLIです
-$ ovs-vsctl -h
-
-# ovs-ofctlは、ブリッジのフローを確認したり、変更するためのCLIです
-$ ovs-ofctl -h
-
-# ovs-appctlは、Open vSwitch デーモンにいろいろ問い合わせできるCLIです
-# ovs-appctlは、-hだと対して情報がなく、list-commandsで利用可能なコマンドを確認するとよい
-$ ovs-appctl -h
-$ ovs-appctl list-commands
-```
-
 ## ブリッジ構成の表示
 
 ```
