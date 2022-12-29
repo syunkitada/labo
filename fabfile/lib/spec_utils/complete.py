@@ -135,7 +135,7 @@ def complete_spec(spec):
                     frr["ipv4_networks"][i] = _complete_value(value, spec, rspec)
                 for i, value in enumerate(frr.get("ipv6_networks", [])):
                     frr["ipv6_networks"][i] = _complete_value(value, spec, rspec)
-                for route_map in frr.get("route_maps", []):
+                for route_map in frr.get("route_map", {}).values():
                     for i, value in enumerate(route_map.get("prefix_list", [])):
                         route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
 

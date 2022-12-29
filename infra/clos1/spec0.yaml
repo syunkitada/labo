@@ -34,6 +34,10 @@ template_map:
       net.ipv6.conf.default.accept_ra: 0
       net.ipv6.conf.all.accept_ra: 0
       net.ipv4.conf.all.rp_filter: 0
+      net.ipv4.conf.all.forwarding: 1
+      net.ipv4.conf.default.forwarding: 1
+      net.ipv6.conf.all.forwarding: 1
+      net.ipv6.conf.default.forwarding: 1
   spine:
     lo_ips:
       - inet: "<%=assign_inet4(spine_network)%>"
@@ -80,6 +84,8 @@ nodes:
             dst: <%=_node_map.SP1.lo_ips.0.ip%>
           - name: L11
             dst: <%=_node_map.L11.lo_ips.0.ip%>
+          - name: L11-L2
+            dst: <%=_node_map.L11.bridges.0.ips.0.ip%>
           - name: L12
             dst: <%=_node_map.L12.lo_ips.0.ip%>
           - name: HV1-L2

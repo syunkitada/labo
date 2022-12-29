@@ -1,7 +1,6 @@
 import yaml
 import os
-import copy
-from . import container_context, container_ovs, container_frr
+from . import container_ovs, container_frr
 from lib import colors
 
 
@@ -89,7 +88,6 @@ def _make_prepare(rc):
 
 def _make(rc):
     rspec = rc.rspec
-    print("debug make0")
 
     dryrun = True
     docker_options = [
@@ -160,7 +158,6 @@ def _make(rc):
         dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", dryrun)]
 
     rc.exec(dcmds, title="setup-networks")
-    print("debug make2")
 
     if "ovs" in rspec:
         container_ovs.make(rc)
@@ -204,7 +201,6 @@ def _make(rc):
     if "cmds" in rspec:
         rc.exec(rspec.get("cmds", []), title="cmds")
 
-    print("debug make6")
     for vm in rspec.get("vms", []):
         rc.rspec = vm
         _make(rc)

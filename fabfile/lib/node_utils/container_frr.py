@@ -68,8 +68,7 @@ def make(rc):
     ]
 
     # prefix_listとroute_mapの定義
-    for route_map in frr.get("route_maps", []):
-        name = route_map["name"]
+    for name, route_map in frr.get("route_map", {}).items():
         for prefix in route_map.get("prefix_list", []):
             vtysh_cmds += [f"ip prefix-list {name} {prefix}"]
         vtysh_cmds += [f"route-map {name} {route_map['policy']} {route_map['order']}"]
