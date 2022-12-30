@@ -1,6 +1,6 @@
 imports:
-  - infra/common/remote_spec.yaml
-  - infra/clos1/spec0.yaml
+  - infra/local/remote.yaml
+  - infra/ovs/clos1/spec0.yaml
 
 ipam:
   l3admin_network1:

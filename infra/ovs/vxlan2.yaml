@@ -1,8 +1,8 @@
 imports:
-  - infra/common/remote_spec.yaml
+  - infra/local/remote.yaml
 
 common:
-  namespace: vxlan1-ovs
+  namespace: ovs
 
 ipam:
   network1:
@@ -72,6 +72,39 @@ nodes:
       - ovs-vsctl --may-exist add-port tenant2 n1_1_t2vm1
       - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=5000
       - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=6000
+      #
+      # internalPortを追加してみる(vxlanとは関係ない)
+      # internalPortにIPを振るとt1vm1から疎通ができる
+      # ちなみに、add-brで追加したブリッジもtype=internalで作られてる
+      - ovs-vsctl --may-exist add-port tenant1 internalPort -- set interface internalPort type=internal
+      - ip a | grep 10.100.0.10 || ip addr add 10.100.0.10/24 dev internalPort
+      - ip link set internalPort up
+      #
+      # mirrorPortを追加してみる
+      # tsharkでmirrorPortでtcpdumpができるようになります
+      # [root@ovs-t1vm1 /]# ping 10.100.0.3
+      # PING 10.100.0.3 (10.100.0.3) 56(84) bytes of data.
+      # 64 bytes from 10.100.0.3: icmp_seq=1 ttl=64 time=0.134 ms
+      # 64 bytes from 10.100.0.3: icmp_seq=2 ttl=64 time=0.103 ms
+      #
+      # [root@ovs-n1 /]# tshark -c 6 -i mirrorPort
+      #  Running as user "root" and group "root". This could be dangerous.
+      #  Capturing on 'mirrorPort'
+      #      1 0.000000000 Xensourc_00:00:01 → Broadcast    ARP 42 Who has 10.100.0.3? Tell 10.100.0.2
+      #      2 0.000627788 Xensourc_01:00:01 → Xensourc_00:00:01 ARP 42 10.100.0.3 is at 00:16:3e:01:00:01
+      #      3 0.000683332   10.100.0.2 → 10.100.0.3   ICMP 98 Echo (ping) request  id=0x00a8, seq=1/256, ttl=64
+      #      4 0.000934404   10.100.0.3 → 10.100.0.2   ICMP 98 Echo (ping) reply    id=0x00a8, seq=1/256, ttl=64 (request in 3)
+      #      5 1.000729561   10.100.0.2 → 10.100.0.3   ICMP 98 Echo (ping) request  id=0x00a8, seq=2/512, ttl=64
+      #      6 1.000811385   10.100.0.3 → 10.100.0.2   ICMP 98 Echo (ping) reply    id=0x00a8, seq=2/512, ttl=64 (request in 5)
+      - ovs-vsctl --may-exist add-port tenant1 mirrorPort -- set interface mirrorPort type=internal
+      - ip link set mirrorPort up
+      - |-
+        ovs-vsctl --id=@n1_0_t1vm1 get port n1_0_t1vm1 -- \
+                  --id=@mirrorPort get port mirrorPort -- \
+                  --id=@mirror create mirror name=mirror \
+                  select-dst-port=@n1_0_t1vm1 select-src-port=@n1_0_t1vm1 output-port=@mirrorPort -- \
+                  set bridge tenant1 mirrors=@mirror
+      - ovs-vsctl --may-exist add-br tenant3
   - name: n2
     templates:
       - node

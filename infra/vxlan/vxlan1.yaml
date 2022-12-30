@@ -1,8 +1,8 @@
 imports:
-  - infra/common/remote_spec.yaml
+  - infra/local/remote.yaml
 
 common:
-  namespace: vxlan1
+  namespace: vxlan
 
 ipam:
   network1:

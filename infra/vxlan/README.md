@@ -12,3 +12,7 @@
   - VTEP の実装はまちまちで、VXLAN を接続する VTEP 同士は同じ仕組みを扱える必要がある
   - 参考
     - [Flannel の VXLAN バックエンドの仕組み](https://enakai00.hatenablog.com/entry/2015/04/02/173739)
+- VXLAN vs GRE
+  - https://www.reddit.com/r/networking/comments/4bko87/vxlan_vs_gre/
+  - VXLAN は UDP 上に実装されてるので ECMP できるが、GRE はできない（実装によってはできる？）
+    - VXLAN なら Gateway をスケールできる？

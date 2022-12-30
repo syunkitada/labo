@@ -1,5 +1,5 @@
 imports:
-  - infra/common/remote_spec.yaml
+  - infra/local/remote.yaml
 
 common:
   namespace: clos1

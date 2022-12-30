@@ -14,6 +14,14 @@ def cmd(t):
         elif t.next == 1:
             _make(t.rc)
             t.next = -1
+    elif t.cmd == "remake":
+        if t.next == 0:
+            _clean(t.rc)
+            _make_prepare(t.rc)
+            t.next = 1
+        elif t.next == 1:
+            _make(t.rc)
+            t.next = -1
     elif t.cmd == "clean":
         _clean(t.rc)
     elif t.cmd == "test":

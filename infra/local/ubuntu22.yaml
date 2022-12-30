@@ -1,5 +1,5 @@
 imports:
-  - infra/common/local_spec.yaml
+  - infra/local/common.yaml
 
 common:
   namespace: local

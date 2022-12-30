@@ -26,7 +26,8 @@ RUN yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga
     yum install -y rdo-openvswitch python3-rdo-openvswitch
 
 # tools
-RUN yum install -y tcpdump traceroute vim ethtool sudo iputils httpd
+RUN yum install -y tcpdump traceroute vim ethtool sudo iputils httpd wireshark
+RUN yum install -y man
 
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]
