@@ -1,13 +1,13 @@
 # nfs utils
 
 
-def cmd(cmd, c, spec, rspec):
-    if cmd == "dump":
-        print(rspec)
+def cmd(t):
+    if t.cmd == "dump":
+        print(t.rspec)
     elif cmd == "make":
-        _make(c, spec, rspec)
+        _make(t)
 
 
-def _make(c, spec, rspec):
-    for cmd in rspec["cmds"]:
-        c.sudo(cmd)
+def _make(t):
+    for cmd in t.rspec["cmds"]:
+        t.c.sudo(cmd)

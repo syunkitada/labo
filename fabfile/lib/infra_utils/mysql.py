@@ -1,11 +1,11 @@
-def cmd(cmd, c, spec, rspec):
-    if cmd == "dump":
-        print(rspec)
-    elif cmd == "make":
-        make(c, spec, rspec)
+def cmd(t):
+    if t.cmd == "dump":
+        print(t.rspec)
+    elif t.cmd == "make":
+        make(t.c)
 
 
-def make(c, spec, rspec):
+def make(c):
     if c.run("ps ax | grep [m]ysqld", warn=True).failed:
         if c.is_local:
             c.sudo("labo/mysql/mysql.sh")

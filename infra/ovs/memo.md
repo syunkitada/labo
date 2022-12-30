@@ -1,6 +1,6 @@
-# centos7
+# メモ
 
-## install
+## centos7 にインストール
 
 ```
 sudo yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-rocky/rdo-release-rocky-2.noarch.rpm
@@ -16,7 +16,7 @@ $ sudo ovs-vsctl show
     ovs_version: "2.11.0"
 ```
 
-## tutorial
+## vm をつなげてみる
 
 ```
 # bridgeの作成

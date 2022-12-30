@@ -98,17 +98,6 @@ def complete_spec(spec):
         if rspec["kind"] == "container":
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
             _complete_ips(rspec.get("lo_ips", []), spec, rspec)
-            frr = rspec.get("frr")
-            if frr is not None:
-                frr["id"] = _complete_value(frr["id"], spec, rspec)
-                frr["asn"] = _complete_value(frr["asn"], spec, rspec)
-                for i, value in enumerate(frr.get("ipv4_networks", [])):
-                    frr["ipv4_networks"][i] = _complete_value(value, spec, rspec)
-                for i, value in enumerate(frr.get("ipv6_networks", [])):
-                    frr["ipv6_networks"][i] = _complete_value(value, spec, rspec)
-                for route_map in frr.get("route_maps", []):
-                    for i, value in enumerate(route_map.get("prefix_list", [])):
-                        route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
             for bridge in rspec.get("bridges", []):
                 if "mtu" not in bridge:
                     bridge["mtu"] = rspec.get("mtu", 1500)
@@ -138,6 +127,18 @@ def complete_spec(spec):
             for vmi, vm in enumerate(rspec.get("vms", [])):
                 _complete_node(vmi, vm)
 
+            frr = rspec.get("frr")
+            if frr is not None:
+                frr["id"] = _complete_value(frr["id"], spec, rspec)
+                frr["asn"] = _complete_value(frr["asn"], spec, rspec)
+                for i, value in enumerate(frr.get("ipv4_networks", [])):
+                    frr["ipv4_networks"][i] = _complete_value(value, spec, rspec)
+                for i, value in enumerate(frr.get("ipv6_networks", [])):
+                    frr["ipv6_networks"][i] = _complete_value(value, spec, rspec)
+                for route_map in frr.get("route_map", {}).values():
+                    for i, value in enumerate(route_map.get("prefix_list", [])):
+                        route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
+
         # end if rspec["kind"] == "container":
         else:
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
@@ -152,8 +153,26 @@ def complete_spec(spec):
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
 
+        for key, value in rspec.get("var_map", {}).items():
+            rspec["var_map"][key] = _complete_value(value, spec, rspec)
+
+    def _complete_node_at_last(_, rspec):
+        for j, cmd in enumerate(rspec.get("cmds", [])):
+            rspec["cmds"][j] = _complete_value(cmd, spec, rspec)
+
+        for j, test in enumerate(rspec.get("tests", [])):
+            if test["kind"] == "ping":
+                for target in test["targets"]:
+                    target["dst"] = _complete_value(target["dst"], spec, rspec)
+
+        for vmi, vm in enumerate(rspec.get("vms", [])):
+            _complete_node_at_last(vmi, vm)
+
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
+
+    for i, rspec in enumerate(spec.get("nodes", [])):
+        _complete_node_at_last(i, rspec)
 
     return
 
@@ -162,12 +181,13 @@ def _complete_value(value, spec, node, is_get_src=False):
     if not isinstance(value, str):
         return value
 
-    compi = value.find("${")
-    compri = value.rfind("}")
+    compi = value.find("<%=")
+    compri = value.find("%>", compi)
     if compi >= 0 and compri > 1:
         value_prefix = value[0:compi]
-        value_suffix = value[compri + 1 :]  # noqa
-        value = value[compi + 2 : compri]  # noqa
+        value_suffix = value[compri + 2 :]  # noqa
+        value = value[compi + 3 : compri]  # noqa
+        value = value.strip()
         funci = value.find("(")
         funcri = value.rfind(")")
         func = value[:funci]
@@ -178,6 +198,8 @@ def _complete_value(value, spec, node, is_get_src=False):
             value = ipam.assign_inet4(arg, spec)
         elif func == "gateway_inet4":
             value = ipam.gateway_inet4(arg, spec)
+        elif func == "inet_to_ip":
+            value = ipam.inet_to_ip(_complete_value(arg, spec, node, True))
         elif func == "gateway_ip":
             value = ipam.gateway_ip(_complete_value(arg, spec, node, True))
         elif func == "inet4_to_inet6":
@@ -186,7 +208,7 @@ def _complete_value(value, spec, node, is_get_src=False):
             value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
         else:
             raise Exception(f"unexpected func: {func}")
-        return value_prefix + str(value) + value_suffix
+        return _complete_value(value_prefix + str(value) + value_suffix, spec, node)
     else:
         if is_get_src:
             return _get_src(value, spec, node)

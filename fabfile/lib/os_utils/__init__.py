@@ -1,38 +1,5 @@
 import ipaddress
-import json
 import re
-
-
-def patch_ctx(c):
-    def update_docker_ctx(c):
-        docker_ps = json.loads("[" + ",".join(c.sudo("docker ps --format='{{json .}}'", hide=True).stdout.splitlines()) + "]")
-        docker_ps_map = {}
-        for ps in docker_ps:
-            docker_ps_map[ps["Names"]] = ps
-        c.docker_ps = docker_ps
-        c.docker_ps_map = docker_ps_map
-
-    def update_netns_ctx(c):
-        netns_map = {}
-        for line in c.sudo("ip netns", hide=True).stdout.splitlines():
-            netns_name = line.split(" ")[0]
-            if netns_name == "":
-                continue
-            netns_map[netns_name] = {
-                "netdev_map": ip_a(c, netns_name),
-                "route_map": ip_r(c, netns_name),
-                "route6_map": ip_r(c, netns_name, isv6=True),
-                "rule_map": ip_rule(c, netns_name),
-            }
-        c.netns_map = netns_map
-
-    def update_ctx():
-        update_docker_ctx(c)
-        update_netns_ctx(c)
-
-    c.update_ctx = update_ctx
-    c.update_docker_ctx = update_docker_ctx
-    c.update_netns_ctx = update_netns_ctx
 
 
 re_net_device = re.compile("^([0-9]+): ([a-zA-Z0-9-_.]+)[:@].*")
@@ -41,6 +8,21 @@ re_net_inet = re.compile("inet (.*/[0-9]+) ")
 re_net_inet6 = re.compile("inet6 (.*/[0-9]+) ")
 re_net_route = re.compile("(.*) via (.*) dev ")
 re_net_rule = re.compile("([0-9]+):[ \t]+([a-z].*) lookup (.*)$")
+
+
+def get_netns_map(c):
+    netns_map = {}
+    for line in c.sudo("ip netns", hide=True).stdout.splitlines():
+        netns_name = line.split(" ")[0]
+        if netns_name == "":
+            continue
+        netns_map[netns_name] = {
+            "netdev_map": ip_a(c, netns_name),
+            "route_map": ip_r(c, netns_name),
+            "route6_map": ip_r(c, netns_name, isv6=True),
+            "rule_map": ip_rule(c, netns_name),
+        }
+    return netns_map
 
 
 def ip_a(c, netns=None):
