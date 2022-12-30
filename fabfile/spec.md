@@ -32,3 +32,39 @@
   - 各 resource のコンテキストです
   - task を内包しています
   - 単純なリソースの場合には、これを持たず task のみで resource を制御します
+
+## spec(yaml) のフォーマット
+
+```
+# 他のspecをimportして設定を引き継ぎます
+imports
+  ...
+
+# 汎用設定
+common:
+  ...
+
+# resourceのテンプレートの定義場所
+template_map:
+  ...
+
+# ipamの定義場所
+ipam:
+  ...
+
+# infra resource の定義場所
+infra_map:
+  ...
+
+# image resource の定義場所
+vm_image_map:
+  ...
+
+# node resource の定義場所
+nodes:
+  ...
+
+# node resource の上書き用の定義
+node_map:
+  ...
+```

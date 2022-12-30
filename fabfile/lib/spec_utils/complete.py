@@ -165,6 +165,9 @@ def complete_spec(spec):
                 for target in test["targets"]:
                     target["dst"] = _complete_value(target["dst"], spec, rspec)
 
+        for vmi, vm in enumerate(rspec.get("vms", [])):
+            _complete_node_at_last(vmi, vm)
+
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
 

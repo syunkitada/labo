@@ -8,11 +8,11 @@ ipam:
   network1:
     subnet: 10.10.1.0/24
     kind: l2
-  network2:
-    subnet: 10.10.2.0/24
+  t1vm_network1:
+    subnet: 10.100.0.0/24
     kind: l2
-  network_vlan1:
-    subnet: 10.100.1.0/24
+  t2vm_network1:
+    subnet: 10.100.0.0/24
     kind: l2
 
 template_map:
@@ -20,52 +20,84 @@ template_map:
     kind: container
     image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
     mtu: 1500
+  vm:
+    mtu: 1500
+    routes:
+      - dst: default
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 nodes:
-  - name: r1
-    templates:
-      - node
-    links:
-      - peer: n1
-        ips:
-          - inet: <%=gateway_inet4(network1)%>
-        peer_ips:
-          - inet: <%=assign_inet4(network1)%>
-      - peer: n2
-        ips:
-          - inet: <%=gateway_inet4(network2)%>
-        peer_ips:
-          - inet: <%=assign_inet4(network2)%>
   - name: n1
     templates:
       - node
-    routes:
-      - dst: default
-        via: <%=_links.0.ips.0.ip%>
-    var_map:
-      vlan_inet4: <%=assign_inet4(network_vlan1)%>
+    links:
+      - peer: n2
+        ips:
+          - inet: <%=assign_inet4(network1)%>
+        peer_ips:
+          - inet: <%=assign_inet4(network1)%>
+    vm_links:
+      - peer: t1vm1
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network1)%>
+      - peer: t2vm1
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network1)%>
+    vms:
+      - name: t1vm1
+        templates:
+          - node
+          - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t1vm2
+                dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
+      - name: t2vm1
+        templates:
+          - node
+          - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t2vm2
+                dst: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
     cmds:
-      - set +e
-      - ip link add test-vxlan1 type vxlan id 100 remote <%=_node_map.n2._links.0.peer_ips.0.ip%> dstport 4789 dev <%=_links.0.peer_name%>
-      - ip address add <%=var_map.vlan_inet4%> dev test-vxlan1
-      - ip link set test-vxlan1 up
-    tests:
-      - kind: ping
-        targets:
-          - name: n2_under
-            dst: <%=_node_map.n2._links.0.peer_ips.0.ip%>
-          - name: n2_over_vxlan
-            dst: <%=inet_to_ip(_node_map.n2.var_map.vlan_inet4)%>
+      - systemctl start openvswitch
+      - ovs-vsctl --may-exist add-br tenant1
+      - ovs-vsctl --may-exist add-br tenant2
+      - ip link set tenant1 up
+      - ip link set tenant2 up
+      - ovs-vsctl --may-exist add-port tenant1 n1_0_t1vm1
+      - ovs-vsctl --may-exist add-port tenant2 n1_1_t2vm1
+      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=5000
+      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=6000
   - name: n2
     templates:
       - node
-    routes:
-      - dst: default
-        via: <%=_links.0.ips.0.ip%>
-    var_map:
-      vlan_inet4: <%=assign_inet4(network_vlan1)%>
+    vm_links:
+      - peer: t1vm2
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network1)%>
+      - peer: t2vm2
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network1)%>
+    vms:
+      - name: t1vm2
+        templates:
+          - node
+          - vm
+      - name: t2vm2
+        templates:
+          - node
+          - vm
     cmds:
-      - set +e
-      - ip link add test-vxlan1 type vxlan id 100 remote <%=_node_map.n1._links.0.peer_ips.0.ip%> dstport 4789 dev <%=_links.0.peer_name%>
-      - ip address add <%=var_map.vlan_inet4%> dev test-vxlan1
-      - ip link set test-vxlan1 up
+      - systemctl start openvswitch
+      - ovs-vsctl --may-exist add-br tenant1
+      - ovs-vsctl --may-exist add-br tenant2
+      - ip link set tenant1 up
+      - ip link set tenant2 up
+      - ovs-vsctl --may-exist add-port tenant1 n2_0_t1vm2
+      - ovs-vsctl --may-exist add-port tenant2 n2_1_t2vm2
+      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=5000
+      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=6000

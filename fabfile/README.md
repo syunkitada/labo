@@ -4,21 +4,22 @@
 - 方針
   - なるべくコードはシェルスクリプトに落とし込んでブラックボックス化を避ける
     - シェルスクリプトは後から確認したり単体でも実行できるようにする
+- [仕様書](spec.md)
 
 ## 使い方
 
 - プロジェクトルートで以下を実行してください
 
 ```
-# 環境構築（初回だけ実行してください）
+# ローカルの初回環境構築（初回だけ実行してください）
 $ make env
 ```
 
 ```
-# -fで仕様書を指定してinfraを作成します
+# -fで仕様書(spec.yaml)を指定して実験環境を作成します
 $ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml
 
-# infraを削除します
+# 実験環境を削除します
 $ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml -c clean
 ```
 
@@ -26,28 +27,4 @@ $ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml -c clean
 # オプションで特定リソースを指定したり、特定コマンドを指定することができます
 # 以下は、node:vm1のコンソールログを出力します
 $ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml -t node:vm1 -c log
-```
-
-## yaml フォーマット
-
-```
-# 汎用設定
-common:
-  ...
-
-# vmのimage管理用
-vm_image_map:
-  ...
-
-# テンプレート
-template_map:
-  ...
-
-# ユニークなリソースを定義する場所(kindが重複できない)
-infra_map:
-  ...
-
-# リソースを定義する場所(kindは重複してよい)
-nodes:
-  ...
 ```

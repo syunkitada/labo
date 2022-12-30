@@ -26,6 +26,7 @@
 
 ## 参考になりそうなもの
 
-- [OPENSTACK RULES: HOW OPENVSWITCH WORKS INSIDE OPENSTACK](https://aptira.com/openstack-rules-how-openvswitch-works-inside-openstack/)
 - [PicOS Open vSwitch Command Reference](https://docs.pica8.com/display/PICOS2111cg/PicOS+Open+vSwitch+Command+Reference)
   - [Creating a Group Table](https://docs.pica8.com/display/picos2102cg/Creating+a+Group+Table)
+- [OPENSTACK RULES: HOW OPENVSWITCH WORKS INSIDE OPENSTACK](https://aptira.com/openstack-rules-how-openvswitch-works-inside-openstack/)
+- [OpenStack Networking: Open vSwitch and VXLAN introduction](https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/)

@@ -58,6 +58,13 @@ def _test(rc):
         for target in ng_targets:
             ng_msgs.append(f"ping to {target['name']}(dst={target['dst']},err={target['err']})")
         msgs.append(colors.crit("\n".join(ng_msgs)))
+
+    for vm in rspec.get("vms", []):
+        rc.rspec = vm
+        result = _test(rc)
+        status += result["status"]
+        msgs.append(result["msg"])
+
     msgs.append("")
     return {
         "status": status,
@@ -203,4 +210,5 @@ def _make(rc):
 
     for vm in rspec.get("vms", []):
         rc.rspec = vm
+        _make_prepare(rc)
         _make(rc)

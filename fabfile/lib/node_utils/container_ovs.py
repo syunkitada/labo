@@ -11,13 +11,14 @@ def make(rc):
 
     for bridge in ovs["bridges"]:
         br_name = bridge["name"]
+        br_kind = bridge.get("kind", "")
         br_flows = []
         cmds += [
             f"ovs-vsctl --may-exist add-br {br_name}",
             f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
             f"ip link set up {br_name}",
         ]
-        if bridge["kind"] == "external-ha":
+        if br_kind == "external-ha":
             for link in rspec["_links"]:
                 for vlan_id, vlan in link["vlan_map"].items():
                     peer_ovs = vlan.get("peer_ovs")
@@ -71,7 +72,7 @@ def make(rc):
                     + '"'
                 ]
 
-        elif bridge["kind"] == "internal-vm":
+        elif br_kind == "internal-vm":
             for vm_link in rspec["vm_links"]:
                 cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
                 vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
