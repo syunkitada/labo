@@ -1,5 +1,3 @@
-# 以下を参考にした構成です(vxlanで疎通が取れるまで)
-# - https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/
 imports:
   - infra/local/remote.yaml
 
@@ -9,6 +7,12 @@ common:
 ipam:
   network1:
     subnet: 10.10.1.0/24
+    kind: l2
+  network2:
+    subnet: 10.10.2.0/24
+    kind: l2
+  network3:
+    subnet: 10.10.3.0/24
     kind: l2
   t1vm_network1:
     subnet: 10.100.0.0/24
@@ -29,15 +33,37 @@ template_map:
         via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 nodes:
-  - name: n1
+  - name: r1
     templates:
       - node
     links:
-      - peer: n2
+      - peer: gw1
         ips:
-          - inet: <%=assign_inet4(network1)%>
+          - inet: <%=gateway_inet4(network1)%>
         peer_ips:
           - inet: <%=assign_inet4(network1)%>
+      - peer: n1
+        ips:
+          - inet: <%=gateway_inet4(network2)%>
+        peer_ips:
+          - inet: <%=assign_inet4(network2)%>
+      - peer: n2
+        ips:
+          - inet: <%=gateway_inet4(network3)%>
+        peer_ips:
+          - inet: <%=assign_inet4(network3)%>
+  - name: gw1
+    routes:
+      - dst: default
+        via: <%=_links.0.ips.0.ip%>
+    templates:
+      - node
+  - name: n1
+    templates:
+      - node
+    routes:
+      - dst: default
+        via: <%=_links.0.ips.0.ip%>
     vm_links:
       - peer: t1vm1
         peer_ips:
@@ -72,11 +98,14 @@ nodes:
       - ip link set tenant2 up
       - ovs-vsctl --may-exist add-port tenant1 n1_0_t1vm1
       - ovs-vsctl --may-exist add-port tenant2 n1_1_t2vm1
-      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=5000
-      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=6000
+      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=_node_map.n2._links.0.peer_ips.0.ip%> options:key=5000
+      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=_node_map.n2._links.0.peer_ips.0.ip%> options:key=6000
   - name: n2
     templates:
       - node
+    routes:
+      - dst: default
+        via: <%=_links.0.ips.0.ip%>
     vm_links:
       - peer: t1vm2
         peer_ips:
@@ -101,5 +130,5 @@ nodes:
       - ip link set tenant2 up
       - ovs-vsctl --may-exist add-port tenant1 n2_0_t1vm2
       - ovs-vsctl --may-exist add-port tenant2 n2_1_t2vm2
-      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=5000
-      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=6000
+      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=_node_map.n1._links.0.peer_ips.0.ip%> options:key=5000
+      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=_node_map.n1._links.0.peer_ips.0.ip%> options:key=6000

@@ -1,3 +1,5 @@
+# 以下を参考にした構成です(mirror portの設定まで)
+# - https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/
 imports:
   - infra/local/remote.yaml
 
