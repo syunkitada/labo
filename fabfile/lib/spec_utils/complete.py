@@ -203,39 +203,43 @@ def _complete_value(value, spec, node, is_get_src=False):
     if not isinstance(value, str):
         return value
 
-    compi = value.find("<%=")
-    compri = value.find("%>", compi)
-    if compi >= 0 and compri > 1:
-        value_prefix = value[0:compi]
-        value_suffix = value[compri + 2 :]  # noqa
-        value = value[compi + 3 : compri]  # noqa
-        value = value.strip()
-        funci = value.find("(")
-        funcri = value.rfind(")")
-        func = value[:funci]
-        arg = value[funci + 1 : funcri]  # noqa
-        if funci == -1 or funcri == -1:
-            value = _get_src(value, spec, node)
-        elif func == "assign_inet4":
-            value = ipam.assign_inet4(arg, spec)
-        elif func == "gateway_inet4":
-            value = ipam.gateway_inet4(arg, spec)
-        elif func == "inet_to_ip":
-            value = ipam.inet_to_ip(_complete_value(arg, spec, node, True))
-        elif func == "gateway_ip":
-            value = ipam.gateway_ip(_complete_value(arg, spec, node, True))
-        elif func == "inet4_to_inet6":
-            value = ipam.inet4_to_inet6(_complete_value(arg, spec, node, True))
-        elif func == "ipv4_to_asn":
-            value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
+    try:
+        compi = value.find("<%=")
+        compri = value.find("%>", compi)
+        if compi >= 0 and compri > 1:
+            value_prefix = value[0:compi]
+            value_suffix = value[compri + 2 :]  # noqa
+            value = value[compi + 3 : compri]  # noqa
+            value = value.strip()
+            funci = value.find("(")
+            funcri = value.rfind(")")
+            func = value[:funci]
+            arg = value[funci + 1 : funcri]  # noqa
+            if funci == -1 or funcri == -1:
+                value = _get_src(value, spec, node)
+            elif func == "assign_inet4":
+                value = ipam.assign_inet4(arg, spec)
+            elif func == "gateway_inet4":
+                value = ipam.gateway_inet4(arg, spec)
+            elif func == "inet_to_ip":
+                value = ipam.inet_to_ip(_complete_value(arg, spec, node, True))
+            elif func == "gateway_ip":
+                value = ipam.gateway_ip(_complete_value(arg, spec, node, True))
+            elif func == "inet4_to_inet6":
+                value = ipam.inet4_to_inet6(_complete_value(arg, spec, node, True))
+            elif func == "ipv4_to_asn":
+                value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
+            else:
+                raise Exception(f"unexpected func: {func}")
+            return _complete_value(value_prefix + str(value) + value_suffix, spec, node)
         else:
-            raise Exception(f"unexpected func: {func}")
-        return _complete_value(value_prefix + str(value) + value_suffix, spec, node)
-    else:
-        if is_get_src:
-            return _get_src(value, spec, node)
-        else:
-            return value
+            if is_get_src:
+                return _get_src(value, spec, node)
+            else:
+                return value
+    except Exception as e:
+        print(f"value={value}")
+        raise (e)
 
 
 def _get_src(src, spec={}, rspec={}):

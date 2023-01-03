@@ -15,7 +15,7 @@ def make(rc):
         br_flows = []
         cmds += [
             f"ovs-vsctl --may-exist add-br {br_name}",
-            f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
+            # f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
             f"ip link set up {br_name}",
         ]
         if br_kind == "external-ha":
@@ -111,18 +111,15 @@ def make(rc):
                         ]
 
         elif br_kind == "vxlan-tenant-vm":
-            print("debug vxlan_tenant")
             vxlan_eth = f"vxlan{bridge['tenant']}"
-            local_ip = rspec["_links"][0]["peer_ips"][0]["ip"]
+            # local_ip = rspec["_links"][0]["peer_ips"][0]["ip"]
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
-                f" set interface {vxlan_eth} type=vxlan options:local_ip={local_ip} options:remote_ip=flow options:key={bridge['tenant']}"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}"
             ]
             for vm_link in rspec["vm_links"]:
-                print("debug vm_link1")
                 if bridge["tenant"] != vm_link["tenant"]:
                     continue
-                print("debug vm_link2", vm_link["peer_ips"], bridge["ex_vteps"])
                 cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
                 vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
                 for ip in vm_link.get("peer_ips", []):
@@ -160,7 +157,7 @@ def make(rc):
                     for _link in ex_vtep["dst"]["_links"]:
                         for ip in _link["peer_ips"]:
                             br_flows += [
-                                f"priority=700,ip_dst={ip['ip']} actions=set_field:10.10.2.2->tun_src,set_field:1->tun_id,set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
+                                f"priority=700,ip_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
                             ]
 
         for link in bridge.get("links", []):
