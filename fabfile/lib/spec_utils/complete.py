@@ -78,6 +78,8 @@ def complete_spec(spec):
             if "mtu" in rspec:
                 if rspec["mtu"] < link["mtu"]:
                     link["mtu"] = rspec["mtu"]
+            if "tenant" in rspec:
+                link["tenant"] = rspec["tenant"]
 
         if "l3admin" in rspec:
             _complete_ips(rspec["l3admin"].get("ips", []), spec, rspec)
@@ -125,6 +127,7 @@ def complete_spec(spec):
             for link in rspec.get("vm_links", []):
                 peer_links_map[link["peer"]].append(link)
             for vmi, vm in enumerate(rspec.get("vms", [])):
+                vm["hv"] = rspec
                 _complete_node(vmi, vm)
 
             frr = rspec.get("frr")
@@ -167,6 +170,25 @@ def complete_spec(spec):
 
         for vmi, vm in enumerate(rspec.get("vms", [])):
             _complete_node_at_last(vmi, vm)
+
+        if "ovs" in rspec:
+            for bridge in rspec["ovs"].get("bridges", []):
+                if bridge["kind"] == "vxlan-tenant-vm":
+                    own_vm_map = {}
+                    for vm in rspec.get("vms", []):
+                        own_vm_map[vm["name"]] = vm
+
+                    br_tenant = bridge["tenant"]
+                    ex_vteps = []
+                    for node in _node_map.values():
+                        if "tenant" in node and node["name"] not in own_vm_map and node["tenant"] == br_tenant:
+                            ex_vteps.append(
+                                {
+                                    "dst": node,
+                                    "tun_dst": node["hv"]["_links"][0]["peer_ips"][0]["ip"],
+                                }
+                            )
+                    bridge["ex_vteps"] = ex_vteps
 
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)

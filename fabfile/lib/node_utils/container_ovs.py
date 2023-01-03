@@ -110,6 +110,59 @@ def make(rc):
                             + "IN_PORT"
                         ]
 
+        elif br_kind == "vxlan-tenant-vm":
+            print("debug vxlan_tenant")
+            vxlan_eth = f"vxlan{bridge['tenant']}"
+            local_ip = rspec["_links"][0]["peer_ips"][0]["ip"]
+            cmds += [
+                f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
+                f" set interface {vxlan_eth} type=vxlan options:local_ip={local_ip} options:remote_ip=flow options:key={bridge['tenant']}"
+            ]
+            for vm_link in rspec["vm_links"]:
+                print("debug vm_link1")
+                if bridge["tenant"] != vm_link["tenant"]:
+                    continue
+                print("debug vm_link2", vm_link["peer_ips"], bridge["ex_vteps"])
+                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
+                vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
+                for ip in vm_link.get("peer_ips", []):
+                    br_flows += [
+                        # ingress
+                        # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
+                        f"priority=700,ip,,nw_dst={ip['ip']}"
+                        + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+                    ]
+
+                    # VMのインターフェイスからARP要求(arp_op=1)が飛んできたときに、dummy_macを返却します
+                    # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
+                    # NXM_OF_ETH_SRC = Ethernet Source address
+                    # NXM_OF_ETH_DST = Ethernet Destination address
+                    # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
+                    # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
+                    # NXM_OF_ARP_SPA = ARP Source IP Address
+                    # NXM_OF_ARP_TPA = ARP Target IP Address
+                    dummy_mac = "0x00163e000001"
+                    br_flows += [
+                        f"priority=800,in_port={vm_link['link_name']},arp,arp_op=1 actions="
+                        # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、dummy_macをNXM_OF_ETH_SRCにセットする
+                        + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{dummy_mac}->NXM_OF_ETH_SRC[],"
+                        # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、dummy_macをNXM_NX_ARP_SHAにセットする
+                        + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{dummy_mac}->NXM_NX_ARP_SHA[],"
+                        # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
+                        + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
+                        # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
+                        + "load:0x2->NXM_OF_ARP_OP[],"
+                        # IN_PORTにそのまま返す
+                        + "IN_PORT"
+                    ]
+
+                for ex_vtep in bridge["ex_vteps"]:
+                    for _link in ex_vtep["dst"]["_links"]:
+                        for ip in _link["peer_ips"]:
+                            br_flows += [
+                                f"priority=700,ip_dst={ip['ip']} actions=set_field:10.10.2.2->tun_src,set_field:1->tun_id,set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
+                            ]
+
         for link in bridge.get("links", []):
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {link['link_name']}"

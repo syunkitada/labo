@@ -4,7 +4,7 @@ imports:
   - infra/local/remote.yaml
 
 common:
-  namespace: ovs
+  namespace: ovs-vxlan1
 
 ipam:
   network1:
