@@ -1,12 +1,17 @@
+# vxlan2.1のovsの設定をcmdsではなくモジュールで設定したもの
+# 参考: https://docs.openvswitch.org/en/latest/howto/userspace-tunneling/
 imports:
   - infra/local/remote.yaml
 
 common:
-  namespace: ovs
+  namespace: ovs-vxlan3
 
 ipam:
   network1:
     subnet: 10.10.1.0/24
+    kind: l2
+  network2:
+    subnet: 10.10.2.0/24
     kind: l2
   t1vm_network1:
     subnet: 10.100.0.0/24
@@ -27,15 +32,34 @@ template_map:
         via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 nodes:
-  - name: n1
+  - name: r1
     templates:
       - node
     links:
-      - peer: n2
+      - peer: n1
         ips:
-          - inet: <%=assign_inet4(network1)%>
+          - inet: <%=gateway_inet4(network1)%>
         peer_ips:
           - inet: <%=assign_inet4(network1)%>
+      - peer: n2
+        ips:
+          - inet: <%=gateway_inet4(network2)%>
+        peer_ips:
+          - inet: <%=assign_inet4(network2)%>
+  - name: n1
+    templates:
+      - node
+    routes:
+      - dst: default
+        via: <%=_links.0.ips.0.ip%>
+    ovs:
+      bridges:
+        - name: br-t1
+          kind: vxlan-tenant-vm
+          tenant: 5000
+        - name: br-t2
+          kind: vxlan-tenant-vm
+          tenant: 6000
     vm_links:
       - peer: t1vm1
         peer_ips:
@@ -45,6 +69,7 @@ nodes:
           - inet: <%=assign_inet4(t2vm_network1)%>
     vms:
       - name: t1vm1
+        tenant: 5000
         templates:
           - node
           - vm
@@ -54,6 +79,7 @@ nodes:
               - name: t1vm2
                 dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
       - name: t2vm1
+        tenant: 6000
         templates:
           - node
           - vm
@@ -62,19 +88,20 @@ nodes:
             targets:
               - name: t2vm2
                 dst: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
-    cmds:
-      - systemctl start openvswitch
-      - ovs-vsctl --may-exist add-br tenant1
-      - ovs-vsctl --may-exist add-br tenant2
-      - ip link set tenant1 up
-      - ip link set tenant2 up
-      - ovs-vsctl --may-exist add-port tenant1 n1_0_t1vm1
-      - ovs-vsctl --may-exist add-port tenant2 n1_1_t2vm1
-      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=5000
-      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=6000
   - name: n2
     templates:
       - node
+    routes:
+      - dst: default
+        via: <%=_links.0.ips.0.ip%>
+    ovs:
+      bridges:
+        - name: br-t1
+          kind: vxlan-tenant-vm
+          tenant: 5000
+        - name: br-t2
+          kind: vxlan-tenant-vm
+          tenant: 6000
     vm_links:
       - peer: t1vm2
         peer_ips:
@@ -84,20 +111,12 @@ nodes:
           - inet: <%=assign_inet4(t2vm_network1)%>
     vms:
       - name: t1vm2
+        tenant: 5000
         templates:
           - node
           - vm
       - name: t2vm2
+        tenant: 6000
         templates:
           - node
           - vm
-    cmds:
-      - systemctl start openvswitch
-      - ovs-vsctl --may-exist add-br tenant1
-      - ovs-vsctl --may-exist add-br tenant2
-      - ip link set tenant1 up
-      - ip link set tenant2 up
-      - ovs-vsctl --may-exist add-port tenant1 n2_0_t1vm2
-      - ovs-vsctl --may-exist add-port tenant2 n2_1_t2vm2
-      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=5000
-      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=6000

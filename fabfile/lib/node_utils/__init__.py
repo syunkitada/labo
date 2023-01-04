@@ -1,22 +1,27 @@
 from fabric import Connection
 
+from lib import colors
 from . import container_context, router, container, vm, vm_image
 
 
 def make(t):
     print(f"{t.cmd} node {t.rspec['name']}: start {t.next}")
     result = None
-    if t.rspec["kind"] == "gw":
-        result = router.cmd(t.cmd, t.c, t.spec, t.rspec)
-    elif t.rspec["kind"] == "container":
-        if t.rc is None:
-            t.rc = container_context.Context(t)
-        result = container.cmd(t)
-    elif t.rspec["kind"] == "vm":
-        result = vm.cmd(t.cmd, t.c, t.spec, t.rspec)
-    else:
-        print(f"unsupported kind: kind={t.rspec['kind']}")
-        exit(1)
+    try:
+        if t.rspec["kind"] == "gw":
+            result = router.cmd(t.cmd, t.c, t.spec, t.rspec)
+        elif t.rspec["kind"] == "container":
+            if t.rc is None:
+                t.rc = container_context.Context(t)
+            result = container.cmd(t)
+        elif t.rspec["kind"] == "vm":
+            result = vm.cmd(t.cmd, t.c, t.spec, t.rspec)
+        else:
+            print(f"unsupported kind: kind={t.rspec['kind']}")
+            exit(1)
+    except Exception as e:
+        result = {"status": 1, "msg": colors.crit(str(e))}
+        t.next = -1
 
     if t.next > 0:
         print(f"{t.cmd} node {t.rspec['name']}: next {t.next}")

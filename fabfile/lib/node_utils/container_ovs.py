@@ -15,10 +15,13 @@ def make(rc):
         br_flows = []
         cmds += [
             f"ovs-vsctl --may-exist add-br {br_name}",
-            f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
+            # f"ovs-vsctl set bridge {br_name} datapath_type=netdev protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13,OpenFlow14,OpenFlow15",
             f"ip link set up {br_name}",
         ]
         if br_kind == "external-ha":
+            if "ex_ip" in ovs:
+                rc.append_cmds_ip_addr_add(cmds, ovs["ex_ip"], br_name)
+
             for link in rspec["_links"]:
                 for vlan_id, vlan in link["vlan_map"].items():
                     peer_ovs = vlan.get("peer_ovs")
@@ -109,6 +112,60 @@ def make(rc):
                             # IN_PORTにそのまま返す
                             + "IN_PORT"
                         ]
+
+        elif br_kind == "vxlan-tenant-vm":
+            vxlan_eth = f"vxlan{bridge['tenant']}"
+            vxlan_options = ""
+            vxlan_flow_options = ""
+            if "ex_ip" in ovs:
+                vxlan_options = f" options:local_ip={ovs['ex_ip']['ip']}"
+                # vxlan_flow_options = f",set_field:{ovs['ex_ip']['ip']}->tun_src"
+            cmds += [
+                f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
+            ]
+            for vm_link in rspec["vm_links"]:
+                if bridge["tenant"] != vm_link["tenant"]:
+                    continue
+                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
+                vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
+                for ip in vm_link.get("peer_ips", []):
+                    br_flows += [
+                        # ingress
+                        # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
+                        f"priority=700,ip,,nw_dst={ip['ip']}"
+                        + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+                    ]
+
+                    # VMのインターフェイスからARP要求(arp_op=1)が飛んできたときに、dummy_macを返却します
+                    # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
+                    # NXM_OF_ETH_SRC = Ethernet Source address
+                    # NXM_OF_ETH_DST = Ethernet Destination address
+                    # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
+                    # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
+                    # NXM_OF_ARP_SPA = ARP Source IP Address
+                    # NXM_OF_ARP_TPA = ARP Target IP Address
+                    dummy_mac = "0x00163e000001"
+                    br_flows += [
+                        f"priority=800,in_port={vm_link['link_name']},arp,arp_op=1 actions="
+                        # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、dummy_macをNXM_OF_ETH_SRCにセットする
+                        + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{dummy_mac}->NXM_OF_ETH_SRC[],"
+                        # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、dummy_macをNXM_NX_ARP_SHAにセットする
+                        + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{dummy_mac}->NXM_NX_ARP_SHA[],"
+                        # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
+                        + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
+                        # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
+                        + "load:0x2->NXM_OF_ARP_OP[],"
+                        # IN_PORTにそのまま返す
+                        + "IN_PORT"
+                    ]
+
+                for ex_vtep in bridge["ex_vteps"]:
+                    for _link in ex_vtep["dst"]["_links"]:
+                        for ip in _link["peer_ips"]:
+                            br_flows += [
+                                f"priority=700,ip_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst{vxlan_flow_options},{vxlan_eth}",
+                            ]
 
         for link in bridge.get("links", []):
             cmds += [
