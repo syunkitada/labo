@@ -120,6 +120,8 @@ def complete_spec(spec):
                         link["peer_name"] = f"{link['peer']}_{br_name}"
                         ovs_peer_links_map[link["peer"]].append(link)
                     bridge["_links"] = ovs_peer_links_map.get(br_name, [])
+                if "ex_ip" in ovs:
+                    _complete_ip(ovs["ex_ip"], spec, rspec)
 
             _complete_links(i, spec, rspec, rspec.get("vm_links", []))
             for vm in rspec.get("vms", []):
@@ -172,7 +174,8 @@ def complete_spec(spec):
             _complete_node_at_last(vmi, vm)
 
         if "ovs" in rspec:
-            for bridge in rspec["ovs"].get("bridges", []):
+            ovs = rspec["ovs"]
+            for bridge in ovs.get("bridges", []):
                 if bridge["kind"] == "vxlan-tenant-vm":
                     own_vm_map = {}
                     for vm in rspec.get("vms", []):
@@ -182,10 +185,13 @@ def complete_spec(spec):
                     ex_vteps = []
                     for node in _node_map.values():
                         if "tenant" in node and node["name"] not in own_vm_map and node["tenant"] == br_tenant:
+                            tun_dst = node["hv"]["_links"][0]["peer_ips"][0]["ip"]
+                            if "ex_ip" in node["hv"]["ovs"]:
+                                tun_dst = node["hv"]["ovs"]["ex_ip"]["ip"]
                             ex_vteps.append(
                                 {
                                     "dst": node,
-                                    "tun_dst": node["hv"]["_links"][0]["peer_ips"][0]["ip"],
+                                    "tun_dst": tun_dst,
                                 }
                             )
                     bridge["ex_vteps"] = ex_vteps
@@ -276,8 +282,12 @@ def _complete_links(i, spec, rspec, links):
 
 def _complete_ips(ips, spec, rspec):
     for ip in ips:
-        ip["inet"] = _complete_value(ip["inet"], spec, rspec)
-        ip_interface = ipaddress.ip_interface(ip["inet"])
-        ip["ip"] = str(ip_interface.ip)
-        ip["version"] = ip_interface.version
-        ip["network"] = str(ip_interface.network)
+        _complete_ip(ip, spec, rspec)
+
+
+def _complete_ip(ip, spec, rspec):
+    ip["inet"] = _complete_value(ip["inet"], spec, rspec)
+    ip_interface = ipaddress.ip_interface(ip["inet"])
+    ip["ip"] = str(ip_interface.ip)
+    ip["version"] = ip_interface.version
+    ip["network"] = str(ip_interface.network)

@@ -159,7 +159,7 @@ $ sudo docker exec -it clos1-HV1 ovs-appctl vlog/set file::info
 ## ルートの確認
 
 ```
-admin@local-vm1:~$ sudo docker exec -it clos1-HV1 ovs-appctl ovs/route/show
+$ sudo docker exec -it clos1-HV1 ovs-appctl ovs/route/show
 Route Table:
 Cached: 10.10.3.2/32 dev HV1_0_L11 SRC 10.10.3.2 local
 Cached: 10.10.10.1/32 dev l3admin SRC 10.10.10.1 local

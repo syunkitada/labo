@@ -19,6 +19,9 @@ def make(rc):
             f"ip link set up {br_name}",
         ]
         if br_kind == "external-ha":
+            if "ex_ip" in ovs:
+                rc.append_cmds_ip_addr_add(cmds, ovs["ex_ip"], br_name)
+
             for link in rspec["_links"]:
                 for vlan_id, vlan in link["vlan_map"].items():
                     peer_ovs = vlan.get("peer_ovs")
@@ -112,10 +115,14 @@ def make(rc):
 
         elif br_kind == "vxlan-tenant-vm":
             vxlan_eth = f"vxlan{bridge['tenant']}"
-            # local_ip = rspec["_links"][0]["peer_ips"][0]["ip"]
+            vxlan_options = ""
+            vxlan_flow_options = ""
+            if "ex_ip" in ovs:
+                vxlan_options = f" options:local_ip={ovs['ex_ip']['ip']}"
+                # vxlan_flow_options = f",set_field:{ovs['ex_ip']['ip']}->tun_src"
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
-                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
             ]
             for vm_link in rspec["vm_links"]:
                 if bridge["tenant"] != vm_link["tenant"]:
@@ -157,7 +164,7 @@ def make(rc):
                     for _link in ex_vtep["dst"]["_links"]:
                         for ip in _link["peer_ips"]:
                             br_flows += [
-                                f"priority=700,ip_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
+                                f"priority=700,ip_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst{vxlan_flow_options},{vxlan_eth}",
                             ]
 
         for link in bridge.get("links", []):
