@@ -18,6 +18,7 @@ def update_dict(d, u):
 
 
 def complete_spec(spec):
+    spec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", spec["common"]["namespace"])
     template_map = spec.get("template_map", {})
     node_map = spec.get("node_map", {})
 

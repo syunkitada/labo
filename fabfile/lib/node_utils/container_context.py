@@ -6,6 +6,7 @@ class Context:
         self.c = t.c
         self.rspec = t.rspec
         self.debug = t.debug
+        self.full_cmds = []
         if t.ctx_data is not None:
             self.netns_map = t.ctx_data["netns_map"]
             self.docker_ps_map = t.ctx_data["docker_ps_map"]
@@ -13,10 +14,19 @@ class Context:
     def dexec(self, cmd, *args, **kwargs):
         return self.c.sudo(f"docker exec {self.rspec['_hostname']} {cmd}", *args, **kwargs)
 
-    def exec(self, cmds, title="", dryrun=False, is_local=False):
-        exec_filepath = os.path.join(self.rspec["_script_dir"], f"{self.rspec['_script_index']}_{title}_exec.sh")
-        full_filepath = os.path.join(self.rspec["_script_dir"], f"{self.rspec['_script_index']}_{title}_full.sh")
-        log_filepath = os.path.join(self.rspec["_script_dir"], f"{self.rspec['_script_index']}_{title}.log")
+    def exec(self, cmds, title=None, dryrun=False, is_local=False):
+        file_name_prefix = ""
+        comment_name_prefix = ""
+        if title is None:
+            file_name_prefix = f"{self.rspec['_script_index']}"
+            comment_name_prefix = f"{self.rspec['_script_index']}"
+        else:
+            file_name_prefix = f"{self.rspec['_script_index']}_{title.replace(' ', '-')}"
+            comment_name_prefix = f"{self.rspec['_script_index']}: {title}"
+
+        exec_filepath = os.path.join(self.rspec["_script_dir"], f"{file_name_prefix}_exec.sh")
+        full_filepath = os.path.join(self.rspec["_script_dir"], f"{file_name_prefix}_full.sh")
+        log_filepath = os.path.join(self.rspec["_script_dir"], f"{file_name_prefix}.log")
         self.rspec["_script_index"] += 1
 
         exec_cmds = []
@@ -32,11 +42,11 @@ class Context:
                 full_cmds.append(cmd)
 
         with open(exec_filepath, "w") as f:
-            if is_local:
-                f.write("\n".join(exec_cmds) + "\n")
-            else:
-                cmds_str = "\n".join(exec_cmds)
-                f.write(f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{cmds_str}\n'\n")
+            cmds_str = "\n".join(exec_cmds) + "\n"
+            if not is_local:
+                cmds_str = f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{cmds_str}'\n"
+            f.write(cmds_str)
+
         if len(exec_cmds) > 0:
             if self.debug:
                 self.c.sudo(f"bash -c 'bash -ex {exec_filepath} 2>&1 | tee {log_filepath}'")
@@ -44,11 +54,16 @@ class Context:
                 self.c.sudo(f"bash -c 'bash -ex {exec_filepath} &> {log_filepath}'")
 
         with open(full_filepath, "w") as f:
-            if is_local:
-                f.write("\n".join(full_cmds))
-            else:
-                cmds_str = "\n".join(full_cmds)
-                f.write(f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{cmds_str}\n'\n")
+            full_cmds_str = "\n".join(full_cmds) + "\n"
+            if not is_local:
+                full_cmds_str = f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{full_cmds_str}'\n"
+            f.write(full_cmds_str)
+
+        self.full_cmds += [
+            f"# {self.rspec['name']}: {comment_name_prefix} {'-'*(80-len(comment_name_prefix))}",
+            full_cmds_str,
+            "",
+        ]
 
         cmds.clear()
 

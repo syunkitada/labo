@@ -31,6 +31,12 @@ def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
     """
 
     spec = spec_utils.load_spec(file)
+    os.makedirs(spec["_script_dir"], exist_ok=True)
+    completed_spec_file = os.path.join(spec["_script_dir"], "spec.yaml")
+    with open(completed_spec_file, "w") as f:
+        f.write(yaml.safe_dump(spec))
+    print(f"completed spec was saved to {completed_spec_file}")
+
     if cmd == "dump-spec":
         print(yaml.safe_dump(spec))
         return
@@ -122,27 +128,56 @@ def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
                 break
             tasks = next_tasks
 
-        print("# results ----------------------------------------")
-        msgs = []
-        for name, results in results.items():
-            last_result = results[-1]
-            last_status = 0
-            if last_result is None:
-                msgs.append(colors.ok(f"{name}: success"))
-            else:
-                last_status = last_result.get("status", 0)
-                if last_status == 0:
-                    msgs.append(colors.ok(f"{name}: success"))
-                else:
-                    msgs.append(colors.crit(f"{name}: failed"))
-
-            for result in results:
-                if result is not None:
-                    msgs.append(result.get("msg", ""))
-        msg = "\n".join(msgs)
-        print(msg)
+        _print_results(results)
+        _dump_scripts(spec, cmd, tasks)
 
         return
+
+
+def _print_results(results):
+    print("# results ----------------------------------------")
+    msgs = []
+    for name, results in results.items():
+        last_result = results[-1]
+        last_status = 0
+        if last_result is None:
+            msgs.append(colors.ok(f"{name}: success"))
+        else:
+            last_status = last_result.get("status", 0)
+            if last_status == 0:
+                msgs.append(colors.ok(f"{name}: success"))
+            else:
+                msgs.append(colors.crit(f"{name}: failed"))
+
+        for result in results:
+            if result is not None:
+                msgs.append(result.get("msg", ""))
+    msg = "\n".join(msgs)
+    print(msg)
+
+
+def _dump_scripts(spec, cmd, tasks):
+    script_path = os.path.join(spec["_script_dir"], f"{cmd}.sh")
+    separator = "#" + "-" * 100
+    cmds = []
+    for t in tasks:
+        if t.rc is None:
+            continue
+        cmds += [
+            separator,
+            f"# {t.rspec['name']} start",
+            separator,
+        ]
+        cmds += t.rc.full_cmds
+        cmds += [
+            separator,
+            f"# {t.rspec['name']} end",
+            separator,
+            "",
+        ]
+
+    with open(script_path, "w") as f:
+        f.write("\n".join(cmds))
 
 
 class Task:
