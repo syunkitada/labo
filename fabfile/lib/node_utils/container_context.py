@@ -6,6 +6,7 @@ class Context:
         self.c = t.c
         self.rspec = t.rspec
         self.debug = t.debug
+        self.dryrun = t.dryrun
         self.full_cmds = []
         if t.ctx_data is not None:
             self.netns_map = t.ctx_data["netns_map"]
@@ -14,7 +15,7 @@ class Context:
     def dexec(self, cmd, *args, **kwargs):
         return self.c.sudo(f"docker exec {self.rspec['_hostname']} {cmd}", *args, **kwargs)
 
-    def exec(self, cmds, title=None, dryrun=False, is_local=False):
+    def exec(self, cmds, title=None, skipped=False, is_local=False):
         file_name_prefix = ""
         comment_name_prefix = ""
         if title is None:
@@ -33,11 +34,11 @@ class Context:
         full_cmds = []
         for cmd in cmds:
             if isinstance(cmd, tuple):
-                if not cmd[1] and not dryrun:
+                if not cmd[1] and not skipped:
                     exec_cmds.append(cmd[0])
                 full_cmds.append(cmd[0])
             else:
-                if not dryrun:
+                if not skipped:
                     exec_cmds.append(cmd)
                 full_cmds.append(cmd)
 
@@ -48,10 +49,13 @@ class Context:
             f.write(cmds_str)
 
         if len(exec_cmds) > 0:
-            if self.debug:
-                self.c.sudo(f"bash -c 'bash -ex {exec_filepath} 2>&1 | tee {log_filepath}'")
+            if not self.dryrun:
+                if self.debug:
+                    self.c.sudo(f"bash -c 'bash -ex {exec_filepath} 2>&1 | tee {log_filepath}'")
+                else:
+                    self.c.sudo(f"bash -c 'bash -ex {exec_filepath} &> {log_filepath}'")
             else:
-                self.c.sudo(f"bash -c 'bash -ex {exec_filepath} &> {log_filepath}'")
+                print(f"skipped exec {exec_filepath}, because of dryrun mode")
 
         with open(full_filepath, "w") as f:
             full_cmds_str = "\n".join(full_cmds) + "\n"
@@ -81,38 +85,38 @@ class Context:
 
     def append_cmds_ip_addr_add(self, cmds, ip, dev):
         if ip["version"] == 4:
-            dryrun = self.exist_netdev(dev) and ip["inet"] in self.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet_map"]
-            cmds += [(f"ip addr add {ip['inet']} dev {dev}", dryrun)]
+            skipped = self.exist_netdev(dev) and ip["inet"] in self.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet_map"]
+            cmds += [(f"ip addr add {ip['inet']} dev {dev}", skipped)]
         elif ip["version"] == 6:
-            dryrun = self.exist_netdev(dev) and ip["inet"] in self.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet6_map"]
-            cmds += [(f"ip addr add {ip['inet']} dev {dev}", dryrun)]
+            skipped = self.exist_netdev(dev) and ip["inet"] in self.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet6_map"]
+            cmds += [(f"ip addr add {ip['inet']} dev {dev}", skipped)]
 
     def append_local_cmds_add_link(self, cmds, link):
-        dryrun = self.exist_netdev(link["link_name"])
-        cmds += [(f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", dryrun)]
+        skipped = self.exist_netdev(link["link_name"])
+        cmds += [(f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", skipped)]
 
     def append_local_cmds_set_link(self, cmds, link):
-        dryrun = self.exist_netdev(link["link_name"])
+        skipped = self.exist_netdev(link["link_name"])
         cmds += [
-            (f"ethtool -K {link['link_name']} tso off tx off", dryrun),
-            (f"ip link set dev {link['link_name']} mtu {link['mtu']}", dryrun),
-            (f"ip link set dev {link['link_name']} address {link['link_mac']}", dryrun),
-            (f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up", dryrun),
+            (f"ethtool -K {link['link_name']} tso off tx off", skipped),
+            (f"ip link set dev {link['link_name']} mtu {link['mtu']}", skipped),
+            (f"ip link set dev {link['link_name']} address {link['link_mac']}", skipped),
+            (f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up", skipped),
         ]
 
     def append_local_cmds_set_peer(self, cmds, link):
-        dryrun = self.exist_netdev(link["peer_name"])
+        skipped = self.exist_netdev(link["peer_name"])
         cmds += [
-            (f"ethtool -K {link['peer_name']} tso off tx off", dryrun),
-            (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", dryrun),
-            (f"ip link set dev {link['peer_name']} address {link['peer_mac']}", dryrun),
-            (f"ip link set dev {link['peer_name']} netns {self.rspec['_hostname']} up", dryrun),
+            (f"ethtool -K {link['peer_name']} tso off tx off", skipped),
+            (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", skipped),
+            (f"ip link set dev {link['peer_name']} address {link['peer_mac']}", skipped),
+            (f"ip link set dev {link['peer_name']} netns {self.rspec['_hostname']} up", skipped),
         ]
 
     def append_cmds_add_vlan(self, cmds, netdev, vlan_id):
         netdev_vlan = f"{netdev}.{vlan_id}"
-        dryrun = self.exist_netdev(netdev_vlan)
+        skipped = self.exist_netdev(netdev_vlan)
         cmds += [
-            (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", dryrun),
-            (f"ip link set {netdev_vlan} up", dryrun),
+            (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", skipped),
+            (f"ip link set {netdev_vlan} up", skipped),
         ]

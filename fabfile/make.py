@@ -10,7 +10,7 @@ from lib import colors, spec_utils, os_utils, infra_utils, node_utils
 
 
 @task
-def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
+def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
     """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])
 
     # target (default=node)
@@ -64,7 +64,7 @@ def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
 
     c = _new_runtime_context(context_config, spec)
 
-    infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug))
+    infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
 
     re_targets = []
     targets = target.split(":")
@@ -89,14 +89,14 @@ def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
             if _not_target(rspec, re_targets):
                 print(f"{cmd} infra {rspec['name']}: skipped")
                 continue
-            infra_utils.make(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug))
+            infra_utils.make(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
 
     if make_image:
         for name, rspec in spec.get("vm_image_map", {}).items():
             if _not_target(rspec, re_targets):
                 print(f"{cmd} image {name}: skipped")
                 continue
-            node_utils.make_vm_image(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug))
+            node_utils.make_vm_image(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
 
     if make_node:
         ctx_data = {
@@ -110,7 +110,9 @@ def make(c, file, target="node", cmd="make", debug=False, parallel_pool_size=5):
             if _not_target(rspec, re_targets):
                 print(f"{cmd} node {rspec['name']}: skipped")
                 continue
-            tasks.append(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, ctx_data=ctx_data))
+            tasks.append(
+                Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun, ctx_data=ctx_data)
+            )
             results[rspec["name"]] = []
 
         while True:
@@ -181,7 +183,7 @@ def _dump_scripts(spec, cmd, tasks):
 
 
 class Task:
-    def __init__(self, context_config, spec, cmd, rspec, debug, ctx_data={}):
+    def __init__(self, context_config, spec, cmd, rspec, debug, dryrun, ctx_data={}):
         self.c = _new_runtime_context(context_config, spec)
         self.cmd = cmd
         self.spec = spec
@@ -189,6 +191,7 @@ class Task:
         self.ctx_data = ctx_data
         self.next = 0
         self.debug = debug
+        self.dryrun = dryrun
         self.rc = None
 
 
