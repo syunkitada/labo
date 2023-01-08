@@ -30,7 +30,7 @@ def make(rc):
                 skipped = rc.exist_iprule(iprule)
                 cmds += [
                     (f"ip rule add {iprule} prio 25", skipped),
-                    f"ip route replace table {table} 0.0.0.0/0 via {ex_ip['gateway_ip']} src {ex_ip['ip']}",
+                    f"ip route replace table {table} 0.0.0.0/0 dev {br_name} src {ex_ip['ip']}",
                 ]
 
             for link in rspec["_links"]:

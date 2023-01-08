@@ -7,7 +7,7 @@ imports:
 ipam:
   ovsadmin_network1:
     subnet: 10.10.20.0/24
-    kind: l2
+    kind: l3
   vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
@@ -38,8 +38,8 @@ template_map:
             - seq 6 permit <%=ipam.ovsadmin_network1.subnet%> le 32
       ipv4_networks:
         - <%=l3admin.ips.0.inet%>
+        - <%=ovs.admin_ips.0.inet%>
         - <%=vm_links.0.peer_ips.0.ip%>/32
-        - <%=ovs.admin_ips.0.ip%>/32
   vm:
     mtu: 1500
     routes:
