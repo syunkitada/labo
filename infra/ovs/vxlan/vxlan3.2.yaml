@@ -1,12 +1,13 @@
+# clos構成でvxlan
 imports:
   - infra/local/remote.yaml
   - infra/ovs/vxlan/vxlan3.yaml
   - infra/ovs/vxlan/vxlan3.1.yaml
 
 ipam:
-  vtep_network1:
-    subnet: 10.10.100.0/24
-    kind: l2
+  ovsadmin_network1:
+    subnet: 10.10.20.0/24
+    kind: l3
   t1vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
@@ -17,16 +18,16 @@ ipam:
 template_map:
   hv:
     ovs:
-      ex_ip:
-        inet: <%=assign_inet4(vtep_network1)%>
+      admin_ips:
+        - inet: <%=assign_inet4(ovsadmin_network1)%>
       bridges:
         - name: br-ex
           kind: external-ha
-          links:
-            - kind: local
-              flows:
-                - kind: ingress
-                - kind: egress
+          # links:
+          #   - kind: local
+          #     flows:
+          #       - kind: ingress
+          #       - kind: egress
         - name: br-t1
           kind: vxlan-tenant-vm
           tenant: 5000
@@ -40,10 +41,10 @@ template_map:
           order: 5
           version: 4
           prefix_list:
-            - seq 5 permit <%=ipam.vtep_network1.subnet%> le 32
+            - seq 6 permit <%=ipam.ovsadmin_network1.subnet%> le 32
       ipv4_networks:
         - <%=l3admin.ips.0.inet%>
-        - <%=ovs.ex_ip.ip%>/32
+        - <%=ovs.admin_ips.0.inet%>
   vm:
     mtu: 1500
     routes:
@@ -51,16 +52,14 @@ template_map:
         via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 node_map:
-  # HV1:
-  # vm_links:
-  #   - peer: vm1
-  #     peer_ips:
-  #       - inet: <%=assign_inet4(vm_network1)%>
-  # vms:
-  #   - name: vm1
-  #     templates:
-  #       - node
-  #       - vm
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          - name: HV1.ovs
+            dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
+          - name: HV2.ovs
+            dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
   HV1:
     vm_links:
       - peer: t1vm1

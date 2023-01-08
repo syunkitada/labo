@@ -1,5 +1,6 @@
 tmp
 tmp.md
+*.tmp
 
 # python
 venv

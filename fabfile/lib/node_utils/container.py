@@ -59,12 +59,12 @@ def _test(rc):
     if len(ok_targets) > 0:
         ok_msgs = ["ok_results"]
         for target in ok_targets:
-            ok_msgs.append(f"ping to {target['name']}(dst={target['dst']})")
+            ok_msgs.append(f"{rspec['name']} ping to {target['name']}(dst={target['dst']})")
         msgs.append(colors.ok("\n".join(ok_msgs)))
     if len(ng_targets) > 0:
         ng_msgs = ["ng_results"]
         for target in ng_targets:
-            ng_msgs.append(f"ping to {target['name']}(dst={target['dst']},err={target['err']})")
+            ng_msgs.append(f"{rspec['name']} ping to {target['name']}(dst={target['dst']},err={target['err']})")
         msgs.append(colors.crit("\n".join(ng_msgs)))
 
     for vm in rspec.get("vms", []):
