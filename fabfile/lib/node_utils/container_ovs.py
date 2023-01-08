@@ -1,5 +1,8 @@
 import os
 
+ARP_DUMMY_MAC = "0x00163e000001"
+BRIDGE_DUMMY_MAC = "00:16:3e:00:00:02"
+
 
 def make(rc):
     rspec = rc.rspec
@@ -11,6 +14,7 @@ def make(rc):
 
     for bridge in ovs["bridges"]:
         br_name = bridge["name"]
+        print("debug ovs", br_name)
         br_kind = bridge.get("kind", "")
         br_flows = []
         cmds += [
@@ -19,8 +23,15 @@ def make(rc):
             f"ip link set up {br_name}",
         ]
         if br_kind == "external-ha":
-            if "ex_ip" in ovs:
-                rc.append_cmds_ip_addr_add(cmds, ovs["ex_ip"], br_name)
+            for i, ex_ip in enumerate(ovs.get("admin_ips", [])):
+                rc.append_cmds_ip_addr_add(cmds, ex_ip, br_name)
+                table = f"20{i}"
+                iprule = f"from {ex_ip['ip']} table {table}"
+                skipped = rc.exist_iprule(iprule)
+                cmds += [
+                    (f"ip rule add {iprule} prio 25", skipped),
+                    f"ip route replace table {table} 0.0.0.0/0 via {ex_ip['gateway_ip']} src {ex_ip['ip']}",
+                ]
 
             for link in rspec["_links"]:
                 for vlan_id, vlan in link["vlan_map"].items():
@@ -62,18 +73,52 @@ def make(rc):
                                     br_flows += [
                                         f"priority=700,ip,in_port={ex_peer_name} actions=output:{link['link_name']}",
                                     ]
-                                elif flow["kind"] == "egress":
-                                    br_flows += [
-                                        f"priority=700,ip,in_port={link['link_name']} actions=group:1",
-                                    ]
 
-                buckets = ",".join(group1_ports)
-                # egressの通信を冗長化させる
-                cmds += [
-                    f'ovs-ofctl -O OpenFlow15 mod-group --may-create {br_name} "group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),'
-                    + buckets
-                    + '"'
+            # bridgeのmacは、一つ目のinterfaceのmacと一緒になる(厳密にはbridgeからちゃんとmacを取得したほうが良い)
+            bridge_mac = rspec["_links"][0]["peer_mac"]
+            for ex_ip in ovs.get("admin_ips", []):
+                br_flows += [
+                    # ingress
+                    f"priority=750,ip,nw_dst={ex_ip['ip']} actions=mod_dl_dst:{bridge_mac},output:LOCAL",
+                    # egress
+                    f"priority=750,ip,in_port=LOCAL,nw_src={ex_ip['ip']} actions=group:1",
                 ]
+            for link in bridge.get("links", []):
+                for flow in link.get("flows", []):
+                    if flow["kind"] == "egress":
+                        br_flows += [
+                            f"priority=700,ip,in_port={link['link_name']} actions=group:1",
+                        ]
+
+            buckets = ",".join(group1_ports)
+            # egressの通信を冗長化させる
+            cmds += [
+                f'ovs-ofctl -O OpenFlow15 mod-group --may-create {br_name} "group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),'
+                + buckets
+                + '"'
+            ]
+
+            # localからARP要求(arp_op=1)が飛んできたときに、dummy_macを返却します
+            # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
+            # NXM_OF_ETH_SRC = Ethernet Source address
+            # NXM_OF_ETH_DST = Ethernet Destination address
+            # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
+            # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
+            # NXM_OF_ARP_SPA = ARP Source IP Address
+            # NXM_OF_ARP_TPA = ARP Target IP Address
+            br_flows += [
+                "priority=800,in_port=LOCAL,arp,arp_op=1 actions="
+                # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
+                + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
+                # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
+                + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
+                # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
+                + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
+                # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
+                + "load:0x2->NXM_OF_ARP_OP[],"
+                # IN_PORTにそのまま返す
+                + "IN_PORT"
+            ]
 
         elif br_kind == "internal-vm":
             for vm_link in rspec["vm_links"]:
@@ -85,12 +130,12 @@ def make(rc):
                             # ingress
                             # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
                             f"priority=700,ip,in_port={_link['peer_name']},nw_dst={ip['ip']}"
-                            + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+                            + f" actions=mod_dl_dst:{vm_link['peer_mac']},output:{vm_link['link_name']}",
                             # egress
                             f"priority=700,ip,in_port={vm_link['link_name']},nw_src={ip['ip']} actions=output:{_link['peer_name']}",
                         ]
 
-                        # VMのインターフェイスからARP要求(arp_op=1)が飛んできたときに、dummy_macを返却します
+                        # VMのインターフェイスからARP要求(arp_op=1)が飛んできたときに、ARP_DUMMY_MACを返却します
                         # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
                         # NXM_OF_ETH_SRC = Ethernet Source address
                         # NXM_OF_ETH_DST = Ethernet Destination address
@@ -98,13 +143,12 @@ def make(rc):
                         # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
                         # NXM_OF_ARP_SPA = ARP Source IP Address
                         # NXM_OF_ARP_TPA = ARP Target IP Address
-                        dummy_mac = "0x00163e000001"
                         br_flows += [
                             f"priority=800,in_port={vm_link['link_name']},arp,arp_op=1 actions="
-                            # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、dummy_macをNXM_OF_ETH_SRCにセットする
-                            + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{dummy_mac}->NXM_OF_ETH_SRC[],"
-                            # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、dummy_macをNXM_NX_ARP_SHAにセットする
-                            + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{dummy_mac}->NXM_NX_ARP_SHA[],"
+                            # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
+                            + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
+                            # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
+                            + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
                             # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
                             + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
                             # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
@@ -168,10 +212,11 @@ def make(rc):
                             ]
 
         for link in bridge.get("links", []):
-            cmds += [
-                f"ovs-vsctl --may-exist add-port {br_name} {link['link_name']}"
-                + f" -- set interface {link['link_name']} type=patch options:peer={link['peer_name']}"
-            ]
+            if link.get("kind", "") != "local":
+                cmds += [
+                    f"ovs-vsctl --may-exist add-port {br_name} {link['link_name']}"
+                    + f" -- set interface {link['link_name']} type=patch options:peer={link['peer_name']}"
+                ]
         for link in bridge.get("_links", []):
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {link['peer_name']}"

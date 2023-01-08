@@ -124,6 +124,9 @@ nodes:
       - ovs-ofctl add-flow tenant1 "in_port=vxlan1 actions=n1_0_t1vm1"
       - ovs-ofctl add-flow tenant2 "in_port=n1_1_t2vm1 actions=set_field:<%=_node_map.n2._links.0.peer_ips.0.ip%>->tun_dst,vxlan2"
       - ovs-ofctl add-flow tenant2 "in_port=vxlan2 actions=n1_1_t2vm1"
+      # 以下はなくてもよいし、あってもよい
+      # - ovs-ofctl add-flow br-ex "in_port=n1_0_r1 actions=output:local"
+      # - ovs-ofctl add-flow br-ex "in_port=local actions=output:n1_0_r1"
   - name: n2
     templates:
       - node

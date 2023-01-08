@@ -22,6 +22,11 @@ template_map:
       bridges:
         - name: br-ex
           kind: external-ha
+          links:
+            - kind: local
+              flows:
+                - kind: ingress
+                - kind: egress
         - name: br-t1
           kind: vxlan-tenant-vm
           tenant: 5000
@@ -38,7 +43,7 @@ template_map:
             - seq 5 permit <%=ipam.vtep_network1.subnet%> le 32
       ipv4_networks:
         - <%=l3admin.ips.0.inet%>
-        # - <%=ovs.ex_ip.inet%>
+        - <%=ovs.ex_ip.ip%>/32
   vm:
     mtu: 1500
     routes:

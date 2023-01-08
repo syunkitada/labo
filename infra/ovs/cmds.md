@@ -180,3 +180,10 @@ Cached: 169.254.0.0/24 dev HV1_0_L12.100 SRC 169.254.0.2
 Cached: 0.0.0.0/0 dev HV1_0_L11 GW 10.10.3.1 SRC 10.10.3.2
 Cached: fe80::/64 dev HV1_0_vm1 SRC fe80::216:3eff:fe04:0
 ```
+
+```
+# ovs-appctl ovs/route/lookup 10.10.2.2
+src 10.10.1.2
+gateway 10.10.1.1
+dev br-ex
+```

@@ -111,18 +111,20 @@ def complete_spec(spec):
 
             ovs = rspec.get("ovs")
             if ovs is not None:
+                _complete_ips(ovs.get("admin_ips", []), spec, rspec)
                 ovs_peer_links_map = {}
                 for bridge in ovs.get("bridges", []):
                     ovs_peer_links_map[bridge["name"]] = []
                 for bridge in ovs.get("bridges", []):
                     br_name = bridge["name"]
                     for link in bridge.get("links", []):
+                        if link.get("kind", "") == "local":
+                            link["link_name"] = "local"
+                            continue
                         link["link_name"] = f"{br_name}_{link['peer']}"
                         link["peer_name"] = f"{link['peer']}_{br_name}"
                         ovs_peer_links_map[link["peer"]].append(link)
                     bridge["_links"] = ovs_peer_links_map.get(br_name, [])
-                if "ex_ip" in ovs:
-                    _complete_ip(ovs["ex_ip"], spec, rspec)
 
             _complete_links(i, spec, rspec, rspec.get("vm_links", []))
             for vm in rspec.get("vms", []):
@@ -187,8 +189,8 @@ def complete_spec(spec):
                     for node in _node_map.values():
                         if "tenant" in node and node["name"] not in own_vm_map and node["tenant"] == br_tenant:
                             tun_dst = node["hv"]["_links"][0]["peer_ips"][0]["ip"]
-                            if "ex_ip" in node["hv"]["ovs"]:
-                                tun_dst = node["hv"]["ovs"]["ex_ip"]["ip"]
+                            if "admin_ips" in node["hv"]["ovs"]:
+                                tun_dst = node["hv"]["ovs"]["admin_ips"][0]["ip"]
                             ex_vteps.append(
                                 {
                                     "dst": node,
@@ -292,3 +294,6 @@ def _complete_ip(ip, spec, rspec):
     ip["ip"] = str(ip_interface.ip)
     ip["version"] = ip_interface.version
     ip["network"] = str(ip_interface.network)
+    ip_network = ipaddress.ip_network(ip["network"])
+    if ip_network.version == 4 and ip_network.prefixlen < 32:
+        ip["gateway_ip"] = str(ip_network[1])
