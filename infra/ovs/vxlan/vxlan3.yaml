@@ -2,7 +2,7 @@ imports:
   - infra/local/remote.yaml
 
 common:
-  namespace: clos1
+  namespace: ovs-vxlan3
   host: 192.168.210.11
   host_user: admin
   host_pass: admin

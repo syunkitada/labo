@@ -59,12 +59,12 @@ def _test(rc):
     if len(ok_targets) > 0:
         ok_msgs = ["ok_results"]
         for target in ok_targets:
-            ok_msgs.append(f"ping to {target['name']}(dst={target['dst']})")
+            ok_msgs.append(f"{rspec['name']} ping to {target['name']}(dst={target['dst']})")
         msgs.append(colors.ok("\n".join(ok_msgs)))
     if len(ng_targets) > 0:
         ng_msgs = ["ng_results"]
         for target in ng_targets:
-            ng_msgs.append(f"ping to {target['name']}(dst={target['dst']},err={target['err']})")
+            ng_msgs.append(f"{rspec['name']} ping to {target['name']}(dst={target['dst']},err={target['err']})")
         msgs.append(colors.crit("\n".join(ng_msgs)))
 
     for vm in rspec.get("vms", []):
@@ -104,7 +104,7 @@ def _make_prepare(rc):
 def _make(rc):
     rspec = rc.rspec
 
-    dryrun = True
+    skipped = True
     docker_options = [
         f"-d  --rm --network none --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
         "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
@@ -116,19 +116,19 @@ def _make(rc):
         "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{rspec['_hostname']}",
     ]
     if rspec["_hostname"] not in rc.docker_ps_map:
-        dryrun = False
-    rc.exec(lcmds, title="prepare-docker", dryrun=dryrun, is_local=True)
+        skipped = False
+    rc.exec(lcmds, title="prepare-docker", skipped=skipped, is_local=True)
 
     dcmds = []
     dcmds += [f"hostname {rspec['_hostname']}"]
     for key, value in rspec.get("sysctl_map", {}).items():
         dcmds += [f"sysctl -w {key}={value}"]
     for bridge in rspec.get("bridges", []):
-        dryrun = rc.exist_netdev(bridge["name"])
+        skipped = rc.exist_netdev(bridge["name"])
         dcmds += [
-            (f"ip link add {bridge['name']} type bridge", dryrun),
-            (f"ip link set {bridge['name']} up", dryrun),
-            (f"ip link set dev {bridge['name']} mtu {bridge['mtu']}", dryrun),
+            (f"ip link add {bridge['name']} type bridge", skipped),
+            (f"ip link set {bridge['name']} up", skipped),
+            (f"ip link set dev {bridge['name']} mtu {bridge['mtu']}", skipped),
         ]
         for ip in bridge.get("ips", []):
             rc.append_cmds_ip_addr_add(dcmds, ip, bridge["name"])
@@ -166,11 +166,11 @@ def _make(rc):
         dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", rc.exist_iprule(iprule["rule"]))]
 
     for route in rspec.get("routes", []):
-        dryrun = rc.exist_route(route)
-        dcmds += [(f"ip route add {route['dst']} via {route['via']}", dryrun)]
+        skipped = rc.exist_route(route)
+        dcmds += [(f"ip route add {route['dst']} via {route['via']}", skipped)]
     for route in rspec.get("routes6", []):
-        dryrun = rc.exist_route6(route)
-        dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", dryrun)]
+        skipped = rc.exist_route6(route)
+        dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", skipped)]
 
     rc.exec(dcmds, title="setup-networks")
 
@@ -182,15 +182,15 @@ def _make(rc):
 
     l3admin = rspec.get("l3admin")
     if l3admin is not None:
-        dryrun = rc.exist_netdev("l3admin")
+        skipped = rc.exist_netdev("l3admin")
         dcmds += [
-            ("ip link add l3admin type dummy", dryrun),
-            ("ip link set up l3admin", dryrun),
+            ("ip link add l3admin type dummy", skipped),
+            ("ip link set up l3admin", skipped),
         ]
 
         iprule = "from all table 300"
-        dryrun = rc.exist_iprule(iprule)
-        dcmds += [(f"ip rule add {iprule} prio 30", dryrun)]
+        skipped = rc.exist_iprule(iprule)
+        dcmds += [(f"ip rule add {iprule} prio 30", skipped)]
 
         for ip in l3admin.get("ips", []):
             rc.append_cmds_ip_addr_add(dcmds, ip, "l3admin")

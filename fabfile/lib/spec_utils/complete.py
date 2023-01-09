@@ -18,6 +18,7 @@ def update_dict(d, u):
 
 
 def complete_spec(spec):
+    spec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", spec["common"]["namespace"])
     template_map = spec.get("template_map", {})
     node_map = spec.get("node_map", {})
 
@@ -49,6 +50,11 @@ def complete_spec(spec):
     for name, rspec in vm_image_map.items():
         rspec["name"] = name
         rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
+
+    vpcgw_map = spec.get("vpcgw_map", {})
+    for rspec in vpcgw_map.values():
+        rspec["_tenant_links_map"] = {}
+        _complete_ip(rspec["vtep"], spec, rspec)
 
     _node_map = {}
     spec["_node_map"] = _node_map
@@ -110,18 +116,20 @@ def complete_spec(spec):
 
             ovs = rspec.get("ovs")
             if ovs is not None:
+                _complete_ips(ovs.get("admin_ips", []), spec, rspec)
                 ovs_peer_links_map = {}
                 for bridge in ovs.get("bridges", []):
                     ovs_peer_links_map[bridge["name"]] = []
                 for bridge in ovs.get("bridges", []):
                     br_name = bridge["name"]
                     for link in bridge.get("links", []):
+                        if link.get("kind", "") == "local":
+                            link["link_name"] = "local"
+                            continue
                         link["link_name"] = f"{br_name}_{link['peer']}"
                         link["peer_name"] = f"{link['peer']}_{br_name}"
                         ovs_peer_links_map[link["peer"]].append(link)
                     bridge["_links"] = ovs_peer_links_map.get(br_name, [])
-                if "ex_ip" in ovs:
-                    _complete_ip(ovs["ex_ip"], spec, rspec)
 
             _complete_links(i, spec, rspec, rspec.get("vm_links", []))
             for vm in rspec.get("vms", []):
@@ -143,6 +151,9 @@ def complete_spec(spec):
                 for route_map in frr.get("route_map", {}).values():
                     for i, value in enumerate(route_map.get("prefix_list", [])):
                         route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
+
+            if "vpcgw" in rspec:
+                rspec["_vpcgw"] = vpcgw_map[rspec["vpcgw"]]
 
         # end if rspec["kind"] == "container":
         else:
@@ -186,8 +197,8 @@ def complete_spec(spec):
                     for node in _node_map.values():
                         if "tenant" in node and node["name"] not in own_vm_map and node["tenant"] == br_tenant:
                             tun_dst = node["hv"]["_links"][0]["peer_ips"][0]["ip"]
-                            if "ex_ip" in node["hv"]["ovs"]:
-                                tun_dst = node["hv"]["ovs"]["ex_ip"]["ip"]
+                            if "admin_ips" in node["hv"]["ovs"]:
+                                tun_dst = node["hv"]["ovs"]["admin_ips"][0]["ip"]
                             ex_vteps.append(
                                 {
                                     "dst": node,
@@ -195,6 +206,27 @@ def complete_spec(spec):
                                 }
                             )
                     bridge["ex_vteps"] = ex_vteps
+
+                    if "vpcgw" in bridge:
+                        tun_dst = rspec["_links"][0]["peer_ips"][0]["ip"]
+                        if "admin_ips" in rspec["ovs"]:
+                            tun_dst = rspec["ovs"]["admin_ips"][0]["ip"]
+                        vpcgw = vpcgw_map[bridge["vpcgw"]]
+                        bridge["_vpcgw"] = vpcgw
+                        tenant_links_map = vpcgw["_tenant_links_map"]
+                        for vm_link in rspec.get("vm_links", []):
+                            if vm_link["tenant"] != bridge["tenant"]:
+                                continue
+                            if vm_link["tenant"] not in tenant_links_map:
+                                tenant_links_map[vm_link["tenant"]] = []
+                            for ip in vm_link["peer_ips"]:
+                                tenant_links_map[vm_link["tenant"]].append(
+                                    {
+                                        "ip": ip["ip"],
+                                        "eip": ip["eip"],
+                                        "tun_dst": tun_dst,
+                                    }
+                                )
 
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
@@ -225,6 +257,8 @@ def _complete_value(value, spec, node, is_get_src=False):
                 value = _get_src(value, spec, node)
             elif func == "assign_inet4":
                 value = ipam.assign_inet4(arg, spec)
+            elif func == "assign_ip4":
+                value = ipam.inet_to_ip(ipam.assign_inet4(arg, spec))
             elif func == "gateway_inet4":
                 value = ipam.gateway_inet4(arg, spec)
             elif func == "inet_to_ip":
@@ -250,7 +284,7 @@ def _complete_value(value, spec, node, is_get_src=False):
 
 def _get_src(src, spec={}, rspec={}):
     splited_src = src.split(".")
-    if splited_src[0] in ["_node_map", "ipam"]:
+    if splited_src[0] in ["_node_map", "vpcgw_map", "ipam"]:
         rspec = spec
 
     tmp_src = None
@@ -291,3 +325,8 @@ def _complete_ip(ip, spec, rspec):
     ip["ip"] = str(ip_interface.ip)
     ip["version"] = ip_interface.version
     ip["network"] = str(ip_interface.network)
+    ip_network = ipaddress.ip_network(ip["network"])
+    if ip_network.version == 4 and ip_network.prefixlen < 32:
+        ip["gateway_ip"] = str(ip_network[1])
+    if "eip" in ip:
+        ip["eip"] = _complete_value(ip["eip"], spec, rspec)
