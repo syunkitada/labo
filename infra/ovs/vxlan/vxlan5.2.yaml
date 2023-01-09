@@ -1,8 +1,8 @@
-# clos構成でvxlan, vpcgw付き
+# vxlan4のvpcgwを冗長化させた構成
 imports:
   - infra/local/remote.yaml
-  - infra/ovs/vxlan/vxlan4.yaml
-  - infra/ovs/vxlan/vxlan4.1.yaml
+  - infra/ovs/vxlan/vxlan5.yaml
+  - infra/ovs/vxlan/vxlan5.1.yaml
 
 ipam:
   ovsadmin_network1:
@@ -110,6 +110,8 @@ node_map:
             dst: <%=_node_map.HV2.ovs.admin_ips.0.ip%>
           - name: GW1.ovs
             dst: <%=_node_map.GW1.ovs.admin_ips.0.ip%>
+          - name: GW2.ovs
+            dst: <%=_node_map.GW2.ovs.admin_ips.0.ip%>
           - name: t1vm1.eip
             dst: <%=_node_map.t1vm1._links.0.peer_ips.0.eip%>
           - name: t1vm2.eip
