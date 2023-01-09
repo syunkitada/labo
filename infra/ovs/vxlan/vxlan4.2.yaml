@@ -1,8 +1,8 @@
 # clos構成でvxlan
 imports:
   - infra/local/remote.yaml
-  - infra/ovs/vxlan/vxlan3.yaml
-  - infra/ovs/vxlan/vxlan3.1.yaml
+  - infra/ovs/vxlan/vxlan4.yaml
+  - infra/ovs/vxlan/vxlan4.1.yaml
 
 ipam:
   ovsadmin_network1:
@@ -14,6 +14,14 @@ ipam:
   t2vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
+  eip_network1:
+    subnet: 10.110.0.0/24
+    kind: l3
+
+vpcgw_map:
+  gw1:
+    vtep:
+      inet: <%=assign_inet4(ovsadmin_network1)%>
 
 template_map:
   hv:
@@ -25,6 +33,7 @@ template_map:
           kind: external-ha
         - name: br-t1
           kind: vxlan-tenant-vm
+          vpcgw: gw1
           tenant: 5000
         - name: br-t2
           kind: vxlan-tenant-vm
@@ -40,6 +49,35 @@ template_map:
       ipv4_networks:
         - <%=l3admin.ips.0.inet%>
         - <%=ovs.admin_ips.0.inet%>
+  gw:
+    ovs:
+      admin_ips:
+        - inet: <%=vpcgw_map.gw1.vtep.inet%>
+      bridges:
+        - name: br-ex
+          kind: external-ha
+        - name: br-gw
+          kind: eip-nat
+        - name: br-t1
+          kind: vxlan-tenant
+          vpcgw: gw1
+          tenant: 5000
+        - name: br-t2
+          kind: vxlan-tenant
+          tenant: 6000
+    frr:
+      route_map:
+        VM-v4:
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+            - seq 6 permit <%=ipam.eip_network1.subnet%> le 32
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+        - <%=ovs.admin_ips.0.inet%>
+        - <%=ipam.eip_network1.subnet%>
   vm:
     mtu: 1500
     routes:
@@ -55,6 +93,8 @@ node_map:
             dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
           - name: HV2.ovs
             dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
+          - name: GW1.ovs
+            dst: <%=_node_map.GW1.ovs.admin_ips.0.ip%>
   HV1:
     vm_links:
       - peer: t1vm1

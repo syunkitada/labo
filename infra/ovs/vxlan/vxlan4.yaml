@@ -2,7 +2,7 @@ imports:
   - infra/local/remote.yaml
 
 common:
-  namespace: ovs-vxlan3
+  namespace: ovs-vxlan4
   host: 192.168.210.11
   host_user: admin
   host_pass: admin
@@ -62,6 +62,13 @@ template_map:
     ip_rules:
       - prio: 20
         rule: from <%=_links.0.peer_ips.0.inet%> table main
+  gw:
+    routes:
+      - dst: default
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
+    ip_rules:
+      - prio: 20
+        rule: from <%=_links.0.peer_ips.0.inet%> table main
 
 nodes:
   - name: CL1
@@ -92,6 +99,8 @@ nodes:
             dst: <%=_node_map.HV1._links.0.peer_ips.0.ip%>
           - name: HV2-L2
             dst: <%=_node_map.HV2._links.0.peer_ips.0.ip%>
+          - name: GW1-L2
+            dst: <%=_node_map.GW1._links.0.peer_ips.0.ip%>
   - name: SP1
     templates:
       - node
@@ -144,6 +153,18 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp0
+      - peer: GW1
+        bridge: l2-br
+        peer_ips:
+          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp0
   - name: L12
     templates:
       - node
@@ -170,6 +191,15 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp1
+      - peer: GW1
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp1
   - name: HV1
     templates:
       - node
@@ -178,3 +208,7 @@ nodes:
     templates:
       - node
       - hv
+  - name: GW1
+    templates:
+      - node
+      - gw

@@ -51,6 +51,10 @@ def complete_spec(spec):
         rspec["name"] = name
         rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
 
+    vpcgw_map = spec.get("vpcgw_map", {})
+    for rspec in vpcgw_map.values():
+        _complete_ip(rspec["vtep"], spec, rspec)
+
     _node_map = {}
     spec["_node_map"] = _node_map
     peer_links_map = {}
@@ -180,6 +184,9 @@ def complete_spec(spec):
             ovs = rspec["ovs"]
             for bridge in ovs.get("bridges", []):
                 if bridge["kind"] == "vxlan-tenant-vm":
+                    if "vpcgw" in bridge:
+                        bridge["_vpcgw"] = vpcgw_map[bridge["vpcgw"]]
+
                     own_vm_map = {}
                     for vm in rspec.get("vms", []):
                         own_vm_map[vm["name"]] = vm
@@ -253,7 +260,7 @@ def _complete_value(value, spec, node, is_get_src=False):
 
 def _get_src(src, spec={}, rspec={}):
     splited_src = src.split(".")
-    if splited_src[0] in ["_node_map", "ipam"]:
+    if splited_src[0] in ["_node_map", "vpcgw_map", "ipam"]:
         rspec = spec
 
     tmp_src = None

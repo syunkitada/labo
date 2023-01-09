@@ -189,13 +189,12 @@ def make(rc):
                     # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
                     # NXM_OF_ARP_SPA = ARP Source IP Address
                     # NXM_OF_ARP_TPA = ARP Target IP Address
-                    dummy_mac = "0x00163e000001"
                     br_flows += [
                         f"priority=800,in_port={vm_link['link_name']},arp,arp_op=1 actions="
-                        # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、dummy_macをNXM_OF_ETH_SRCにセットする
-                        + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{dummy_mac}->NXM_OF_ETH_SRC[],"
-                        # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、dummy_macをNXM_NX_ARP_SHAにセットする
-                        + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{dummy_mac}->NXM_NX_ARP_SHA[],"
+                        # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
+                        + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
+                        # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
+                        + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
                         # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
                         + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
                         # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
@@ -210,6 +209,10 @@ def make(rc):
                             br_flows += [
                                 f"priority=700,ip_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst{vxlan_flow_options},{vxlan_eth}",
                             ]
+                if "_vpcgw" in bridge:
+                    br_flows += [
+                        f"priority=600 actions=set_field:{bridge['_vpcgw']['vtep']['ip']}->tun_dst{vxlan_flow_options},{vxlan_eth}",
+                    ]
 
         for link in bridge.get("links", []):
             if link.get("kind", "") != "local":
