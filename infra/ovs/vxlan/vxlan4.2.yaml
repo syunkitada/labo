@@ -37,6 +37,7 @@ template_map:
           tenant: 5000
         - name: br-t2
           kind: vxlan-tenant-vm
+          vpcgw: gw1
           tenant: 6000
     frr:
       route_map:
@@ -50,20 +51,34 @@ template_map:
         - <%=l3admin.ips.0.inet%>
         - <%=ovs.admin_ips.0.inet%>
   gw:
+    vpcgw: gw1
     ovs:
       admin_ips:
         - inet: <%=vpcgw_map.gw1.vtep.inet%>
       bridges:
         - name: br-ex
           kind: external-ha
-        - name: br-gw
-          kind: eip-nat
+          links:
+            - peer: br-dnat
+              flows:
+                - kind: ingress
+                - kind: egress
+        - name: br-dnat
+          kind: dnat-eip
+          links:
+            - peer: br-t1
+              flows:
+                - kind: ingress
+                - kind: egress
+            - peer: br-t2
+              flows:
+                - kind: ingress
+                - kind: egress
         - name: br-t1
-          kind: vxlan-tenant
-          vpcgw: gw1
+          kind: vxlan-tenant-vpcgw
           tenant: 5000
         - name: br-t2
-          kind: vxlan-tenant
+          kind: vxlan-tenant-vpcgw
           tenant: 6000
     frr:
       route_map:
@@ -95,14 +110,24 @@ node_map:
             dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
           - name: GW1.ovs
             dst: <%=_node_map.GW1.ovs.admin_ips.0.ip%>
+          - name: t1vm1.eip
+            dst: <%=_node_map.t1vm1._links.0.peer_ips.0.eip%>
+          - name: t1vm2.eip
+            dst: <%=_node_map.t1vm2._links.0.peer_ips.0.eip%>
+          - name: t2vm1.eip
+            dst: <%=_node_map.t2vm1._links.0.peer_ips.0.eip%>
+          - name: t2vm2.eip
+            dst: <%=_node_map.t2vm2._links.0.peer_ips.0.eip%>
   HV1:
     vm_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
     vms:
       - name: t1vm1
         tenant: 5000
@@ -114,6 +139,10 @@ node_map:
             targets:
               - name: t1vm2
                 dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
+              - name: t2vm1.eip
+                dst: <%=_node_map.t2vm1._links.0.peer_ips.0.eip%>
+              - name: t2vm2.eip
+                dst: <%=_node_map.t2vm2._links.0.peer_ips.0.eip%>
       - name: t2vm1
         tenant: 6000
         templates:
@@ -129,9 +158,11 @@ node_map:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
     vms:
       - name: t1vm2
         tenant: 5000

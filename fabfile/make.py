@@ -9,6 +9,11 @@ from collections import OrderedDict
 from lib import colors, spec_utils, os_utils, infra_utils, node_utils
 
 
+class NoAliasDumper(yaml.Dumper):
+    def ignore_aliases(self, _):
+        return True
+
+
 @task
 def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
     """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])

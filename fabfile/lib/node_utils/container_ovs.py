@@ -1,8 +1,5 @@
 import os
 
-ARP_DUMMY_MAC = "0x00163e000001"
-BRIDGE_DUMMY_MAC = "00:16:3e:00:00:02"
-
 
 def make(rc):
     rspec = rc.rspec
@@ -83,6 +80,7 @@ def make(rc):
                     # egress
                     f"priority=750,ip,in_port=LOCAL,nw_src={ex_ip['ip']} actions=group:1",
                 ]
+
             for link in bridge.get("links", []):
                 for flow in link.get("flows", []):
                     if flow["kind"] == "egress":
@@ -98,27 +96,7 @@ def make(rc):
                 + '"'
             ]
 
-            # localからARP要求(arp_op=1)が飛んできたときに、dummy_macを返却します
-            # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
-            # NXM_OF_ETH_SRC = Ethernet Source address
-            # NXM_OF_ETH_DST = Ethernet Destination address
-            # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
-            # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
-            # NXM_OF_ARP_SPA = ARP Source IP Address
-            # NXM_OF_ARP_TPA = ARP Target IP Address
-            br_flows += [
-                "priority=800,in_port=LOCAL,arp,arp_op=1 actions="
-                # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
-                + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
-                # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
-                + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
-                # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
-                + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
-                # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
-                + "load:0x2->NXM_OF_ARP_OP[],"
-                # IN_PORTにそのまま返す
-                + "IN_PORT"
-            ]
+            _append_flows_for_dummy_arp(br_flows, "LOCAL")
 
         elif br_kind == "internal-vm":
             for vm_link in rspec["vm_links"]:
@@ -135,35 +113,13 @@ def make(rc):
                             f"priority=700,ip,in_port={vm_link['link_name']},nw_src={ip['ip']} actions=output:{_link['peer_name']}",
                         ]
 
-                        # VMのインターフェイスからARP要求(arp_op=1)が飛んできたときに、ARP_DUMMY_MACを返却します
-                        # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
-                        # NXM_OF_ETH_SRC = Ethernet Source address
-                        # NXM_OF_ETH_DST = Ethernet Destination address
-                        # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
-                        # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
-                        # NXM_OF_ARP_SPA = ARP Source IP Address
-                        # NXM_OF_ARP_TPA = ARP Target IP Address
-                        br_flows += [
-                            f"priority=800,in_port={vm_link['link_name']},arp,arp_op=1 actions="
-                            # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
-                            + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
-                            # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
-                            + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
-                            # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
-                            + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
-                            # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
-                            + "load:0x2->NXM_OF_ARP_OP[],"
-                            # IN_PORTにそのまま返す
-                            + "IN_PORT"
-                        ]
+                        _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
 
         elif br_kind == "vxlan-tenant-vm":
             vxlan_eth = f"vxlan{bridge['tenant']}"
             vxlan_options = ""
-            vxlan_flow_options = ""
             if "ex_ip" in ovs:
                 vxlan_options = f" options:local_ip={ovs['ex_ip']['ip']}"
-                # vxlan_flow_options = f",set_field:{ovs['ex_ip']['ip']}->tun_src"
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
                 f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
@@ -181,39 +137,71 @@ def make(rc):
                         + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
                     ]
 
-                    # VMのインターフェイスからARP要求(arp_op=1)が飛んできたときに、dummy_macを返却します
-                    # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
-                    # NXM_OF_ETH_SRC = Ethernet Source address
-                    # NXM_OF_ETH_DST = Ethernet Destination address
-                    # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
-                    # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
-                    # NXM_OF_ARP_SPA = ARP Source IP Address
-                    # NXM_OF_ARP_TPA = ARP Target IP Address
-                    br_flows += [
-                        f"priority=800,in_port={vm_link['link_name']},arp,arp_op=1 actions="
-                        # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
-                        + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
-                        # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
-                        + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
-                        # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
-                        + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
-                        # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
-                        + "load:0x2->NXM_OF_ARP_OP[],"
-                        # IN_PORTにそのまま返す
-                        + "IN_PORT"
-                    ]
+                    _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
 
                 for ex_vtep in bridge["ex_vteps"]:
                     for _link in ex_vtep["dst"]["_links"]:
                         for ip in _link["peer_ips"]:
                             br_flows += [
-                                f"priority=700,ip_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst{vxlan_flow_options},{vxlan_eth}",
+                                f"priority=700,ip,nw_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
                             ]
                 if "_vpcgw" in bridge:
                     br_flows += [
-                        f"priority=600 actions=set_field:{bridge['_vpcgw']['vtep']['ip']}->tun_dst{vxlan_flow_options},{vxlan_eth}",
+                        f"priority=600 actions=set_field:{bridge['_vpcgw']['vtep']['ip']}->tun_dst,{vxlan_eth}",
                     ]
 
+        elif br_kind == "vxlan-tenant-vpcgw":
+            vxlan_eth = f"vxlan{bridge['tenant']}"
+            vxlan_options = ""
+            if "ex_ip" in ovs:
+                vxlan_options = f" options:local_ip={ovs['ex_ip']['ip']}"
+            cmds += [
+                f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
+            ]
+
+            vpcgw = rspec["_vpcgw"]
+            for link in vpcgw["_tenant_links_map"][bridge["tenant"]]:
+                br_flows += [
+                    # egress
+                    f"priority=700,ip,nw_dst={link['ip']} actions=set_field:{link['tun_dst']}->tun_dst,{vxlan_eth}",
+                ]
+                for _link in bridge.get("_links", []):
+                    br_flows += [
+                        # ingress
+                        # snat vpcip to eip
+                        f"priority=700,ip,nw_src={link['ip']} actions=set_field:{link['eip']}->nw_src,output:{_link['peer_name']}",
+                    ]
+
+        elif br_kind == "dnat-eip":
+            vpcgw = rspec["_vpcgw"]
+            for tenant_id, links in vpcgw["_tenant_links_map"].items():
+                tenant_link = None
+                for _bridge in ovs["bridges"]:
+                    if tenant_id == _bridge.get("tenant", 0):
+                        for _link in bridge.get("links", []):
+                            if _link["peer"] == _bridge["name"]:
+                                tenant_link = _link["link_name"]
+                                break
+                        else:
+                            break
+                if tenant_link is None:
+                    continue
+                for link in links:
+                    br_flows += [
+                        # egress
+                        # dnat eip to vpcip
+                        f"priority=700,ip,nw_dst={link['eip']} actions=set_field:{link['ip']}->nw_dst,output:{tenant_link}",
+                    ]
+            for _link in bridge.get("_links", []):
+                for flow in _link.get("flows", []):
+                    if flow["kind"] == "egress":
+                        br_flows += [
+                            # egress for not eip
+                            f"priority=500 actions=output:{_link['peer_name']}",
+                        ]
+
+        cmds += [f"# {br_name} {br_kind}"]
         for link in bridge.get("links", []):
             if link.get("kind", "") != "local":
                 cmds += [
@@ -236,3 +224,33 @@ def make(rc):
             cmds += [f"ovs-ofctl -O OpenFlow15 replace-flows {br_name} {flows_filepath}"]
 
     rc.exec(cmds, title="ovs")
+
+
+ARP_DUMMY_MAC = "0x00163e000001"
+
+
+def _append_flows_for_dummy_arp(br_flows, in_port=None):
+    # in_portからARP要求(arp_op=1)が飛んできたときに、ARP_DUMMY_MACを返却します
+    # arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
+    # NXM_OF_ETH_SRC = Ethernet Source address
+    # NXM_OF_ETH_DST = Ethernet Destination address
+    # NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
+    # NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
+    # NXM_OF_ARP_SPA = ARP Source IP Address
+    # NXM_OF_ARP_TPA = ARP Target IP Address
+    in_port_option = ""
+    if in_port is not None:
+        in_port_option = f",in_port={in_port}"
+    br_flows += [
+        f"priority=800{in_port_option},arp,arp_op=1 actions="
+        # NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする
+        + f"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{ARP_DUMMY_MAC}->NXM_OF_ETH_SRC[],"
+        # NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする
+        + f"move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{ARP_DUMMY_MAC}->NXM_NX_ARP_SHA[],"
+        # NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える
+        + "push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[],"
+        # Opcodeを2にセットする(ARPのリプライであることを示すフラグ)
+        + "load:0x2->NXM_OF_ARP_OP[],"
+        # IN_PORTにそのまま返す
+        + "IN_PORT"
+    ]

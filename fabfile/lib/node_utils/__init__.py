@@ -1,3 +1,4 @@
+import traceback
 from fabric import Connection
 
 from lib import colors
@@ -20,7 +21,7 @@ def make(t):
             print(f"unsupported kind: kind={t.rspec['kind']}")
             exit(1)
     except Exception as e:
-        result = {"status": 1, "msg": colors.crit(str(e))}
+        result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
         t.next = -1
 
     if t.next > 0:

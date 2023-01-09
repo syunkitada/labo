@@ -53,6 +53,7 @@ def complete_spec(spec):
 
     vpcgw_map = spec.get("vpcgw_map", {})
     for rspec in vpcgw_map.values():
+        rspec["_tenant_links_map"] = {}
         _complete_ip(rspec["vtep"], spec, rspec)
 
     _node_map = {}
@@ -151,6 +152,9 @@ def complete_spec(spec):
                     for i, value in enumerate(route_map.get("prefix_list", [])):
                         route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
 
+            if "vpcgw" in rspec:
+                rspec["_vpcgw"] = vpcgw_map[rspec["vpcgw"]]
+
         # end if rspec["kind"] == "container":
         else:
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
@@ -184,9 +188,6 @@ def complete_spec(spec):
             ovs = rspec["ovs"]
             for bridge in ovs.get("bridges", []):
                 if bridge["kind"] == "vxlan-tenant-vm":
-                    if "vpcgw" in bridge:
-                        bridge["_vpcgw"] = vpcgw_map[bridge["vpcgw"]]
-
                     own_vm_map = {}
                     for vm in rspec.get("vms", []):
                         own_vm_map[vm["name"]] = vm
@@ -205,6 +206,27 @@ def complete_spec(spec):
                                 }
                             )
                     bridge["ex_vteps"] = ex_vteps
+
+                    if "vpcgw" in bridge:
+                        tun_dst = rspec["_links"][0]["peer_ips"][0]["ip"]
+                        if "admin_ips" in rspec["ovs"]:
+                            tun_dst = rspec["ovs"]["admin_ips"][0]["ip"]
+                        vpcgw = vpcgw_map[bridge["vpcgw"]]
+                        bridge["_vpcgw"] = vpcgw
+                        tenant_links_map = vpcgw["_tenant_links_map"]
+                        for vm_link in rspec.get("vm_links", []):
+                            if vm_link["tenant"] != bridge["tenant"]:
+                                continue
+                            if vm_link["tenant"] not in tenant_links_map:
+                                tenant_links_map[vm_link["tenant"]] = []
+                            for ip in vm_link["peer_ips"]:
+                                tenant_links_map[vm_link["tenant"]].append(
+                                    {
+                                        "ip": ip["ip"],
+                                        "eip": ip["eip"],
+                                        "tun_dst": tun_dst,
+                                    }
+                                )
 
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
@@ -235,6 +257,8 @@ def _complete_value(value, spec, node, is_get_src=False):
                 value = _get_src(value, spec, node)
             elif func == "assign_inet4":
                 value = ipam.assign_inet4(arg, spec)
+            elif func == "assign_ip4":
+                value = ipam.inet_to_ip(ipam.assign_inet4(arg, spec))
             elif func == "gateway_inet4":
                 value = ipam.gateway_inet4(arg, spec)
             elif func == "inet_to_ip":
@@ -304,3 +328,5 @@ def _complete_ip(ip, spec, rspec):
     ip_network = ipaddress.ip_network(ip["network"])
     if ip_network.version == 4 and ip_network.prefixlen < 32:
         ip["gateway_ip"] = str(ip_network[1])
+    if "eip" in ip:
+        ip["eip"] = _complete_value(ip["eip"], spec, rspec)
