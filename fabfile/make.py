@@ -10,11 +10,6 @@ from collections import OrderedDict
 from lib import colors, spec_utils, os_utils, infra_utils, node_utils
 
 
-class NoAliasDumper(yaml.Dumper):
-    def ignore_aliases(self, _):
-        return True
-
-
 @task
 def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
     """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])
@@ -31,6 +26,9 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
 
     # debug (default=False)
     実行ログを詳細化します。
+
+    # Dryrun (default=False)
+    Dryrunモードで実行します。
 
     # parallel_pool_size (default=5)
     並列実行のプールサイズです。
@@ -150,52 +148,6 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
         return
 
 
-def _print_results(results):
-    print("# results ----------------------------------------")
-    msgs = []
-    for name, results in results.items():
-        last_result = results[-1]
-        last_status = 0
-        if last_result is None:
-            msgs.append(colors.ok(f"{name}: success"))
-        else:
-            last_status = last_result.get("status", 0)
-            if last_status == 0:
-                msgs.append(colors.ok(f"{name}: success"))
-            else:
-                msgs.append(colors.crit(f"{name}: failed"))
-
-        for result in results:
-            if result is not None:
-                msgs.append(result.get("msg", ""))
-    msg = "\n".join(msgs)
-    print(msg)
-
-
-def _dump_scripts(spec, cmd, tasks):
-    script_path = os.path.join(spec["_script_dir"], f"{cmd}.sh")
-    separator = "#" + "-" * 100
-    cmds = []
-    for t in tasks:
-        if t.rc is None:
-            continue
-        cmds += [
-            separator,
-            f"# {t.rspec['name']} start",
-            separator,
-        ]
-        cmds += t.rc.full_cmds
-        cmds += [
-            separator,
-            f"# {t.rspec['name']} end",
-            separator,
-            "",
-        ]
-
-    with open(script_path, "w") as f:
-        f.write("\n".join(cmds))
-
-
 class Task:
     def __init__(self, context_config, spec, cmd, rspec, debug, dryrun, ctx_data={}):
         self.c = _new_runtime_context(context_config, spec)
@@ -244,6 +196,28 @@ def _not_target(rspec, re_targets):
         if r.match(name):
             return False
     return True
+
+
+def _print_results(results):
+    print("# results ----------------------------------------")
+    msgs = []
+    for name, results in results.items():
+        last_result = results[-1]
+        last_status = 0
+        if last_result is None:
+            msgs.append(colors.ok(f"{name}: success"))
+        else:
+            last_status = last_result.get("status", 0)
+            if last_status == 0:
+                msgs.append(colors.ok(f"{name}: success"))
+            else:
+                msgs.append(colors.crit(f"{name}: failed"))
+
+        for result in results:
+            if result is not None:
+                msgs.append(result.get("msg", ""))
+    msg = "\n".join(msgs)
+    print(msg)
 
 
 def _dump_net(spec):
@@ -336,3 +310,27 @@ def _dump_netdev(spec, netns_map, show_ipv6_link_local=False):
             data.append([hostname, "None"])
 
     print(tabulate(data, headers=headers, stralign="left", numalign="left", tablefmt="fancy_grid"))
+
+
+def _dump_scripts(spec, cmd, tasks):
+    script_path = os.path.join(spec["_script_dir"], f"{cmd}.sh")
+    separator = "#" + "-" * 100
+    cmds = []
+    for t in tasks:
+        if t.rc is None:
+            continue
+        cmds += [
+            separator,
+            f"# {t.rspec['name']} start",
+            separator,
+        ]
+        cmds += t.rc.full_cmds
+        cmds += [
+            separator,
+            f"# {t.rspec['name']} end",
+            separator,
+            "",
+        ]
+
+    with open(script_path, "w") as f:
+        f.write("\n".join(cmds))
