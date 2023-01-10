@@ -1,6 +1,7 @@
 import re
 import os
 import yaml
+from tabulate import tabulate
 from invoke.context import Context
 from fabric import task, Config, Connection
 from concurrent.futures import ThreadPoolExecutor
@@ -45,6 +46,9 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
     if cmd == "dump-spec":
         print(yaml.safe_dump(spec))
         return
+    elif cmd == "dump-net":
+        _dump_net(spec)
+        return
 
     context_config = {}
     context_config.update(
@@ -68,6 +72,11 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
         exit(1)
 
     c = _new_runtime_context(context_config, spec)
+
+    if cmd == "dump-netdev":
+        netns_map = os_utils.get_netns_map(c)
+        _dump_netdev(spec, netns_map)
+        return
 
     infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
 
@@ -235,3 +244,95 @@ def _not_target(rspec, re_targets):
         if r.match(name):
             return False
     return True
+
+
+def _dump_net(spec):
+    topology = []
+
+    def _link_topology(node_topo_index, peer_topo_index, link_name, peer_name):
+        link_topo = topology[node_topo_index]
+        peer_topo = topology[peer_topo_index]
+        for column_index, _ in enumerate(link_topo):
+            if link_topo[column_index] is None:
+                for row_index in range(node_topo_index, peer_topo_index + 1):
+                    if topology[row_index][column_index] is not None:
+                        break
+                    if row_index == peer_topo_index:
+                        # link箇所を埋める
+                        link_topo[column_index] = link_name
+                        peer_topo[column_index] = "@" + peer_name
+                        # linkの間を"|"で埋める
+                        for r in range(node_topo_index + 1, peer_topo_index):
+                            topology[r][column_index] = "|"
+                        return
+
+    node_topo_index_map = {}  # nodeのtopologyの位置
+    nodes = spec["nodes"]
+    topo_nodes = spec["nodes"]
+    topo_width = 20
+    # nodesをtopologyに追加
+    for i, node in enumerate(nodes):
+        topology += [[None] * topo_width]
+        node_topo_index_map[node["name"]] = i
+
+    # vmsをtopologyに追加
+    topo_index = len(topology)
+    for node in nodes:
+        for vm in node.get("vms", []):
+            topology += [[None] * topo_width]
+            topo_nodes.append(vm)
+            node_topo_index_map[vm["name"]] = topo_index
+            topo_index += 1
+
+    for i, node in enumerate(topo_nodes):
+        for link in node.get("links", []):
+            _link_topology(i, node_topo_index_map[link["peer"]], link["link_name"], link["peer_name"])
+        for link in node.get("vm_links", []):
+            _link_topology(i, node_topo_index_map[link["peer"]], link["link_name"], link["peer_name"])
+
+    table_rows = []
+    for i, topo in enumerate(topology):
+        table_rows.append([topo_nodes[i]["name"]] + topo)
+        topo_separator = [""] + [None] * topo_width
+        table_rows.append(topo_separator)
+
+    len_table_rows = len(table_rows)
+    for i, topo in enumerate(table_rows):
+        for j, link in enumerate(topo):
+            # linkの開始点ならその下の空いてる部分(None)を"|"で埋める（各node間にtopo_separatorがNodeで挟まってる）
+            if link is not None and link != "" and link.split("_")[0] == topo[0]:
+                next_index = i + 1
+                while next_index < len_table_rows:
+                    if table_rows[next_index][j] is None:
+                        table_rows[next_index][j] = "|"
+                    elif table_rows[next_index][j] != "|":
+                        break
+                    next_index += 1
+
+    print(tabulate(table_rows, stralign="center", numalign="left", tablefmt="simple"))
+
+
+def _dump_netdev(spec, netns_map, show_ipv6_link_local=False):
+    data = []
+    headers = ["node", "netdev"]
+    for rspec in spec["nodes"]:
+        hostname = rspec["_hostname"]
+        if hostname in netns_map:
+            netns = netns_map[hostname]
+            netdev_infos = []
+            for dname, dev in netns["netdev_map"].items():
+                netdev_infos.append(f"{dname}: mac={dev.get('mac')}")
+                ipv4s = dev.get("inet_map", {}).keys()
+                if len(ipv4s) > 0:
+                    netdev_infos.append("  ipv4s: " + ",".join(ipv4s))
+                ipv6s = []
+                for ip in dev.get("inet6_map", {}).keys():
+                    if ip.find("fe80:") != 0 or show_ipv6_link_local:
+                        ipv6s.append(ip)
+                if len(ipv6s) > 0:
+                    netdev_infos.append("  ipv6s: " + ",".join(ipv6s))
+            data.append([hostname, "\n".join(netdev_infos)])
+        else:
+            data.append([hostname, "None"])
+
+    print(tabulate(data, headers=headers, stralign="left", numalign="left", tablefmt="fancy_grid"))
