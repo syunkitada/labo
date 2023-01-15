@@ -1,7 +1,5 @@
 # vxlan4のvpcgwを冗長化させた構成
 imports:
-  - infra/local/remote.yaml
-  - infra/ovs/vxlan/vxlan5.yaml
   - infra/ovs/vxlan/vxlan5.1.yaml
 
 ipam:

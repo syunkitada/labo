@@ -39,3 +39,8 @@ sudo ovs-vsctl show
                 type: internal
     ovs_version: "2.11.0"
 ```
+
+## オフロードまわり
+
+- [DPDK Tunneling Offload](https://www.dpdk.org/wp-content/uploads/sites/35/2018/12/Rony_Yongseok_DPDK_Tunnel_Offloading.pdf)
+- [2021-0708: OvS-DPDK Full VXLAN Offload with SR-IOV](https://www.openvswitch.org/support/ovscon2021/slides/ovs_dpdk_full_vxlan_offload.pdf)

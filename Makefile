@@ -13,3 +13,6 @@ docker-push-centos7-nwnode:
 docker-push-rocky8-nwnode:
 	sudo docker image tag labo/rocky8-nwnode localhost:5000/labo/rocky8-nwnode:latest
 	sudo docker push localhost:5000/labo/rocky8-nwnode:latest
+
+test:
+	pytest -x -vv fabfile_tests

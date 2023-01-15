@@ -1,7 +1,5 @@
 # clos構成でvxlan, vpcgw付き
 imports:
-  - infra/local/remote.yaml
-  - infra/ovs/vxlan/vxlan4.yaml
   - infra/ovs/vxlan/vxlan4.1.yaml
 
 ipam:
@@ -59,7 +57,7 @@ template_map:
         - name: br-ex
           kind: external-ha
           links:
-            - peer: br-dnat
+            - peer: br-acl
               flows:
                 - kind: ingress
                 - kind: egress
@@ -68,18 +66,39 @@ template_map:
           links:
             - peer: br-t1
               flows:
-                - kind: ingress
                 - kind: egress
             - peer: br-t2
               flows:
-                - kind: ingress
                 - kind: egress
         - name: br-t1
           kind: vxlan-tenant-vpcgw
           tenant: 5000
+          links:
+            - peer: br-acl
+              kind: ingress
         - name: br-t2
           kind: vxlan-tenant-vpcgw
           tenant: 6000
+          links:
+            - peer: br-acl
+              kind: ingress
+        - name: br-acl
+          kind: acl
+          links:
+            - peer: br-acl-t1
+              kind: ingress
+            - peer: br-acl-t2
+              kind: ingress
+        - name: br-acl-t1
+          kind: acl
+          links:
+            - peer: br-dnat
+              kind: ingress
+        - name: br-acl-t2
+          kind: acl
+          links:
+            - peer: br-dnat
+              kind: ingress
     frr:
       route_map:
         VM-v4:

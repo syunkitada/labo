@@ -1,7 +1,5 @@
 # clos構成でvxlan
 imports:
-  - infra/local/remote.yaml
-  - infra/ovs/vxlan/vxlan3.yaml
   - infra/ovs/vxlan/vxlan3.1.yaml
 
 ipam:
