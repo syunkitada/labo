@@ -19,7 +19,8 @@ def _load_file(spec, file):
     for spec_path in _spec.get("imports", []):
         _load_file(_spec, spec_path)
 
-    update_dict(spec, _spec)
+    update_dict(_spec, spec)
+    spec.update(_spec)
 
 
 def _load_conf(spec):

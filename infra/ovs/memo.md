@@ -40,6 +40,12 @@ sudo ovs-vsctl show
     ovs_version: "2.11.0"
 ```
 
+## 制限まわり
+
+- port(interface) name の長さは 15 までです
+  - 参考: https://man7.org/linux/man-pages/man5/ovs-vswitchd.conf.db.5.html
+  - add-port はいちおうできるが、flow の設定ができない
+
 ## オフロードまわり
 
 - [DPDK Tunneling Offload](https://www.dpdk.org/wp-content/uploads/sites/35/2018/12/Rony_Yongseok_DPDK_Tunnel_Offloading.pdf)

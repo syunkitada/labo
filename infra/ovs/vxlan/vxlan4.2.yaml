@@ -57,48 +57,33 @@ template_map:
         - name: br-ex
           kind: external-ha
           links:
-            - peer: br-acl
+            - peer: br-aclgw
               flows:
                 - kind: ingress
-                - kind: egress
-        - name: br-dnat
-          kind: dnat-eip
-          links:
-            - peer: br-t1
+            - peer: br-aclex
               flows:
                 - kind: egress
-            - peer: br-t2
+        - name: br-tun
+          kind: vxlan-tenant-vpcgw
+          links:
+            - peer: br-aclgw
+              flows:
+                - kind: ingress
+            - peer: br-aclvpc
               flows:
                 - kind: egress
-        - name: br-t1
-          kind: vxlan-tenant-vpcgw
-          tenant: 5000
+        - name: br-aclgw
+          kind: aclgw
           links:
-            - peer: br-acl
-              kind: ingress
-        - name: br-t2
-          kind: vxlan-tenant-vpcgw
-          tenant: 6000
-          links:
-            - peer: br-acl
-              kind: ingress
-        - name: br-acl
-          kind: acl
-          links:
-            - peer: br-acl-t1
-              kind: ingress
-            - peer: br-acl-t2
-              kind: ingress
-        - name: br-acl-t1
-          kind: acl
-          links:
-            - peer: br-dnat
-              kind: ingress
-        - name: br-acl-t2
-          kind: acl
-          links:
-            - peer: br-dnat
-              kind: ingress
+            - peer: br-aclvpc
+              flows:
+                - kind: ingress
+                  match_kind: vpc-eip
+            - peer: br-aclex
+              flows:
+                - kind: ingress
+        - name: br-aclex
+        - name: br-aclvpc
     frr:
       route_map:
         VM-v4:
