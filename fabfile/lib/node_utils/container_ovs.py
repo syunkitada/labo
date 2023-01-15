@@ -11,7 +11,6 @@ def make(rc):
 
     for bridge in ovs["bridges"]:
         br_name = bridge["name"]
-        print("debug ovs", br_name)
         br_kind = bridge.get("kind", "")
         br_flows = []
         cmds += [
@@ -99,7 +98,7 @@ def make(rc):
             _append_flows_for_dummy_arp(br_flows, "LOCAL")
 
         elif br_kind == "internal-vm":
-            for vm_link in rspec["vm_links"]:
+            for vm_link in rspec.get("vm_links", []):
                 cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
                 vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
                 for ip in vm_link.get("peer_ips", []):
@@ -124,7 +123,7 @@ def make(rc):
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
                 f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
             ]
-            for vm_link in rspec["vm_links"]:
+            for vm_link in rspec.get("vm_links", []):
                 if bridge["tenant"] != vm_link["tenant"]:
                     continue
                 cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
@@ -139,16 +138,21 @@ def make(rc):
 
                     _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
 
-                for ex_vtep in bridge["ex_vteps"]:
-                    for _link in ex_vtep["dst"]["_links"]:
-                        for ip in _link["peer_ips"]:
-                            br_flows += [
-                                f"priority=700,ip,nw_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
-                            ]
-                if "_vpcgw" in bridge:
-                    br_flows += [
-                        f"priority=600 actions=set_field:{bridge['_vpcgw']['vtep']['ip']}->tun_dst,{vxlan_eth}",
-                    ]
+                # 同一tenant間通信はHV to HVでフルメッシュのリンクにする
+                # disableの場合はGW経由での通信となる
+                if not bridge.get("disable_tenant_fullmesh", False):
+                    for ex_vtep in bridge["ex_vteps"]:
+                        for _link in ex_vtep["dst"]["_links"]:
+                            for ip in _link["peer_ips"]:
+                                br_flows += [
+                                    f"priority=700,ip,nw_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
+                                ]
+
+            # 行先不明ならGWへ
+            if "_vpcgw" in bridge:
+                br_flows += [
+                    f"priority=600 actions=set_field:{bridge['_vpcgw']['vtep']['ip']}->tun_dst,{vxlan_eth}",
+                ]
 
         elif br_kind == "vxlan-tenant-vpcgw":
             vxlan_options = ""
@@ -165,16 +169,26 @@ def make(rc):
                     if egress_link is None and flow["kind"] == "egress":
                         egress_link = link
 
+            # eip宛て通信
+            # 同一vpc宛て通信
+            #    - 別clusterへ(TODO)
+            #    - cluster配下へ
+            # nonvpc宛て通信
             vpcgw = rspec["_vpcgw"]
             for tun_id, tlinks in vpcgw["_tenant_links_map"].items():
                 for tlink in tlinks:
+                    # br_flows += [
+                    #     # ingress to same vpc in same cluster
+                    #     f"priority=800,in_port=vxlan,tun_id={tun_id},ip,nw_dst={tlink['ip']} "
+                    #     + f"actions=set_field:{tun_id}->tun_id,set_field:{tlink['tun_dst']}->tun_dst,vxlan",
+                    # ]
                     for link in bridge.get("links", []):
                         for flow in link.get("flows", []):
                             if flow["kind"] == "ingress":
                                 br_flows += [
-                                    # ingress
+                                    # ingress to eip
                                     # snat vpcip to eip
-                                    f"priority=700,in_port=vxlan,ip,nw_src={tlink['ip']},tun_id={tun_id} "
+                                    f"priority=700,in_port=vxlan,tun_id={tun_id},ip,nw_src={tlink['ip']} "
                                     + f"actions=set_field:{tlink['eip']}->nw_src,output:{link['link_name']}",
                                 ]
                     if egress_link is not None:
@@ -273,3 +287,4 @@ def _append_flows_for_dummy_arp(br_flows, in_port=None):
 def check():
     pass
     # ovs-appctl ofproto/trace br-ex in_port=GW1_2_L12.200,icmp,nw_dst=10.110.0.1
+    # ovs-vxlan5-HV1 ovs-appctl ofproto/trace br-t1 in_port=HV1_0_t1vm1,icmp,nw_dst=10.100.0.3

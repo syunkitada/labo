@@ -91,6 +91,7 @@ node_map:
     tests:
       - kind: ping
         targets:
+          # cluster1
           - name: HV1-L3
             dst: <%=_node_map.HV1.l3admin.ips.0.ip%>
           - name: HV2-L3
@@ -99,3 +100,12 @@ node_map:
             dst: <%=_node_map.GW1.l3admin.ips.0.ip%>
           - name: GW2-L3
             dst: <%=_node_map.GW2.l3admin.ips.0.ip%>
+          # cluster2
+          - name: HV3-L3
+            dst: <%=_node_map.HV3.l3admin.ips.0.ip%>
+          - name: HV4-L3
+            dst: <%=_node_map.HV4.l3admin.ips.0.ip%>
+          - name: GW3-L3
+            dst: <%=_node_map.GW3.l3admin.ips.0.ip%>
+          - name: GW4-L3
+            dst: <%=_node_map.GW4.l3admin.ips.0.ip%>

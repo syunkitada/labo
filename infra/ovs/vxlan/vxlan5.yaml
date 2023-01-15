@@ -19,9 +19,23 @@ ipam:
   leaf_network:
     subnet: 10.10.2.0/24
     kind: l3
-  leaf1_l2admin_network:
+  leaf1X_l2admin_network:
     subnet: 10.10.3.0/27
     kind: l2
+  leaf2X_l2admin_network:
+    subnet: 10.10.3.32/27
+    kind: l2
+  ovsadmin_network1:
+    subnet: 10.10.20.0/24
+    kind: l3
+
+vpcgw_map:
+  gw1:
+    vtep:
+      inet: <%=assign_inet4(ovsadmin_network1)%>
+  gw2:
+    vtep:
+      inet: <%=assign_inet4(ovsadmin_network1)%>
 
 template_map:
   node:
@@ -62,6 +76,10 @@ template_map:
     ip_rules:
       - prio: 20
         rule: from <%=_links.0.peer_ips.0.inet%> table main
+  cluster1_hv:
+    vpcgw: gw1
+  cluster2_hv:
+    vpcgw: gw2
   gw:
     routes:
       - dst: default
@@ -69,6 +87,10 @@ template_map:
     ip_rules:
       - prio: 20
         rule: from <%=_links.0.peer_ips.0.inet%> table main
+  cluster1_gw:
+    vpcgw: gw1
+  cluster2_gw:
+    vpcgw: gw2
 
 nodes:
   - name: CL1
@@ -78,7 +100,7 @@ nodes:
       - dst: default
         via: <%=links.0.peer_ips.0.ip%>
     links:
-      - peer: SP1
+      - peer: AG1
         ips:
           - inet: <%=assign_inet4(outer_network1)%>
           - inet: <%=inet4_to_inet6(links.0.ips.0.inet)%>
@@ -89,21 +111,37 @@ nodes:
         targets:
           - name: SP1
             dst: <%=_node_map.SP1.lo_ips.0.ip%>
+          - name: SP2
+            dst: <%=_node_map.SP2.lo_ips.0.ip%>
           - name: L11
             dst: <%=_node_map.L11.lo_ips.0.ip%>
           - name: L11-L2
             dst: <%=_node_map.L11.bridges.0.ips.0.ip%>
           - name: L12
             dst: <%=_node_map.L12.lo_ips.0.ip%>
+          - name: L21
+            dst: <%=_node_map.L21.lo_ips.0.ip%>
+          - name: L21-L2
+            dst: <%=_node_map.L21.bridges.0.ips.0.ip%>
+          - name: L22
+            dst: <%=_node_map.L22.lo_ips.0.ip%>
           - name: HV1-L2
             dst: <%=_node_map.HV1._links.0.peer_ips.0.ip%>
           - name: HV2-L2
             dst: <%=_node_map.HV2._links.0.peer_ips.0.ip%>
+          - name: HV3-L2
+            dst: <%=_node_map.HV3._links.0.peer_ips.0.ip%>
+          - name: HV4-L2
+            dst: <%=_node_map.HV4._links.0.peer_ips.0.ip%>
           - name: GW1-L2
             dst: <%=_node_map.GW1._links.0.peer_ips.0.ip%>
           - name: GW2-L2
             dst: <%=_node_map.GW2._links.0.peer_ips.0.ip%>
-  - name: SP1
+          - name: GW3-L2
+            dst: <%=_node_map.GW3._links.0.peer_ips.0.ip%>
+          - name: GW4-L2
+            dst: <%=_node_map.GW4._links.0.peer_ips.0.ip%>
+  - name: AG1
     templates:
       - node
       - spine
@@ -114,9 +152,41 @@ nodes:
       ipv6_networks:
         - "<%=_node_map.CL1.links.0.ips.1.network%>"
     links:
+      - peer: SP1
+        bgp_peer_group: ADMIN
+      - peer: SP2
+        bgp_peer_group: ADMIN
+  - name: SP1
+    templates:
+      - node
+      - spine
+    frr:
+      ipv4_networks:
+        - <%=lo_ips.0.inet%>
+    links:
       - peer: L11
         bgp_peer_group: ADMIN
       - peer: L12
+        bgp_peer_group: ADMIN
+      - peer: L21
+        bgp_peer_group: ADMIN
+      - peer: L22
+        bgp_peer_group: ADMIN
+  - name: SP2
+    templates:
+      - node
+      - spine
+    frr:
+      ipv4_networks:
+        - <%=lo_ips.0.inet%>
+    links:
+      - peer: L11
+        bgp_peer_group: ADMIN
+      - peer: L12
+        bgp_peer_group: ADMIN
+      - peer: L21
+        bgp_peer_group: ADMIN
+      - peer: L22
         bgp_peer_group: ADMIN
   - name: L11
     templates:
@@ -125,7 +195,7 @@ nodes:
     bridges:
       - name: l2-br
         ips:
-          - inet: <%=gateway_inet4(leaf1_l2admin_network)%>
+          - inet: <%=gateway_inet4(leaf1X_l2admin_network)%>
     frr:
       ipv4_networks:
         - <%=links.0.peer_ips.0.network%>
@@ -134,7 +204,7 @@ nodes:
       - peer: HV1
         bridge: l2-br
         peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
+          - inet: <%=assign_inet4(leaf1X_l2admin_network)%>
         vlan_map:
           100:
             bgp_peer_group: ADMIN
@@ -143,10 +213,10 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp0
-      - peer: HV2
+      - peer: HV3
         bridge: l2-br
         peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
+          - inet: <%=assign_inet4(leaf1X_l2admin_network)%>
         vlan_map:
           100:
             bgp_peer_group: ADMIN
@@ -158,7 +228,7 @@ nodes:
       - peer: GW1
         bridge: l2-br
         peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
+          - inet: <%=assign_inet4(leaf1X_l2admin_network)%>
         vlan_map:
           100:
             bgp_peer_group: ADMIN
@@ -167,10 +237,10 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp0
-      - peer: GW2
+      - peer: GW3
         bridge: l2-br
         peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
+          - inet: <%=assign_inet4(leaf1X_l2admin_network)%>
         vlan_map:
           100:
             bgp_peer_group: ADMIN
@@ -196,7 +266,7 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp1
-      - peer: HV2
+      - peer: HV3
         vlan_map:
           100:
             bgp_peer_group: ADMIN
@@ -214,6 +284,102 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp1
+      - peer: GW3
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp1
+  - name: L21
+    templates:
+      - node
+      - leaf
+    bridges:
+      - name: l2-br
+        ips:
+          - inet: <%=gateway_inet4(leaf2X_l2admin_network)%>
+    frr:
+      ipv4_networks:
+        - <%=links.0.peer_ips.0.network%>
+        - <%=lo_ips.0.inet%>
+    links:
+      - peer: HV2
+        bridge: l2-br
+        peer_ips:
+          - inet: <%=assign_inet4(leaf2X_l2admin_network)%>
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp0
+      - peer: HV4
+        bridge: l2-br
+        peer_ips:
+          - inet: <%=assign_inet4(leaf2X_l2admin_network)%>
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp0
+      - peer: GW2
+        bridge: l2-br
+        peer_ips:
+          - inet: <%=assign_inet4(leaf2X_l2admin_network)%>
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp0
+      - peer: GW4
+        bridge: l2-br
+        peer_ips:
+          - inet: <%=assign_inet4(leaf2X_l2admin_network)%>
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp0
+  - name: L22
+    templates:
+      - node
+      - leaf
+    frr:
+      ipv4_networks:
+        - <%=lo_ips.0.inet%>
+    links:
+      - peer: HV2
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp1
+      - peer: HV4
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp1
       - peer: GW2
         vlan_map:
           100:
@@ -223,19 +389,56 @@ nodes:
             peer_ovs:
               peer: br-ex
               peer_name: bgp1
+      - peer: GW4
+        vlan_map:
+          100:
+            bgp_peer_group: ADMIN
+          200:
+            bgp_peer_group: VM
+            peer_ovs:
+              peer: br-ex
+              peer_name: bgp1
+
+  # cluster1_gw
   - name: HV1
     templates:
       - node
       - hv
+      - cluster1_hv
   - name: HV2
     templates:
       - node
       - hv
+      - cluster1_hv
   - name: GW1
     templates:
       - node
       - gw
+      - cluster1_gw
   - name: GW2
     templates:
       - node
       - gw
+      - cluster1_gw
+
+  # cluster2_gw
+  - name: HV3
+    templates:
+      - node
+      - hv
+      - cluster2_hv
+  - name: HV4
+    templates:
+      - node
+      - hv
+      - cluster2_hv
+  - name: GW3
+    templates:
+      - node
+      - gw
+      - cluster2_gw
+  - name: GW4
+    templates:
+      - node
+      - gw
+      - cluster2_gw

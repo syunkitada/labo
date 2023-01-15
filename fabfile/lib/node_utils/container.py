@@ -100,11 +100,7 @@ def _make_prepare(rc):
         rc.append_local_cmds_add_link(lcmds, link)
     rc.exec(lcmds, title="prepare-links", is_local=True)
 
-
-def _make(rc):
-    rspec = rc.rspec
-
-    skipped = True
+    # メモ: (負荷が高いと？)dockerでsystemdが起動できないことがある
     docker_options = [
         f"-d  --rm --network none --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
         "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
@@ -115,10 +111,15 @@ def _make(rc):
         f"pid=`docker inspect {rspec['_hostname']}" + " --format '{{.State.Pid}}'`",
         "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{rspec['_hostname']}",
     ]
-    if rspec["_hostname"] not in rc.docker_ps_map:
-        skipped = False
-    rc.exec(lcmds, title="prepare-docker", skipped=skipped, is_local=True)
+    rc.exec(lcmds, title="prepare-docker", skipped=(rspec["_hostname"] in rc.docker_ps_map), is_local=True)
 
+
+def _make(rc):
+    rspec = rc.rspec
+
+    skipped = False
+
+    lcmds = []
     dcmds = []
     dcmds += [f"hostname {rspec['_hostname']}"]
     for key, value in rspec.get("sysctl_map", {}).items():
