@@ -28,14 +28,24 @@ ipam:
   ovsadmin_network1:
     subnet: 10.10.20.0/24
     kind: l3
+  eip_network1: # cluster1
+    subnet: 10.110.0.0/24
+    kind: l3
+  eip_network2: # cluster2
+    subnet: 10.110.1.0/24
+    kind: l3
 
 vpcgw_map:
   gw1:
     vtep:
       inet: <%=assign_inet4(ovsadmin_network1)%>
+    eip_networks:
+      - name: eip_network1
   gw2:
     vtep:
       inet: <%=assign_inet4(ovsadmin_network1)%>
+    eip_networks:
+      - name: eip_network2
 
 template_map:
   node:

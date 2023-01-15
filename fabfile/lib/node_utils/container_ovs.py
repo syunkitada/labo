@@ -170,18 +170,21 @@ def make(rc):
                         egress_link = link
 
             # eip宛て通信
-            # 同一vpc宛て通信
+            #    - 同一clusterへ
             #    - 別clusterへ(TODO)
-            #    - cluster配下へ
+            # 同一vpc宛て通信
+            #    - 同一cluster配下へ
+            #    - 別clusterへ(TODO)
             # nonvpc宛て通信
             vpcgw = rspec["_vpcgw"]
             for tun_id, tlinks in vpcgw["_tenant_links_map"].items():
                 for tlink in tlinks:
-                    # br_flows += [
-                    #     # ingress to same vpc in same cluster
-                    #     f"priority=800,in_port=vxlan,tun_id={tun_id},ip,nw_dst={tlink['ip']} "
-                    #     + f"actions=set_field:{tun_id}->tun_id,set_field:{tlink['tun_dst']}->tun_dst,vxlan",
-                    # ]
+                    br_flows += [
+                        # ingress to same vpc in same cluster
+                        # メモ: IN_PORT ではなくoutput:vxlanとすると処理されないので注意
+                        f"priority=800,in_port=vxlan,tun_id={tun_id},ip,nw_dst={tlink['ip']} "
+                        + f"actions=set_field:{tun_id}->tun_id,set_field:{tlink['tun_dst']}->tun_dst,IN_PORT",
+                    ]
                     for link in bridge.get("links", []):
                         for flow in link.get("flows", []):
                             if flow["kind"] == "ingress":

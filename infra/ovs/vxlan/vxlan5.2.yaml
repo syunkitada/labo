@@ -14,12 +14,6 @@ ipam:
   t2vm_network2:
     subnet: 10.100.1.0/24
     kind: l2
-  eip_network1: # cluster1
-    subnet: 10.110.0.0/24
-    kind: l3
-  eip_network2: # cluster2
-    subnet: 10.110.1.0/24
-    kind: l3
 
 vpc_map:
   vpc1:
@@ -64,8 +58,6 @@ template_map:
         - <%=l3admin.ips.0.inet%>
         - <%=ovs.admin_ips.0.inet%>
   cluster1_gw:
-    eip_networks:
-      - name: eip_network1
     ovs:
       admin_ips:
         - inet: <%=vpcgw_map.gw1.vtep.inet%>
@@ -83,8 +75,6 @@ template_map:
         - <%=ovs.admin_ips.0.inet%>
         - <%=ipam.eip_network1.subnet%>
   cluster2_gw:
-    eip_networks:
-      - name: eip_network2
     ovs:
       admin_ips:
         - inet: <%=vpcgw_map.gw2.vtep.inet%>
