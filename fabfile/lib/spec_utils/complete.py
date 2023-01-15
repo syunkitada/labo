@@ -128,6 +128,15 @@ def complete_spec(spec):
                             continue
                         link["link_name"] = f"{br_name}_{link['peer']}"
                         link["peer_name"] = f"{link['peer']}_{br_name}"
+                        # ovsのinterface nameは15字までなので、br-というprefixは削ります
+                        # https://man7.org/linux/man-pages/man5/ovs-vswitchd.conf.db.5.html
+                        link["link_name"] = link["link_name"].replace("br-", "")
+                        link["peer_name"] = link["peer_name"].replace("br-", "")
+                        # それでも15字を超える場合は、そのまま削る
+                        if len(link["link_name"]) > 15:
+                            link["link_name"] = link["link_name"][:15]
+                        if len(link["peer_name"]) > 15:
+                            link["peer_name"] = link["peer_name"][:15]
                         ovs_peer_links_map[link["peer"]].append(link)
                     bridge["_links"] = ovs_peer_links_map.get(br_name, [])
 
@@ -187,7 +196,8 @@ def complete_spec(spec):
         if "ovs" in rspec:
             ovs = rspec["ovs"]
             for bridge in ovs.get("bridges", []):
-                if bridge["kind"] == "vxlan-tenant-vm":
+                br_kind = bridge.get("kind", "")
+                if br_kind == "vxlan-tenant-vm":
                     own_vm_map = {}
                     for vm in rspec.get("vms", []):
                         own_vm_map[vm["name"]] = vm
@@ -207,26 +217,27 @@ def complete_spec(spec):
                             )
                     bridge["ex_vteps"] = ex_vteps
 
-                    if "vpcgw" in bridge:
-                        tun_dst = rspec["_links"][0]["peer_ips"][0]["ip"]
-                        if "admin_ips" in rspec["ovs"]:
-                            tun_dst = rspec["ovs"]["admin_ips"][0]["ip"]
-                        vpcgw = vpcgw_map[bridge["vpcgw"]]
-                        bridge["_vpcgw"] = vpcgw
-                        tenant_links_map = vpcgw["_tenant_links_map"]
-                        for vm_link in rspec.get("vm_links", []):
-                            if vm_link["tenant"] != bridge["tenant"]:
-                                continue
-                            if vm_link["tenant"] not in tenant_links_map:
-                                tenant_links_map[vm_link["tenant"]] = []
-                            for ip in vm_link["peer_ips"]:
-                                tenant_links_map[vm_link["tenant"]].append(
-                                    {
-                                        "ip": ip["ip"],
-                                        "eip": ip["eip"],
-                                        "tun_dst": tun_dst,
-                                    }
-                                )
+                    tun_dst = rspec["_links"][0]["peer_ips"][0]["ip"]
+                    if "admin_ips" in rspec["ovs"]:
+                        tun_dst = rspec["ovs"]["admin_ips"][0]["ip"]
+                    if "vpcgw" not in bridge:
+                        bridge["vpcgw"] = rspec["vpcgw"]
+                    vpcgw = vpcgw_map[bridge["vpcgw"]]
+                    bridge["_vpcgw"] = vpcgw
+                    tenant_links_map = vpcgw["_tenant_links_map"]
+                    for vm_link in rspec.get("vm_links", []):
+                        if vm_link["tenant"] != bridge["tenant"]:
+                            continue
+                        if vm_link["tenant"] not in tenant_links_map:
+                            tenant_links_map[vm_link["tenant"]] = []
+                        for ip in vm_link["peer_ips"]:
+                            tenant_links_map[vm_link["tenant"]].append(
+                                {
+                                    "ip": ip["ip"],
+                                    "eip": ip["eip"],
+                                    "tun_dst": tun_dst,
+                                }
+                            )
 
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)

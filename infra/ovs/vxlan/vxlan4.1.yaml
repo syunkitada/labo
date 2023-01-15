@@ -1,5 +1,4 @@
 imports:
-  - infra/local/remote.yaml
   - infra/ovs/vxlan/vxlan4.yaml
 
 ipam:

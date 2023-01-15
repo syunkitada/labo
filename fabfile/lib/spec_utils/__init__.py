@@ -4,24 +4,26 @@ from lib.spec_utils.complete import update_dict, complete_spec
 
 
 def load_spec(file):
-    with open(file) as f:
-        tmp_spec = yaml.safe_load(f)
-
     spec = {}
-    for spec_path in tmp_spec.get("imports", []):
-        with open(spec_path) as f:
-            imported_spec = yaml.safe_load(f)
-            update_dict(spec, imported_spec)
+    _load_file(spec, file)
 
-    update_dict(spec, tmp_spec)
-
-    spec["conf"] = load_conf(spec)
+    spec["conf"] = _load_conf(spec)
     complete_spec(spec)
 
     return spec
 
 
-def load_conf(spec):
+def _load_file(spec, file):
+    with open(file) as f:
+        _spec = yaml.safe_load(f)
+    for spec_path in _spec.get("imports", []):
+        _load_file(_spec, spec_path)
+
+    update_dict(_spec, spec)
+    spec.update(_spec)
+
+
+def _load_conf(spec):
     conf_path = os.environ.get(
         "LABO_CONF",
         os.path.join(

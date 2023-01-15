@@ -30,8 +30,8 @@ def test_complete_spec():
                     {
                         "peer": "node2",
                         "ips": [
-                            {"inet": "${assign_inet4(network1)}"},
-                            {"inet": "${inet4_to_inet6(links.0.ips.0.inet)}"},
+                            {"inet": "<%=assign_inet4(network1)%>"},
+                            {"inet": "<%=inet4_to_inet6(links.0.ips.0.inet)%>"},
                         ],
                     },
                 ],
@@ -40,24 +40,24 @@ def test_complete_spec():
                 "name": "node2",
                 "templates": ["node1"],
                 "lo_ips": [
-                    {"inet": "${assign_inet4(network2)}"},
+                    {"inet": "<%=assign_inet4(network2)%>"},
                 ],
                 "frr": {
-                    "id": "${lo_ips.0.ip}",
-                    "asn": "${ipv4_to_asn(lo_ips.0.ip)}",
+                    "id": "<%=lo_ips.0.ip%>",
+                    "asn": "<%=ipv4_to_asn(lo_ips.0.ip)%>",
                     "ipv4_networks": [
-                        "${_node_map.node1.links.0.ips.0.network}",
+                        "<%=_node_map.node1.links.0.ips.0.network%>",
                     ],
                     "ipv6_networks": [
-                        "${_node_map.node1.links.0.ips.1.network}",
+                        "<%=_node_map.node1.links.0.ips.1.network%>",
                     ],
-                    "route_maps": [
-                        {
+                    "route_map": {
+                        "admin": {
                             "prefix_list": [
-                                "permit ${ipam.network1.subnet} le 32",
+                                "permit <%=ipam.network1.subnet%> le 32",
                             ],
                         },
-                    ],
+                    },
                 },
             },
         ],
@@ -72,16 +72,23 @@ def test_complete_spec():
                 "links": [
                     {
                         "ips": [
-                            {"inet": "10.10.0.2/24", "ip": "10.10.0.2", "network": "10.10.0.0/24", "version": "4"},
                             {
-                                "inet": "fc00:0000:0000:0000:10:10:0:2/112",
+                                "gateway_ip": "10.10.0.1",
+                                "inet": "10.10.0.2/24",
+                                "ip": "10.10.0.2",
+                                "network": "10.10.0.0/24",
+                                "version": 4,
+                            },
+                            {
+                                "inet": "fc00:0000:0000:0000:0010:0010:0000:0002/112",
                                 "ip": "fc00::10:10:0:2",
                                 "network": "fc00::10:10:0:0/112",
-                                "version": "6",
+                                "version": 6,
                             },
                         ],
                         "link_mac": "00:16:3e:00:00:00",
                         "link_name": "node1_0_node2",
+                        "mtu": 1500,
                         "peer": "node2",
                         "peer_mac": "00:16:3e:00:00:01",
                         "peer_name": "node2_0_node1",
@@ -98,20 +105,25 @@ def test_complete_spec():
                 "templates": ["node1"],
                 "kind": "container",
                 "lo_ips": [
-                    {"inet": "10.10.1.1/32", "ip": "10.10.1.1", "network": "10.10.1.1/32", "version": "4"},
+                    {
+                        "inet": "10.10.1.1/32",
+                        "ip": "10.10.1.1",
+                        "network": "10.10.1.1/32",
+                        "version": 4,
+                    },
                 ],
                 "frr": {
                     "id": "10.10.1.1",
                     "asn": "4201769729",
                     "ipv4_networks": ["10.10.0.0/24"],
                     "ipv6_networks": ["fc00::10:10:0:0/112"],
-                    "route_maps": [
-                        {
+                    "route_map": {
+                        "admin": {
                             "prefix_list": [
                                 "permit 10.10.0.0/24 le 32",
                             ],
                         },
-                    ],
+                    },
                 },
                 "_hostname": "test-node2",
                 "_script_index": 0,
