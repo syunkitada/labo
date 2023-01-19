@@ -41,6 +41,7 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
         f.write(yaml.safe_dump(spec))
     print(f"completed spec was saved to {completed_spec_file}")
 
+    cmds = cmd.split(":")
     if cmd == "dump-spec":
         print(yaml.safe_dump(spec))
         return
@@ -74,6 +75,9 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
     if cmd == "dump-netdev":
         netns_map = os_utils.get_netns_map(c)
         _dump_netdev(spec, netns_map)
+        return
+    elif cmds[0] == "route-trace":
+        _trace_route(cmds[1], c, context_config=context_config, spec=spec, debug=debug)
         return
 
     infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
@@ -310,6 +314,18 @@ def _dump_netdev(spec, netns_map, show_ipv6_link_local=False):
             data.append([hostname, "None"])
 
     print(tabulate(data, headers=headers, stralign="left", numalign="left", tablefmt="fancy_grid"))
+
+
+def _trace_route(option, c, context_config, spec, debug):
+    ctx_data = {
+        "netns_map": os_utils.get_netns_map(c),
+        "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
+    }
+    tasks = []
+    for rspec in spec.get("nodes", []):
+        tasks.append(Task(context_config=context_config, cmd=None, spec=spec, rspec=rspec, debug=debug, dryrun=False, ctx_data=ctx_data))
+    node_utils.trace_route(option, spec, ctx_data, tasks)
+    return
 
 
 def _dump_scripts(spec, cmd, tasks):

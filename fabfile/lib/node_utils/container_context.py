@@ -120,3 +120,7 @@ class Context:
             (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", skipped),
             (f"ip link set {netdev_vlan} up", skipped),
         ]
+
+    def ip_route_get(self, src, dst):
+        result = self.c.sudo(f"docker exec -it {self.rspec['_hostname']} ip route get {dst} from {src}")
+        # TODO: parse 10.100.0.3 from 10.100.0.2 dev t1vm1_0_HV1 uid 0
