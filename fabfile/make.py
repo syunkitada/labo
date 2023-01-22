@@ -321,10 +321,52 @@ def _trace_route(option, c, context_config, spec, debug):
         "netns_map": os_utils.get_netns_map(c),
         "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
     }
-    tasks = []
-    for rspec in spec.get("nodes", []):
-        tasks.append(Task(context_config=context_config, cmd=None, spec=spec, rspec=rspec, debug=debug, dryrun=False, ctx_data=ctx_data))
-    node_utils.trace_route(option, spec, ctx_data, tasks)
+    options = option.split("_")
+    srcs = options[0].split(".")
+    dsts = options[1].split(".")
+    src_node = spec["_node_map"][srcs[0]]
+    dst_node = spec["_node_map"][dsts[0]]
+    src_ip = None
+    dst_ip = None
+
+    for link in src_node.get("links", []):
+        for ip in link.get("ips", []):
+            src_ip = ip
+            break
+        if src_ip is not None:
+            break
+    if src_ip is None:
+        for link in src_node.get("_links", []):
+            for ip in link.get("peer_ips", []):
+                src_ip = ip
+                break
+            if src_ip is not None:
+                break
+
+    for link in dst_node.get("links", []):
+        for ip in link.get("ips", []):
+            dst_ip = ip
+            break
+        if dst_ip is not None:
+            break
+    if dst_ip is None:
+        for link in dst_node.get("_links", []):
+            for ip in link.get("peer_ips", []):
+                dst_ip = ip
+                break
+            if dst_ip is not None:
+                break
+
+    task = Task(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
+    src = {
+        "node": src_node,
+        "ip": src_ip,
+    }
+    dst = {
+        "node": dst_node,
+        "ip": dst_ip,
+    }
+    node_utils.trace_route(task, src, dst)
     return
 
 

@@ -116,9 +116,10 @@ def make(rc):
 
         elif br_kind == "vxlan-tenant-vm":
             vxlan_eth = f"vxlan{bridge['tenant']}"
-            vxlan_options = ""
-            if "ex_ip" in ovs:
-                vxlan_options = f" options:local_ip={ovs['ex_ip']['ip']}"
+            tun_src = ""
+            for ip in ovs.get("admin_ips", []):
+                tun_src = ip["ip"]
+            vxlan_options = f" options:local_ip={tun_src}"
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
                 f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
