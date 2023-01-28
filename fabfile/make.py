@@ -1,13 +1,13 @@
-import re
 import os
-import yaml
-from tabulate import tabulate
-from invoke.context import Context
-from fabric import task, Config, Connection
-from concurrent.futures import ThreadPoolExecutor
+import re
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
-from lib import colors, spec_utils, os_utils, infra_utils, node_utils
+import yaml
+from fabric import Config, Connection, task
+from invoke.context import Context
+from lib import colors, infra_utils, node_utils, os_utils, spec_utils
+from tabulate import tabulate
 
 
 @task

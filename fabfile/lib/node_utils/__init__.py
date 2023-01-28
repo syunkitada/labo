@@ -1,8 +1,9 @@
 import traceback
-from fabric import Connection
 
+from fabric import Connection
 from lib import colors
-from . import container_context, router, container, vm, vm_image
+
+from . import container, container_context, router, vm, vm_image
 
 
 def make(t):

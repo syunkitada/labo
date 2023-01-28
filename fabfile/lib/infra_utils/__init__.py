@@ -1,4 +1,4 @@
-from . import docker, mysql, pdns, nfs, shell, envrc
+from . import docker, envrc, mysql, nfs, pdns, shell
 
 
 def make(t):

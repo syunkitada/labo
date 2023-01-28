@@ -1,6 +1,7 @@
-import yaml
 import os
-from lib.spec_utils.complete import update_dict, complete_spec
+
+import yaml
+from lib.spec_utils.complete import complete_spec, update_dict
 
 
 def load_spec(file):

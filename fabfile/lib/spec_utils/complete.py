@@ -1,9 +1,8 @@
 import copy
-import os
 import ipaddress
+import os
 
 from lib.spec_utils import ipam
-
 
 MAC_OUI = [0x00, 0x16, 0x3E]
 
