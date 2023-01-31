@@ -3,23 +3,30 @@ imports:
   - infra/ovs/vxlan/vxlan4.1.yaml
 
 ipam:
-  ovsadmin_network1:
-    subnet: 10.10.20.0/24
-    kind: l3
   t1vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
   t2vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
-  eip_network1:
-    subnet: 10.110.0.0/24
+  t1vip_network1:
+    subnet: 10.100.10.0/24
+    kind: l3
+  evip_network1:
+    subnet: 10.110.10.0/24
     kind: l3
 
-vpcgw_map:
-  gw1:
-    vtep:
-      inet: <%=assign_inet4(ovsadmin_network1)%>
+vpc_map:
+  vpc1:
+    id: 5000
+    network_gw_map:
+      gw1:
+        - name: t1vm_network1
+  vpc2:
+    id: 6000
+    network_gw_map:
+      gw1:
+        - name: t2vm_network1
 
 template_map:
   hv:
@@ -31,12 +38,11 @@ template_map:
           kind: external-ha
         - name: br-t1
           kind: vxlan-tenant-vm
-          vpcgw: gw1
           tenant: 5000
         - name: br-t2
           kind: vxlan-tenant-vm
-          vpcgw: gw1
           tenant: 6000
+          disable_tenant_fullmesh: true
     frr:
       route_map:
         VM-v4:
@@ -97,6 +103,11 @@ template_map:
         - <%=l3admin.ips.0.inet%>
         - <%=ovs.admin_ips.0.inet%>
         - <%=ipam.eip_network1.subnet%>
+  lb:
+    ovs:
+      bridges:
+        - name: br-ex
+          kind: external-ha
   vm:
     mtu: 1500
     routes:

@@ -61,8 +61,9 @@ def complete_spec(spec):
     for rspec in spec.get("nodes", []):
         peer_links_map[rspec["name"]] = []
 
-    def _complete_node(i, rspec):
-        _node_map[rspec["name"]] = rspec
+    def apply_template(rspec):
+        if "templates" not in rspec:
+            return
         tmp_spec = {}
         for template in rspec.get("templates", []):
             if template not in template_map:
@@ -71,8 +72,17 @@ def complete_spec(spec):
             template_spec = copy.deepcopy(template_map[template])
             update_dict(tmp_spec, template_spec)
         update_dict(tmp_spec, rspec)
-        update_dict(tmp_spec, node_map.get(rspec["name"], {}))
         rspec.update(tmp_spec)
+
+    def _complete_node(i, rspec):
+        _node_map[rspec["name"]] = rspec
+
+        apply_template(rspec)
+        update_dict(rspec, node_map.get(rspec["name"], {}))
+        for link in rspec.get("links", []):
+            apply_template(link)
+        if "frr" in rspec:
+            apply_template(rspec["frr"])
 
         _complete_links(i, spec, rspec, rspec.get("links", []))
 
