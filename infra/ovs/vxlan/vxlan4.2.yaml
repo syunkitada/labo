@@ -12,6 +12,9 @@ ipam:
   t1vip_network1:
     subnet: 10.100.10.0/24
     kind: l3
+  tunvip_network1:
+    subnet: 10.200.10.0/24
+    kind: l3
   evip_network1:
     subnet: 10.110.10.0/24
     kind: l3
@@ -27,6 +30,16 @@ vpc_map:
     network_gw_map:
       gw1:
         - name: t2vm_network1
+
+vip_map:
+  t1vip1:
+    tenant: 5000
+    vip:
+      inet: <%=assign_inet4(t1vip_network1)%>
+    tunvip: # tunnel終端用のipをvipごとに持たせる
+      inet: <%=assign_inet4(tunvip_network1)%>
+    members:
+      - name: t1vm2
 
 template_map:
   hv:
@@ -105,9 +118,13 @@ template_map:
         - <%=ipam.eip_network1.subnet%>
   lb:
     ovs:
+      admin_ips:
+        - inet: <%=vip_map.t1vip1.tunvip.inet%>
       bridges:
         - name: br-ex
           kind: external-ha
+        - name: br-t1
+          kind: vxlan-tenant-lb
   vm:
     mtu: 1500
     routes:

@@ -254,6 +254,15 @@ def complete_spec(spec):
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node_at_last(i, rspec)
 
+    vip_map = spec.get("vip_map", {})
+    for rspec in vip_map.values():
+        _complete_ip(rspec["vip"], spec, rspec)
+        _complete_ip(rspec["tunvip"], spec, rspec)
+        if "evip" in rspec:
+            _complete_ip(rspec["evip"], spec, rspec)
+        for member in rspec.get("members", []):
+            member["_node"] = _node_map[member["name"]]
+
     return
 
 
@@ -304,7 +313,7 @@ def _complete_value(value, spec, node, is_get_src=False):
 
 def _get_src(src, spec={}, rspec={}):
     splited_src = src.split(".")
-    if splited_src[0] in ["_node_map", "vpcgw_map", "ipam"]:
+    if splited_src[0] in ["_node_map", "vpcgw_map", "ipam", "vip_map"]:
         rspec = spec
 
     tmp_src = None
