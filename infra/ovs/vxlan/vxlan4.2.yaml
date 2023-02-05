@@ -125,6 +125,7 @@ template_map:
           kind: external-ha
         - name: br-t1
           kind: vxlan-tenant-lb
+          tenant: 5000
   vm:
     mtu: 1500
     routes:

@@ -2,6 +2,7 @@ import os
 
 
 def make(rc):
+    spec = rc.spec
     rspec = rc.rspec
 
     ovs = rspec["ovs"]
@@ -202,6 +203,53 @@ def make(rc):
                             f"priority=700,in_port={egress_link['link_name']},ip,nw_dst={tlink['eip']} "
                             + f"actions=set_field:{tlink['ip']}->nw_dst,set_field:{tun_id}->tun_id,set_field:{tlink['tun_dst']}->tun_dst,vxlan",
                         ]
+
+        elif br_kind == "vxlan-tenant-lb":
+            # これは疑似的なVPCテナント用のLBです（ちゃんとLBするわけではない）
+            vxlan_eth = f"vxlan{bridge['tenant']}"
+            tun_src = ""
+            for ip in ovs.get("admin_ips", []):
+                tun_src = ip["ip"]
+            vxlan_options = f" options:local_ip={tun_src}"
+            cmds += [
+                f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
+            ]
+            for vip in spec["vip_map"].values():
+                if vip["tenant"] != bridge["tenant"]:
+                    continue
+                for member in vip["members"]:
+                    tun_dst = member["_node"]["hv"]["ovs"]["admin_ips"][0]
+                    for link in member["_node"]["_links"]:
+                        for ip in link["peer_ips"]:
+                            # FIXME
+                            br_flows += [
+                                f"priority=700,in_port={vxlan_eth},ip actions=set_field:{ip['ip']}->nw_dst,set_field:{tun_dst}->tun_dst,IN_PORT",
+                            ]
+            # for vm_link in rspec.get("vm_links", []):
+            #     if bridge["tenant"] != vm_link["tenant"]:
+            #         continue
+            #     cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
+            #     vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
+            #     for ip in vm_link.get("peer_ips", []):
+            #         br_flows += [
+            #             # ingress
+            #             # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
+            #             f"priority=700,ip,,nw_dst={ip['ip']}"
+            #             + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+            #         ]
+
+            #         _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
+
+            #     # 同一tenant間通信はHV to HVでフルメッシュのリンクにする
+            #     # disableの場合はGW経由での通信となる
+            #     if not bridge.get("disable_tenant_fullmesh", False):
+            #         for ex_vtep in bridge["ex_vteps"]:
+            #             for _link in ex_vtep["dst"]["_links"]:
+            #                 for ip in _link["peer_ips"]:
+            #                     br_flows += [
+            #                         f"priority=700,ip,nw_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
+            #                     ]
 
         elif br_kind == "aclgw":
             for link in bridge.get("links", []):
