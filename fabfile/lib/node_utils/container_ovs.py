@@ -115,18 +115,18 @@ def make(rc):
 
                         _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
 
-        elif br_kind == "vxlan-tenant-vm":
-            vxlan_eth = f"vxlan{bridge['tenant']}"
+        elif br_kind == "vxlan-vpc-vm":
+            vxlan_eth = f"vxlan{bridge['vpc_id']}"
             tun_src = ""
             for ip in ovs.get("admin_ips", []):
                 tun_src = ip["ip"]
             vxlan_options = f" options:local_ip={tun_src}"
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
-                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['vpc_id']}{vxlan_options}"
             ]
             for vm_link in rspec.get("vm_links", []):
-                if bridge["tenant"] != vm_link["tenant"]:
+                if bridge["vpc_id"] != vm_link["vpc_id"]:
                     continue
                 cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
                 vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
@@ -140,9 +140,9 @@ def make(rc):
 
                     _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
 
-                # 同一tenant間通信はHV to HVでフルメッシュのリンクにする
+                # 同一vpc間通信はHV to HVでフルメッシュのリンクにする
                 # disableの場合はGW経由での通信となる
-                if not bridge.get("disable_tenant_fullmesh", False):
+                if not bridge.get("disable_vpc_fullmesh", False):
                     for ex_vtep in bridge["ex_vteps"]:
                         for _link in ex_vtep["dst"]["_links"]:
                             for ip in _link["peer_ips"]:
@@ -156,7 +156,7 @@ def make(rc):
                     f"priority=600 actions=set_field:{bridge['_vpcgw']['vtep']['ip']}->tun_dst,{vxlan_eth}",
                 ]
 
-        elif br_kind == "vxlan-tenant-vpcgw":
+        elif br_kind == "vxlan-vpc-vpcgw":
             vxlan_options = ""
             if "ex_ip" in ovs:
                 vxlan_options = f" options:local_ip={ovs['ex_ip']['ip']}"
@@ -179,7 +179,7 @@ def make(rc):
             #    - 別clusterへ(TODO)
             # nonvpc宛て通信
             vpcgw = rspec["_vpcgw"]
-            for tun_id, tlinks in vpcgw["_tenant_links_map"].items():
+            for tun_id, tlinks in vpcgw["_vpc_links_map"].items():
                 for tlink in tlinks:
                     br_flows += [
                         # ingress to same vpc in same cluster
@@ -204,21 +204,23 @@ def make(rc):
                             + f"actions=set_field:{tlink['ip']}->nw_dst,set_field:{tun_id}->tun_id,set_field:{tlink['tun_dst']}->tun_dst,vxlan",
                         ]
 
-        elif br_kind == "vxlan-tenant-lb":
+        elif br_kind == "vxlan-vpc-lb":
             # これは疑似的なVPCテナント用のLBです（ちゃんとLBするわけではない）
-            vxlan_eth = f"vxlan{bridge['tenant']}"
+            vxlan_eth = f"vxlan{bridge['vpc_id']}"
             tun_src = ""
             for ip in ovs.get("admin_ips", []):
                 tun_src = ip["ip"]
             vxlan_options = f" options:local_ip={tun_src}"
             cmds += [
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
-                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['tenant']}{vxlan_options}"
+                f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['vpc_id']}{vxlan_options}"
             ]
             for vip in spec["vip_map"].values():
-                if vip["tenant"] != bridge["tenant"]:
+                if vip["vpc_id"] != bridge["vpc_id"]:
                     continue
                 for member in vip["members"]:
+                    # FIXME
+                    continue
                     tun_dst = member["_node"]["hv"]["ovs"]["admin_ips"][0]
                     for link in member["_node"]["_links"]:
                         for ip in link["peer_ips"]:
@@ -227,7 +229,7 @@ def make(rc):
                                 f"priority=700,in_port={vxlan_eth},ip actions=set_field:{ip['ip']}->nw_dst,set_field:{tun_dst}->tun_dst,IN_PORT",
                             ]
             # for vm_link in rspec.get("vm_links", []):
-            #     if bridge["tenant"] != vm_link["tenant"]:
+            #     if bridge["vpc_id"] != vm_link["vpc_id"]:
             #         continue
             #     cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
             #     vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
@@ -241,9 +243,9 @@ def make(rc):
 
             #         _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
 
-            #     # 同一tenant間通信はHV to HVでフルメッシュのリンクにする
+            #     # 同一vpc間通信はHV to HVでフルメッシュのリンクにする
             #     # disableの場合はGW経由での通信となる
-            #     if not bridge.get("disable_tenant_fullmesh", False):
+            #     if not bridge.get("disable_vpc_fullmesh", False):
             #         for ex_vtep in bridge["ex_vteps"]:
             #             for _link in ex_vtep["dst"]["_links"]:
             #                 for ip in _link["peer_ips"]:
@@ -257,7 +259,7 @@ def make(rc):
                     if flow["kind"] == "ingress":
                         if flow.get("match_kind", "") == "vpc-eip":
                             vpcgw = rspec["_vpcgw"]
-                            for _, tlinks in vpcgw["_tenant_links_map"].items():
+                            for _, tlinks in vpcgw["_vpc_links_map"].items():
                                 for tlink in tlinks:
                                     br_flows += [
                                         f"priority=700,ip,nw_dst={tlink['eip']} actions=output:{link['link_name']}",

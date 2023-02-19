@@ -33,7 +33,7 @@ vpc_map:
 
 vip_map:
   t1vip1:
-    tenant: 5000
+    vpc_id: 5000
     vip:
       inet: <%=assign_inet4(t1vip_network1)%>
     tunvip: # tunnel終端用のipをvipごとに持たせる
@@ -50,12 +50,12 @@ template_map:
         - name: br-ex
           kind: external-ha
         - name: br-t1
-          kind: vxlan-tenant-vm
-          tenant: 5000
+          kind: vxlan-vpc-vm
+          vpc_id: 5000
         - name: br-t2
-          kind: vxlan-tenant-vm
-          tenant: 6000
-          disable_tenant_fullmesh: true
+          kind: vxlan-vpc-vm
+          vpc_id: 6000
+          disable_vpc_fullmesh: true
     frr:
       route_map:
         VM-v4:
@@ -83,7 +83,7 @@ template_map:
               flows:
                 - kind: egress
         - name: br-tun
-          kind: vxlan-tenant-vpcgw
+          kind: vxlan-vpc-vpcgw
           links:
             - peer: br-aclgw
               flows:
@@ -124,8 +124,8 @@ template_map:
         - name: br-ex
           kind: external-ha
         - name: br-t1
-          kind: vxlan-tenant-lb
-          tenant: 5000
+          kind: vxlan-vpc-lb
+          vpc_id: 5000
   vm:
     mtu: 1500
     routes:
@@ -163,7 +163,7 @@ node_map:
             eip: <%=assign_ip4(eip_network1)%>
     vms:
       - name: t1vm1
-        tenant: 5000
+        vpc_id: 5000
         templates:
           - node
           - vm
@@ -177,7 +177,7 @@ node_map:
               - name: t2vm2.eip
                 dst: <%=_node_map.t2vm2._links.0.peer_ips.0.eip%>
       - name: t2vm1
-        tenant: 6000
+        vpc_id: 6000
         templates:
           - node
           - vm
@@ -198,12 +198,12 @@ node_map:
             eip: <%=assign_ip4(eip_network1)%>
     vms:
       - name: t1vm2
-        tenant: 5000
+        vpc_id: 5000
         templates:
           - node
           - vm
       - name: t2vm2
-        tenant: 6000
+        vpc_id: 6000
         templates:
           - node
           - vm

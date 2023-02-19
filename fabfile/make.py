@@ -48,6 +48,9 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
     elif cmd == "dump-net":
         _dump_net(spec)
         return
+    elif cmd == "dump-vm":
+        _dump_vm(spec)
+        return
 
     context_config = {}
     context_config.update(
@@ -314,6 +317,32 @@ def _dump_netdev(spec, netns_map, show_ipv6_link_local=False):
             data.append([hostname, "None"])
 
     print(tabulate(data, headers=headers, stralign="left", numalign="left", tablefmt="fancy_grid"))
+
+
+def _dump_vm(spec):
+    print("# vips ----------------------------------------")
+    headers = ["vpc_id", "vip", "vip", "members"]
+    table_rows = []
+    for key, vip in spec.get("vip_map", {}).items():
+        members = []
+        for member in vip["members"]:
+            for _link in member["_node"]["_links"]:
+                for ip in _link["peer_ips"]:
+                    members.append(f"{member['name']} {ip['ip']}")
+        table_rows.append([vip["vpc_id"], key, vip["vip"]["ip"], "\n".join(members)])
+    print(tabulate(table_rows, headers=headers, stralign="center", numalign="left", tablefmt="simple"))
+
+    print("\n# vms ----------------------------------------")
+    headers = ["hv", "vpc_id", "vm", "ips"]
+    table_rows = []
+    for node in spec.get("nodes", []):
+        for vm in node.get("vms", []):
+            ips = []
+            for _link in vm.get("_links", []):
+                for ip in _link.get("peer_ips", []):
+                    ips.append(ip["ip"])
+            table_rows.append([node["name"], vm.get("vpc_id"), vm["name"], ",".join(ips)])
+    print(tabulate(table_rows, headers=headers, stralign="center", numalign="left", tablefmt="simple"))
 
 
 def _trace_route(option, c, context_config, spec, debug):
