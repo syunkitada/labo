@@ -149,6 +149,11 @@ def make(rc):
                                 br_flows += [
                                     f"priority=700,ip,nw_dst={ip['ip']} actions=set_field:{ex_vtep['tun_dst']}->tun_dst,{vxlan_eth}",
                                 ]
+            for vip in spec.get("vip_map", {}).values():
+                if vip["vpc_id"] == bridge["vpc_id"]:
+                    br_flows += [
+                        f"priority=700,ip,nw_dst={vip['vip']['ip']} actions=set_field:{vip['tun_vip']['ip']}->tun_dst,{vxlan_eth}",
+                    ]
 
             # 行先不明ならGWへ
             if "_vpcgw" in bridge:
