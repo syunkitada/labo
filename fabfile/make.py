@@ -4,13 +4,13 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
 import yaml
-from fabric import Config, Connection, task
-from invoke.context import Context
+from invoke import context as invoke
+import fabric
 from lib import colors, infra_utils, node_utils, os_utils, spec_utils
 from tabulate import tabulate
 
 
-@task
+@fabric.task
 def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
     """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])
 
@@ -186,10 +186,10 @@ def _new_runtime_context(context_config, spec):
             context_config["user"] = host_user
         host = common.get("host")
     if host is not None:
-        c = Connection(host, config=Config(context_config), connect_kwargs=connect_kwargs)
+        c = fabric.Connection(host, config=fabric.Config(context_config), connect_kwargs=connect_kwargs)
         c.is_local = False
     else:
-        c = Context(config=context_config)
+        c = invoke.Context(config=invoke.Config(context_config))
         c.is_local = True
 
     return c

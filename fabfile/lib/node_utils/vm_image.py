@@ -78,6 +78,9 @@ def _custom(t):
     if rspec["base"] == "centos7":
         _custom_common(c, spec, rspec)
         _custom_centos7(c, spec, rspec)
+    elif rspec["base"] == "rocky8":
+        _custom_common(c, spec, rspec)
+        _custom_rocky8(c, spec, rspec)
     elif rspec["base"] == "ubuntu20":
         _custom_common(c, spec, rspec)
         _ubuntu_common(c, spec, rspec)
@@ -185,6 +188,20 @@ function retry() {
 
 
 def _custom_centos7(c, _, rspec):
+    root = rspec["_tmp_mount_path"]
+    c.sudo(f"chroot {root} systemctl enable labo-init")
+    c.sudo(f"chroot {root} yum remove -y cloud-init")
+    c.sudo(f"chroot {root} yum install -y dnsmasq tcpdump")
+    # selinuxを無効化しておく
+    c.sudo(f"sed -i  's/^SELINUX=.*/SELINUX=disabled/g' {root}/etc/selinux/config")
+    # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
+    # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
+    c.sudo(f"rm -rf {root}/lib/udev/rules.d/80-net-setup-link.rules")
+    # network-scripts/ifcfg-eth0(anacondaで作成された?)が残ってるので削除してく
+    c.sudo(f"rm -rf {root}/etc/sysconfig/network-scripts/ifcfg-eth0")
+
+
+def _custom_rocky8(c, _, rspec):
     root = rspec["_tmp_mount_path"]
     c.sudo(f"chroot {root} systemctl enable labo-init")
     c.sudo(f"chroot {root} yum remove -y cloud-init")
