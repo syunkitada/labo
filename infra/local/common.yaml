@@ -37,11 +37,11 @@ vm_image_map:
     nfs: nfs1
   ubuntu22_custom:
     base: ubuntu22
-  rocky8_custom:
-    base: rocky8
   rocky8:
     url: https://download.rockylinux.org/pub/rocky/8.6/images/Rocky-8-GenericCloud-8.6.20220702.0.x86_64.qcow2
     nfs: nfs1
+  rocky8_custom:
+    base: rocky8
   rocky9:
     url: https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2
     nfs: nfs1

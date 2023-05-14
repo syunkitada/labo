@@ -203,6 +203,7 @@ def _custom_centos7(c, _, rspec):
 
 def _custom_rocky8(c, _, rspec):
     root = rspec["_tmp_mount_path"]
+    c.sudo(f"cp /etc/resolv.conf {root}/etc/resolv.conf")
     c.sudo(f"chroot {root} systemctl enable labo-init")
     c.sudo(f"chroot {root} yum remove -y cloud-init")
     c.sudo(f"chroot {root} yum install -y dnsmasq tcpdump")
