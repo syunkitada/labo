@@ -7,8 +7,8 @@ def cmd(t):
 
 def make(t):
     c = t.c
-    spec = t.c
-    rspec = t.c
+    spec = t.spec
+    rspec = t.rspec
 
     if c.run("ps ax | grep [m]ysqld", warn=True).failed or True:
         c.sudo("labo/pdns/pdns.sh")

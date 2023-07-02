@@ -33,6 +33,9 @@ def _load_conf(spec):
         ),
     )
 
+    if "_" in spec['common']['namespace']:
+        raise Exception("must not contain _ in namespace")
+
     conf = {
         "domain": f"{spec['common']['namespace']}.example.com",
         "vms_dir": "/opt/labo/vms",

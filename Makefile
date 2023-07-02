@@ -2,7 +2,13 @@ env:
 	# for fabfile
 	test -e .venv || python3 -m venv .venv
 	.venv/bin/pip install -r requirements.txt
+	@docker
+	@docker-registry
 
+docker:
+	./labo/docker/docker.sh setup
+docker-registry:
+	./labo/docker/docker.sh setup-registry
 docker-image-centos7-nwnode:
 	sudo docker build -t labo/centos7-nwnode ./labo/docker/images/centos7-nwnode
 docker-image-rocky8-nwnode:
