@@ -1,6 +1,7 @@
-import yaml
 import os
-from lib.spec_utils.complete import update_dict, complete_spec
+
+import yaml
+from lib.spec_utils.complete import complete_spec, update_dict
 
 
 def load_spec(file):
@@ -31,6 +32,9 @@ def _load_conf(spec):
             "labo.yaml",
         ),
     )
+
+    if "_" in spec['common']['namespace']:
+        raise Exception("must not contain _ in namespace")
 
     conf = {
         "domain": f"{spec['common']['namespace']}.example.com",

@@ -1,8 +1,9 @@
 # qemu utils
 
-import yaml
-import time
 import os
+import time
+
+import yaml
 
 
 def cmd(cmd, c, spec, rspec):

@@ -1,7 +1,9 @@
-import yaml
 import os
-from . import container_ovs, container_frr
+
+import yaml
 from lib import colors
+
+from . import container_frr, container_ovs
 
 
 def cmd(t):

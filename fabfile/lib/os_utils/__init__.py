@@ -1,7 +1,6 @@
 import ipaddress
 import re
 
-
 re_net_device = re.compile("^([0-9]+): ([a-zA-Z0-9-_.]+)[:@].*")
 re_net_link = re.compile("link/ether ([0-9a-e:]+) ")
 re_net_inet = re.compile("inet (.*/[0-9]+) ")

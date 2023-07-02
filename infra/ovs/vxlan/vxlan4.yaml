@@ -22,6 +22,19 @@ ipam:
   leaf1_l2admin_network:
     subnet: 10.10.3.0/27
     kind: l2
+  eip_network1: # cluster1
+    subnet: 10.110.0.0/24
+    kind: l3
+  ovsadmin_network1:
+    subnet: 10.10.20.0/24
+    kind: l3
+
+vpcgw_map:
+  gw1:
+    vtep:
+      inet: <%=assign_inet4(ovsadmin_network1)%>
+    eip_networks:
+      - name: eip_network1
 
 template_map:
   node:
@@ -38,6 +51,26 @@ template_map:
       net.ipv4.conf.default.forwarding: 1
       net.ipv6.conf.all.forwarding: 1
       net.ipv6.conf.default.forwarding: 1
+  frr:
+    route_map:
+      DENY-ANY-v4:
+        policy: deny
+        order: 5
+        version: 4
+        prefix_list:
+          - seq 5 deny 0.0.0.0/0
+      ADMIN-v4:
+        policy: permit
+        order: 5
+        version: 4
+        prefix_list:
+          - seq 5 permit <%=l3admin.ips.0.network%> le 32
+      VM-v4:
+        policy: deny
+        order: 5
+        version: 4
+        prefix_list:
+          - seq 5 deny 0.0.0.0/0
   spine:
     lo_ips:
       - inet: "<%=assign_inet4(spine_network)%>"
@@ -56,6 +89,7 @@ template_map:
         - name: ADMIN
         - name: VM
   hv:
+    vpcgw: gw1
     routes:
       - dst: default
         via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
@@ -63,12 +97,41 @@ template_map:
       - prio: 20
         rule: from <%=_links.0.peer_ips.0.inet%> table main
   gw:
+    vpcgw: gw1
     routes:
       - dst: default
         via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
     ip_rules:
       - prio: 20
         rule: from <%=_links.0.peer_ips.0.inet%> table main
+  lb:
+    routes:
+      - dst: default
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
+    ip_rules:
+      - prio: 20
+        rule: from <%=_links.0.peer_ips.0.inet%> table main
+  link1:
+    bridge: l2-br
+    peer_ips:
+      - inet: <%=assign_inet4(leaf1_l2admin_network)%>
+    vlan_map:
+      100:
+        bgp_peer_group: ADMIN
+      200:
+        bgp_peer_group: VM
+        peer_ovs:
+          peer: br-ex
+          peer_name: bgp0
+  link2:
+    vlan_map:
+      100:
+        bgp_peer_group: ADMIN
+      200:
+        bgp_peer_group: VM
+        peer_ovs:
+          peer: br-ex
+          peer_name: bgp1
 
 nodes:
   - name: CL1
@@ -101,6 +164,8 @@ nodes:
             dst: <%=_node_map.HV2._links.0.peer_ips.0.ip%>
           - name: GW1-L2
             dst: <%=_node_map.GW1._links.0.peer_ips.0.ip%>
+          - name: LB1-L2
+            dst: <%=_node_map.LB1._links.0.peer_ips.0.ip%>
   - name: SP1
     templates:
       - node
@@ -130,41 +195,13 @@ nodes:
         - <%=lo_ips.0.inet%>
     links:
       - peer: HV1
-        bridge: l2-br
-        peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
-        vlan_map:
-          100:
-            bgp_peer_group: ADMIN
-          200:
-            bgp_peer_group: VM
-            peer_ovs:
-              peer: br-ex
-              peer_name: bgp0
+        templates: [link1]
       - peer: HV2
-        bridge: l2-br
-        peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
-        vlan_map:
-          100:
-            bgp_peer_group: ADMIN
-          200:
-            bgp_peer_group: VM
-            peer_ovs:
-              peer: br-ex
-              peer_name: bgp0
+        templates: [link1]
       - peer: GW1
-        bridge: l2-br
-        peer_ips:
-          - inet: <%=assign_inet4(leaf1_l2admin_network)%>
-        vlan_map:
-          100:
-            bgp_peer_group: ADMIN
-          200:
-            bgp_peer_group: VM
-            peer_ovs:
-              peer: br-ex
-              peer_name: bgp0
+        templates: [link1]
+      - peer: LB1
+        templates: [link1]
   - name: L12
     templates:
       - node
@@ -174,32 +211,13 @@ nodes:
         - <%=lo_ips.0.inet%>
     links:
       - peer: HV1
-        vlan_map:
-          100:
-            bgp_peer_group: ADMIN
-          200:
-            bgp_peer_group: VM
-            peer_ovs:
-              peer: br-ex
-              peer_name: bgp1
+        templates: [link2]
       - peer: HV2
-        vlan_map:
-          100:
-            bgp_peer_group: ADMIN
-          200:
-            bgp_peer_group: VM
-            peer_ovs:
-              peer: br-ex
-              peer_name: bgp1
+        templates: [link2]
       - peer: GW1
-        vlan_map:
-          100:
-            bgp_peer_group: ADMIN
-          200:
-            bgp_peer_group: VM
-            peer_ovs:
-              peer: br-ex
-              peer_name: bgp1
+        templates: [link2]
+      - peer: LB1
+        templates: [link2]
   - name: HV1
     templates:
       - node
@@ -212,3 +230,7 @@ nodes:
     templates:
       - node
       - gw
+  - name: LB1
+    templates:
+      - node
+      - lb

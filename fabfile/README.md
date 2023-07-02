@@ -17,10 +17,15 @@ $ make env
 
 ```
 # -fで仕様書(spec.yaml)を指定して実験環境を作成します
-$ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml
+$ sudo -E .venv/bin/fab make -f infra/local/ubuntu20.yaml -t infra
+$ sudo -E .venv/bin/fab make -f infra/local/ubuntu20.yaml
 
 # 実験環境を削除します
-$ sudo -E .venv/bin/fab make -f infra/local1/spec.yaml -c clean
+$ sudo -E .venv/bin/fab make -f infra/local/ubuntu20.yaml -c clean
+```
+
+```
+sudo -E .venv/bin/fab make -f infra/tmp/srv6_vpn.yaml -c make:infra
 ```
 
 ```

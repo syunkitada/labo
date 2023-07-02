@@ -1,16 +1,16 @@
-import re
 import os
-import yaml
-from tabulate import tabulate
-from invoke.context import Context
-from fabric import task, Config, Connection
-from concurrent.futures import ThreadPoolExecutor
+import re
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
-from lib import colors, spec_utils, os_utils, infra_utils, node_utils
+import yaml
+from invoke import context as invoke
+import fabric
+from lib import colors, infra_utils, node_utils, os_utils, spec_utils
+from tabulate import tabulate
 
 
-@task
+@fabric.task
 def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
     """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])
 
@@ -41,11 +41,15 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
         f.write(yaml.safe_dump(spec))
     print(f"completed spec was saved to {completed_spec_file}")
 
+    cmds = cmd.split(":")
     if cmd == "dump-spec":
         print(yaml.safe_dump(spec))
         return
     elif cmd == "dump-net":
         _dump_net(spec)
+        return
+    elif cmd == "dump-vm":
+        _dump_vm(spec)
         return
 
     context_config = {}
@@ -74,6 +78,9 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
     if cmd == "dump-netdev":
         netns_map = os_utils.get_netns_map(c)
         _dump_netdev(spec, netns_map)
+        return
+    elif cmds[0] == "route-trace":
+        _trace_route(cmds[1], c, context_config=context_config, spec=spec, debug=debug)
         return
 
     infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
@@ -179,10 +186,10 @@ def _new_runtime_context(context_config, spec):
             context_config["user"] = host_user
         host = common.get("host")
     if host is not None:
-        c = Connection(host, config=Config(context_config), connect_kwargs=connect_kwargs)
+        c = fabric.Connection(host, config=fabric.Config(context_config), connect_kwargs=connect_kwargs)
         c.is_local = False
     else:
-        c = Context(config=context_config)
+        c = invoke.Context(config=invoke.Config(context_config))
         c.is_local = True
 
     return c
@@ -310,6 +317,86 @@ def _dump_netdev(spec, netns_map, show_ipv6_link_local=False):
             data.append([hostname, "None"])
 
     print(tabulate(data, headers=headers, stralign="left", numalign="left", tablefmt="fancy_grid"))
+
+
+def _dump_vm(spec):
+    print("# vips ----------------------------------------")
+    headers = ["vpc_id", "vip", "vip", "members"]
+    table_rows = []
+    for key, vip in spec.get("vip_map", {}).items():
+        members = []
+        for member in vip["members"]:
+            for _link in member["_node"]["_links"]:
+                for ip in _link["peer_ips"]:
+                    members.append(f"{member['name']} {ip['ip']}")
+        table_rows.append([vip["vpc_id"], key, vip["vip"]["ip"], "\n".join(members)])
+    print(tabulate(table_rows, headers=headers, stralign="center", numalign="left", tablefmt="simple"))
+
+    print("\n# vms ----------------------------------------")
+    headers = ["hv", "vpc_id", "vm", "ips"]
+    table_rows = []
+    for node in spec.get("nodes", []):
+        for vm in node.get("vms", []):
+            ips = []
+            for _link in vm.get("_links", []):
+                for ip in _link.get("peer_ips", []):
+                    ips.append(ip["ip"])
+            table_rows.append([node["name"], vm.get("vpc_id"), vm["name"], ",".join(ips)])
+    print(tabulate(table_rows, headers=headers, stralign="center", numalign="left", tablefmt="simple"))
+
+
+def _trace_route(option, c, context_config, spec, debug):
+    ctx_data = {
+        "netns_map": os_utils.get_netns_map(c),
+        "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
+    }
+    options = option.split("_")
+    srcs = options[0].split(".")
+    dsts = options[1].split(".")
+    src_node = spec["_node_map"][srcs[0]]
+    dst_node = spec["_node_map"][dsts[0]]
+    src_ip = None
+    dst_ip = None
+
+    for link in src_node.get("links", []):
+        for ip in link.get("ips", []):
+            src_ip = ip
+            break
+        if src_ip is not None:
+            break
+    if src_ip is None:
+        for link in src_node.get("_links", []):
+            for ip in link.get("peer_ips", []):
+                src_ip = ip
+                break
+            if src_ip is not None:
+                break
+
+    for link in dst_node.get("links", []):
+        for ip in link.get("ips", []):
+            dst_ip = ip
+            break
+        if dst_ip is not None:
+            break
+    if dst_ip is None:
+        for link in dst_node.get("_links", []):
+            for ip in link.get("peer_ips", []):
+                dst_ip = ip
+                break
+            if dst_ip is not None:
+                break
+
+    task = Task(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
+    src = {
+        "node": src_node,
+        "ip": src_ip,
+    }
+    dst = {
+        "node": dst_node,
+        "ip": dst_ip,
+    }
+    node_utils.trace_route(task, src, dst)
+    return
 
 
 def _dump_scripts(spec, cmd, tasks):
