@@ -164,6 +164,8 @@ def _make(rc):
     for link in rspec.get("_links", []):
         for ip in link.get("peer_ips", []):
             rc.append_cmds_ip_addr_add(dcmds, ip, link["peer_name"])
+    if "sid" in rspec:
+        rc.append_cmds_ip_addr_add(dcmds, rspec["sid"], rspec["sid"]["dev"])
 
     for iprule in rspec.get("ip_rules", []):
         dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", rc.exist_iprule(iprule["rule"]))]
