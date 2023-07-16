@@ -2,7 +2,7 @@ imports:
   - infra/local/remote.yaml
 
 common:
-  namespace: srv6vpn
+  namespace: srv6vrf
   host: 192.168.210.11
   host_user: admin
   host_pass: admin
@@ -127,12 +127,8 @@ nodes:
             dst: <%=_node_map.L22.lo_ips.0.ip%>
           - name: HV1
             dst: <%=_node_map.HV1.lo_ips.0.ip%>
-          - name: HV1 sid
-            dst: <%=_node_map.HV1.sid.ip%>
           - name: HV2
             dst: <%=_node_map.HV2.lo_ips.0.ip%>
-          - name: HV2 sid
-            dst: <%=_node_map.HV2.sid.ip%>
   - name: AG1
     templates:
       - node
@@ -212,6 +208,11 @@ nodes:
         templates:
           - node
           - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t1vm2
+                dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
       - name: t2vm1
         templates:
           - node

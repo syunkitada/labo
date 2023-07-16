@@ -67,6 +67,20 @@ def make(rc):
         "!",
     ]
 
+    if frr["use_srv6_vpn"]:
+        if "sid" in rspec:
+            vtysh_cmds += [
+                "segment-routing",
+                "srv6",
+                "locators",
+                "locator default",
+                f"prefix {rspec['sid']['network']}",
+                "exit",
+                "exit",
+                "exit",
+            ]
+
+
     # prefix_listとroute_mapの定義
     for name, route_map in frr.get("route_map", {}).items():
         for prefix in route_map.get("prefix_list", []):
@@ -131,6 +145,14 @@ def make(rc):
         "no bgp default ipv4-unicast",  # BGPピアを設定してもneighbor activateを実行するまでIPv4ユニキャスト経路情報の交換を開始しないようにする
     ]
 
+    if frr["use_srv6_vpn"]:
+        vtysh_cmds += [
+            "segment-routing srv6",
+            "locator default",
+             "!",
+        ]
+
+
     for bgp_peer_group in frr.get("bgp_peer_groups", []):
         vtysh_cmds += [
             f"neighbor {bgp_peer_group['name']} peer-group",
@@ -176,6 +198,28 @@ def make(rc):
             vtysh_cmds += [f"neighbor {bgp_peer_group['name']} route-map {bgp_peer_group['route_map_v6_out']} out"]
     vtysh_cmds += ["neighbor ADMIN activate"]
     vtysh_cmds += ["exit-address-family"]
+
+    if frr["use_srv6_vpn"]:
+        vtysh_cmds += ["address-family ipv4 vpn"]
+        vtysh_cmds += ["neighbor ADMIN activate"]
+        vtysh_cmds += ["exit-address-family"]
+        vtysh_cmds += [
+            f"router bgp {frr['asn']} vrf vrf10",
+            f"bgp router-id {frr['id']}",
+            "no bgp ebgp-requires-policy",
+            "!",
+            "address-family ipv4 unicast",
+            "sid vpn export 10",
+            # "nexthop vpn export 2001::1",
+            "rd vpn export 0:10",
+            "rt vpn both 0:10",
+            "import vpn",
+            "export vpn",
+            "redistribute connected",
+            "!",
+            "exit-address-family",
+            "!",
+        ]
 
     vtysh_cmds += [
         "!",
