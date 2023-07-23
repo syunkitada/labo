@@ -218,7 +218,6 @@ nodes:
           - node
           - vm
     cmds:
-      - sysctl -w net.ipv4.conf.lo.proxy_arp=1
       - echo 100 localsid >> /etc/iproute2/rt_tables
       - ip -6 rule add to <%=sid.network%> lookup localsid
       - ip -6 route add blackhole default table localsid | echo "ignored"
@@ -255,7 +254,6 @@ nodes:
           - node
           - vm
     cmds:
-      - sysctl -w net.ipv4.conf.lo.proxy_arp=1
       - echo 100 localsid >> /etc/iproute2/rt_tables
       - ip -6 rule add to <%=sid.network%> lookup localsid
       - ip -6 route add blackhole default table localsid | echo "ignored"

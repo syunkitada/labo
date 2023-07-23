@@ -1,9 +1,12 @@
 # srv6vrf2
 
+- https://github.com/FRRouting/frr/tree/master/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf
 - https://github.com/FRRouting/frr/pull/5865
 - https://github.com/FRRouting/frr/pull/9649
 
 ```
+ip vrf exec vrf10 ping 10.100.0.2
+
 srv6vrf2-HV1# show vrf
 vrf vrf10 id 2 table 10
 

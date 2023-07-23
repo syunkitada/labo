@@ -15,6 +15,8 @@ RUN apt install -y vim tcpdump traceroute wireshark tshark \
                    iputils-ping iputils-tracepath iputils-arping
 
 RUN ls /lib/systemd/system/*.wants/* | grep -v journald | xargs rm -rf && \
-    systemctl disable cron
+    systemctl disable cron && \
+    systemctl disable systemd-resolved && \
+    systemctl disable systemd-timesyncd
 
 ENTRYPOINT ["/usr/sbin/init"]

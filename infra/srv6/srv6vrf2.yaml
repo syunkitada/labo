@@ -97,11 +97,11 @@ nodes:
           - node
           - vm
     cmds:
-      - sysctl -w net.ipv4.conf.lo.proxy_arp=1
       - ip link add dev vrf10 type vrf table 10 | echo "ignored"
       - ip link set dev vrf10 up
       - ip link set dev HV1_0_t1vm1 master vrf10
       - ip addr add 10.100.0.1/24 dev HV1_0_t1vm1 | echo "ignored"
+      - ip route add 10.100.0.2 dev HV1_0_t1vm1 table 10 | echo "ignored"
       - sysctl -w net.ipv4.conf.HV1_0_t1vm1.proxy_arp=1
   - name: HV2
     templates:
@@ -124,9 +124,9 @@ nodes:
           - node
           - vm
     cmds:
-      - sysctl -w net.ipv4.conf.lo.proxy_arp=1
       - ip link add dev vrf10 type vrf table 10 | echo "ignored"
       - ip link set dev vrf10 up
       - ip link set dev HV2_0_t1vm2 master vrf10
       - ip addr add 10.100.1.1/24 dev HV2_0_t1vm2 | echo "ignored"
+      - ip route add 10.100.1.2 dev HV1_0_t1vm2 table 10 | echo "ignored"
       - sysctl -w net.ipv4.conf.HV2_0_t1vm2.proxy_arp=1

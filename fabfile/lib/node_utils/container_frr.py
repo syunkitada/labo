@@ -67,7 +67,7 @@ def make(rc):
         "!",
     ]
 
-    if frr["use_srv6_vpn"]:
+    if frr.get("use_srv6_vpn", False):
         if "sid" in rspec:
             vtysh_cmds += [
                 "segment-routing",
@@ -145,7 +145,7 @@ def make(rc):
         "no bgp default ipv4-unicast",  # BGPピアを設定してもneighbor activateを実行するまでIPv4ユニキャスト経路情報の交換を開始しないようにする
     ]
 
-    if frr["use_srv6_vpn"]:
+    if frr.get("use_srv6_vpn", False):
         vtysh_cmds += [
             "segment-routing srv6",
             "locator default",
@@ -199,19 +199,17 @@ def make(rc):
     vtysh_cmds += ["neighbor ADMIN activate"]
     vtysh_cmds += ["exit-address-family"]
 
-    if frr["use_srv6_vpn"]:
+    if frr.get("use_srv6_vpn", False):
         vtysh_cmds += ["address-family ipv4 vpn"]
         vtysh_cmds += ["neighbor ADMIN activate"]
         vtysh_cmds += ["exit-address-family"]
         vtysh_cmds += [
             f"router bgp {frr['asn']} vrf vrf10",
             f"bgp router-id {frr['id']}",
-            "no bgp ebgp-requires-policy",
-            "!",
             "address-family ipv4 unicast",
             "sid vpn export 10",
             # "nexthop vpn export 2001::1",
-            "rd vpn export 0:10",
+            f"rd vpn export {frr['asn']}:10",
             "rt vpn both 0:10",
             "import vpn",
             "export vpn",
