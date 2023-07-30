@@ -67,7 +67,7 @@ def make(rc):
         "!",
     ]
 
-    if frr.get("use_srv6_vpn", False):
+    if "srv6_vpn" in frr:
         if "sid" in rspec:
             vtysh_cmds += [
                 "segment-routing",
@@ -145,7 +145,7 @@ def make(rc):
         "no bgp default ipv4-unicast",  # BGPピアを設定してもneighbor activateを実行するまでIPv4ユニキャスト経路情報の交換を開始しないようにする
     ]
 
-    if frr.get("use_srv6_vpn", False):
+    if "srv6_vpn" in frr:
         vtysh_cmds += [
             "segment-routing srv6",
             "locator default",
@@ -199,25 +199,26 @@ def make(rc):
     vtysh_cmds += ["neighbor ADMIN activate"]
     vtysh_cmds += ["exit-address-family"]
 
-    if frr.get("use_srv6_vpn", False):
+    if "srv6_vpn" in frr:
         vtysh_cmds += ["address-family ipv4 vpn"]
         vtysh_cmds += ["neighbor ADMIN activate"]
         vtysh_cmds += ["exit-address-family"]
-        vtysh_cmds += [
-            f"router bgp {frr['asn']} vrf vrf10",
-            f"bgp router-id {frr['id']}",
-            "address-family ipv4 unicast",
-            "sid vpn export 10",
-            # "nexthop vpn export 2001::1",
-            f"rd vpn export {frr['asn']}:10",
-            "rt vpn both 0:10",
-            "import vpn",
-            "export vpn",
-            "redistribute connected",
-            "!",
-            "exit-address-family",
-            "!",
-        ]
+        for vrf in frr['srv6_vpn'].get('vrfs', []):
+            vtysh_cmds += [
+                f"router bgp {frr['asn']} vrf vrf{vrf['vrf']}",
+                f"bgp router-id {frr['id']}",
+                "address-family ipv4 unicast",
+                f"sid vpn export {vrf['vrf']}",
+                # "nexthop vpn export 2001::1",
+                f"rd vpn export {frr['asn']}:{vrf['vrf']}",
+                f"rt vpn both {vrf['vrf']}:{vrf['vrf']}",
+                "import vpn",
+                "export vpn",
+                f"redistribute {frr['srv6_vpn']['redistribute']}",
+                "!",
+                "exit-address-family",
+                "!",
+            ]
 
     vtysh_cmds += [
         "!",
