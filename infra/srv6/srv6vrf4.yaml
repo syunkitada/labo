@@ -2,7 +2,12 @@ imports:
   - infra/local/remote.yaml
 
 common:
-  namespace: srv6vrf2
+  namespace: srv6vrf4
+  host: 192.168.210.11
+  host_user: admin
+  host_pass: admin
+  nfs_path: /mnt/nfs
+  insecure_docker_registry: docker-registry.local.example.com:5000
 
 ipam:
   hv_network:
@@ -52,15 +57,18 @@ template_map:
         - name: VM
       ipv4_networks:
         - <%=lo_ips.0.inet%>
-      use_srv6_vpn: true
+      srv6_vpn:
+        redistribute: kernel
+        vrfs:
+          - vrf: 10
     sid:
       inet: <%=asn_to_sid(frr.asn)%>
       dev: lo
   vm:
     mtu: 1500
-    routes:
-      - dst: default
-        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
+    # routes:
+    #   - dst: default
+    #     via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 nodes:
   - name: HV1
@@ -73,10 +81,10 @@ nodes:
     vm_links:
       - peer: t1vm1
         peer_ips:
-          - inet: <%=assign_inet4(t1vm_network2)%>
+          - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
-          - inet: <%=assign_inet4(t2vm_network2)%>
+          - inet: <%=assign_inet4(t2vm_network1)%>
     vms:
       - name: t1vm1
         templates:
@@ -93,24 +101,14 @@ nodes:
           - vm
     tests:
       - kind: cmd
-        cmd: ip vrf exec vrf50 ping -c 1 -W 1 10.100.1.2
+        cmd: ip vrf exec vrf10 ping -c 1 -W 1 10.100.0.2
     cmds:
-      - echo 100 localsid >> /etc/iproute2/rt_tables
-      - ip -6 rule add to <%=sid.network%> lookup localsid
-      - ip -6 route add blackhole default table localsid | echo "ignored"
-
-      # vpc50の設定
-      - ip link add dev vrf50 type vrf table 50 | echo "ignored"
-      - ip link set dev vrf50 up
-      - ip vrf show
-      - ip link set dev HV1_0_t1vm1 master vrf50
-      - ip -6 route add `echo <%=sid.network%>|sed -e "s|::/64|::0050|g"` encap seg6local action End.DX4 nh4 169.254.1.50 dev vrf50 table localsid | echo "ignored"
-      - ip route add 169.254.1.50 dev vrf50 | echo "ignored"
-      - ip route add 10.100.1.3 encap seg6 mode encap segs `echo <%=_node_map.HV2.sid.network%>|sed -e "s|::/64|::0050|g"` dev HV1_0_HV2 table 50 | echo "ignored"
-      - ip route add 10.100.1.2 dev HV1_0_t1vm1 table 50 | echo "ignored"
-      - ip addr add 10.100.1.1/24 dev HV1_0_t1vm1 | echo "ignored"
+      - ip link add dev vrf10 type vrf table 10 | echo "ignored"
+      - ip link set dev vrf10 up
+      - ip link set dev HV1_0_t1vm1 master vrf10
+      - ip addr add 10.100.0.1/24 dev HV1_0_t1vm1 | echo "ignored"
+      - ip route add 10.100.0.2 dev HV1_0_t1vm1 table 10 | echo "ignored"
       - sysctl -w net.ipv4.conf.HV1_0_t1vm1.proxy_arp=1
-
   - name: HV2
     templates:
       - node
@@ -118,10 +116,10 @@ nodes:
     vm_links:
       - peer: t1vm2
         peer_ips:
-          - inet: <%=assign_inet4(t1vm_network2)%>
+          - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
-          - inet: <%=assign_inet4(t2vm_network2)%>
+          - inet: <%=assign_inet4(t2vm_network1)%>
     vms:
       - name: t1vm2
         templates:
@@ -132,22 +130,13 @@ nodes:
           - node
           - vm
     cmds:
-      - echo 100 localsid >> /etc/iproute2/rt_tables
-      - ip -6 rule add to <%=sid.network%> lookup localsid
-      - ip -6 route add blackhole default table localsid | echo "ignored"
-
-      # vpc50の設定
-      - ip link add dev vrf50 type vrf table 50 | echo "ignored"
-      - ip link set dev vrf50 up
-      - ip vrf show
-      - ip link set dev HV2_0_t1vm2 master vrf50
-      - ip -6 route add `echo <%=sid.network%>|sed -e "s|::/64|::0050|g"` encap seg6local action End.DX4 nh4 169.254.1.50 dev vrf50 table localsid | echo "ignored"
-      - ip route add 169.254.1.50 dev vrf50 | echo "ignored"
-      - ip route add 10.100.1.2 encap seg6 mode encap segs `echo <%=_node_map.HV1.sid.network%>|sed -e "s|::/64|::0050|g"` dev HV2_0_HV1 table 50 | echo "ignored"
-      - ip route add 10.100.1.3 dev HV2_0_t1vm2 table 50 | echo "ignored"
-      - ip addr add 10.100.1.1/24 dev HV2_0_t1vm2 | echo "ignored"
+      - sysctl -w net.ipv4.conf.lo.proxy_arp=1
+      - ip link add dev vrf10 type vrf table 10 | echo "ignored"
+      - ip link set dev vrf10 up
+      - ip link set dev HV2_0_t1vm2 master vrf10
+      - ip addr add 10.100.0.1/24 dev HV2_0_t1vm2 | echo "ignored"
+      - ip route add 10.100.0.3 dev HV2_0_t1vm2 table 10 | echo "ignored"
       - sysctl -w net.ipv4.conf.HV2_0_t1vm2.proxy_arp=1
-
     tests:
       - kind: cmd
-        cmd: ip vrf exec vrf50 ping -c 1 -W 1 10.100.1.3
+        cmd: ip vrf exec vrf10 ping -c 1 -W 1 10.100.1.2
