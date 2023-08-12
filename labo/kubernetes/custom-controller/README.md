@@ -30,3 +30,7 @@
     - [MOCO](https://github.com/cybozu-go/moco/tree/main)
       - MOCO is a MySQL operator on Kubernetes
       - コードリーディングによいかも
+- [理想的な Kubernetes カスタムコントローラーの開発環境を考えた](https://engineering.mercari.com/blog/entry/20210831-f666b94b24/)
+
+$ curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
+chmod +x kubebuilder && sudo mv kubebuilder /usr/local/bin/
