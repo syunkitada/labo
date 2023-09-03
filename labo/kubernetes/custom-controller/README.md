@@ -34,3 +34,11 @@
 
 $ curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
 chmod +x kubebuilder && sudo mv kubebuilder /usr/local/bin/
+
+TODO
+
+- kubectl flame
+- tracing を使ってみる
+  https://kubernetes.io/docs/concepts/cluster-administration/system-traces/
+- watch の実装を見てみる
+  https://kubernetes.io/docs/reference/using-api/
