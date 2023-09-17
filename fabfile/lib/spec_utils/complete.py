@@ -170,6 +170,10 @@ def complete_spec(spec):
                     for i, value in enumerate(route_map.get("prefix_list", [])):
                         route_map["prefix_list"][i] = _complete_value(value, spec, rspec)
 
+            if "sid" in rspec:
+                rspec["sid"]["inet"] = _complete_value(rspec["sid"]["inet"], spec, rspec)
+                _complete_ip(rspec["sid"], spec, rspec)
+
             if "vpcgw" in rspec:
                 rspec["_vpcgw"] = vpcgw_map[rspec["vpcgw"]]
 
@@ -298,6 +302,8 @@ def _complete_value(value, spec, node, is_get_src=False):
                 value = ipam.inet4_to_inet6(_complete_value(arg, spec, node, True))
             elif func == "ipv4_to_asn":
                 value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
+            elif func == "asn_to_sid":
+                value = ipam.asn_to_sid(_complete_value(arg, spec, node, True))
             else:
                 raise Exception(f"unexpected func: {func}")
             return _complete_value(value_prefix + str(value) + value_suffix, spec, node)

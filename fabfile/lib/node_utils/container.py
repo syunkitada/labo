@@ -46,27 +46,28 @@ def _test(rc):
     rspec = rc.rspec
     status = 0
     msgs = []
-    ok_targets = []
-    ng_targets = []
+    ok_msgs = []
+    ng_msgs = []
     for test in rspec.get("tests", []):
+        msg = ""
+        err = None
         if test["kind"] == "ping":
             for target in test["targets"]:
-                err = _ping(rc, target)
-                if err is None:
-                    ok_targets.append(target)
-                else:
-                    status += 1
-                    target["err"] = err
-                    ng_targets.append(target)
-    if len(ok_targets) > 0:
-        ok_msgs = ["ok_results"]
-        for target in ok_targets:
-            ok_msgs.append(f"{rspec['name']} ping to {target['name']}(dst={target['dst']})")
+                msg, err = _ping(rc, target)
+        elif test["kind"] == "cmd":
+            if "cmd" in test:
+                msg, err = _cmd(rc, test["cmd"])
+        if err is None:
+            ok_msgs.append(f"{test['kind']}: {msg}")
+        else:
+            status += 1
+            ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
+
+    if len(ok_msgs) > 0:
+        ok_msgs.insert(0, "ok_results")
         msgs.append(colors.ok("\n".join(ok_msgs)))
-    if len(ng_targets) > 0:
-        ng_msgs = ["ng_results"]
-        for target in ng_targets:
-            ng_msgs.append(f"{rspec['name']} ping to {target['name']}(dst={target['dst']},err={target['err']})")
+    if len(ng_msgs) > 0:
+        ng_msgs.insert(0, "ng_results")
         msgs.append(colors.crit("\n".join(ng_msgs)))
 
     for vm in rspec.get("vms", []):
@@ -84,10 +85,20 @@ def _test(rc):
 
 def _ping(rc, target):
     result = rc.dexec(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
+    msg = f"{rc.rspec['name']}: ping to {target['name']}(dst={target['dst']})"
     if result.return_code == 0:
-        return
+        return msg, None
     else:
-        return result.stdout + result.stderr
+        return msg, result.stdout + result.stderr
+
+
+def _cmd(rc, cmd):
+    msg = f"{rc.rspec['name']}: {cmd}"
+    result = rc.dexec(cmd, hide=True, warn=True)
+    if result.return_code == 0:
+        return msg, None
+    else:
+        return msg, result.stdout + result.stderr
 
 
 def _make_prepare(rc):
@@ -164,6 +175,8 @@ def _make(rc):
     for link in rspec.get("_links", []):
         for ip in link.get("peer_ips", []):
             rc.append_cmds_ip_addr_add(dcmds, ip, link["peer_name"])
+    if "sid" in rspec:
+        rc.append_cmds_ip_addr_add(dcmds, rspec["sid"], rspec["sid"]["dev"])
 
     for iprule in rspec.get("ip_rules", []):
         dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", rc.exist_iprule(iprule["rule"]))]

@@ -29,5 +29,9 @@ RUN yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga
 RUN yum install -y tcpdump traceroute vim ethtool sudo iputils httpd wireshark
 RUN yum install -y man
 
+RUN ls /lib/systemd/system/*.wants/* | grep -v journald | xargs rm -rf
+RUN systemctl disable rpcbind && \
+    systemctl disable crond
+
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]

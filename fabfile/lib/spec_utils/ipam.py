@@ -83,6 +83,14 @@ def asn_to_ipv4(asn):
     raise Exception(f"Invalid asn: asn={asn}")
 
 
+def asn_to_sid(asn):
+    ipi = int(asn) - PRIVATE_ASN_START
+    suffix = '{:08x}'.format(ipi)
+    sid = f"fc06:0000:{suffix[:4]}:{suffix[4:]}::1/64"
+    ip_interface = ipaddress.ip_interface(sid)
+    return ip_interface.exploded
+
+
 def inet4_to_inet6(inet):
     inets = inet.split("/")
     ip = inets[0]
