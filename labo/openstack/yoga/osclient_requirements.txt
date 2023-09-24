@@ -1,0 +1,7 @@
+python-openstackclient
+python-novaclient
+python-keystoneclient
+python-glanceclient
+python-neutronclient
+python-cinderclient
+osc-placement

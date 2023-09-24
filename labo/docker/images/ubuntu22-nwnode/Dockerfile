@@ -4,7 +4,7 @@ FROM ubuntu:22.04
 ENV FRRVER="frr-stable"
 
 RUN apt update && \
-    apt install -y sudo curl wget gnupg2
+    apt install -y sudo curl wget gnupg2 gcc
 
 RUN curl -s https://deb.frrouting.org/frr/keys.asc | apt-key add - && \
     RELEASE=`cat /etc/os-release | grep VERSION_CODENAME | awk -F '=' '{print $2}'` && \

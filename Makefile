@@ -15,6 +15,8 @@ docker-image-rocky8-nwnode:
 	sudo docker build -t labo/rocky8-nwnode ./labo/docker/images/rocky8-nwnode
 docker-image-ubuntu20-nwnode:
 	sudo docker build -t labo/ubuntu20-nwnode ./labo/docker/images/ubuntu20-nwnode
+docker-image-ubuntu22-base:
+	sudo docker build -t labo/ubuntu22-base ./labo/docker/images/ubuntu22-base
 docker-image-ubuntu22-nwnode:
 	sudo docker build -t labo/ubuntu22-nwnode ./labo/docker/images/ubuntu22-nwnode
 docker-push-centos7-nwnode:
