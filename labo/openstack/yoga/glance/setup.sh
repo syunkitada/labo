@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 
-source envrc
+source ../envrc
 
 mysql -e 'CREATE DATABASE IF NOT EXISTS glance'
 

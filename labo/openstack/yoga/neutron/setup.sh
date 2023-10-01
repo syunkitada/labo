@@ -47,6 +47,10 @@ systemctl status --no-pager neutron-server || systemd-run --unit neutron-server 
 	/opt/neutron/bin/neutron-server --log-file /var/log/neutron/neutron-server.log \
 	--config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini
 
+# workaround for https://bugs.launchpad.net/neutron/+bug/2028285
+# networkを参照しておかないとportが参照時にエラーとなる
+timeout 5 bash -c 'until openstack network list; do sleep 1; done'
+
 # systemctl status nova-scheduler || systemd-run --unit nova-scheduler -- \
 # 	/opt/nova/bin/nova-scheduler --config-file /etc/nova/nova.conf --log-file /var/log/nova/nova-scheduler.log
 # systemctl status nova-conductor || systemd-run --unit nova-conductor -- \

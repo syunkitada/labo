@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 
-source envrc
+source ../envrc
 
 mysql -e 'CREATE DATABASE IF NOT EXISTS placement'
 
@@ -30,8 +30,6 @@ sed -i "s/@OS_SERVICE_PASS/${OS_SERVICE_PASS}/g" /etc/placement/placement.conf
 
 systemctl status placement-api || systemd-run --unit placement-api -- \
 	/opt/placement/bin/placement-api --port 8778
-
-curl http://localhost:8778/
 
 # test api
 timeout 5 bash -c 'until openstack resource class list; do sleep 1; done'
