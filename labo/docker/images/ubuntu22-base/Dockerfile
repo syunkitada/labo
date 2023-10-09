@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt install -y \
-    sudo gnupg2 vim git gcc \
+    sudo gnupg2 vim git gcc make \
     python3-venv python3-dev \
     curl wget tcpdump traceroute wireshark tshark \
     iputils-ping iputils-tracepath iputils-arping iproute2
