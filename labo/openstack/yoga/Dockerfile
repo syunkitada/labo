@@ -49,6 +49,7 @@ RUN cd $WD && \
     /opt/neutron/bin/pip install -r /tmp/neutron/requirements.txt && \
     git clone https://github.com/openstack/neutron.git -b stable/yoga && \
     cd neutron && /opt/neutron/bin/python setup.py install && \
+    cd ../ && \
     git clone https://github.com/openstack/neutron-lib.git -b stable/yoga && \
     cd neutron-lib && /opt/neutron/bin/python setup.py install
 

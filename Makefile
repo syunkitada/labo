@@ -11,6 +11,8 @@ docker-registry:
 	./labo/docker/docker.sh setup-registry
 docker-image-centos7-nwnode:
 	sudo docker build -t labo/centos7-nwnode ./labo/docker/images/centos7-nwnode
+docker-image-rocky8-base:
+	sudo docker build -t labo/rocky8-base ./labo/docker/images/rocky8-base
 docker-image-rocky8-nwnode:
 	sudo docker build -t labo/rocky8-nwnode ./labo/docker/images/rocky8-nwnode
 docker-image-ubuntu20-nwnode:
