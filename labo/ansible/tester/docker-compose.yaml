@@ -1,0 +1,41 @@
+version: "3"
+services:
+  centos7_ssh:
+    hostname: centos7s.example.com
+    build:
+      context: .
+      dockerfile: ./Dockerfile_centos7
+    volumes:
+      - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/sudoers:/etc/sudoers:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/group:/etc/group:ro
+    networks:
+      localnet:
+        ipv4_address: 10.100.11.11
+    entrypoint: bash -c "chown ${SUDO_UID}:${SUDO_GID} ${HOME} &&  /usr/sbin/sshd -D"
+
+  rocky8_ssh:
+    hostname: rocky8.example.com
+    build:
+      context: .
+      dockerfile: ./Dockerfile_rocky8
+    volumes:
+      - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/sudoers:/etc/sudoers:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/group:/etc/group:ro
+    networks:
+      localnet:
+        ipv4_address: 10.100.11.12
+    entrypoint: bash -c "chown ${SUDO_UID}:${SUDO_GID} ${HOME} &&  /usr/sbin/sshd -D"
+
+networks:
+  localnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.100.11.0/24
