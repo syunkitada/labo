@@ -1,12 +1,12 @@
 - name: My first play
   hosts: myhosts
   tasks:
-   - name: Ping my hosts
-     ansible.builtin.ping:
+    - name: Ping my hosts
+      ansible.builtin.ping:
 
-   - name: Print message
-     ansible.builtin.debug:
-      msg: Hello world
+    - name: Print message
+      ansible.builtin.debug:
+        msg: Hello world
 
 - name: Write hostname
   hosts: all
@@ -15,3 +15,16 @@
       ansible.builtin.template:
         src: templates/test.j2
         dest: /tmp/hostname
+
+- name: install ansible
+  hosts: all
+  tasks:
+    - name: debug
+      ansible.builtin.debug:
+        msg: "{{ ansible_facts }}"
+
+    - name: install ansible
+      become: true
+      ansible.builtin.yum:
+        name: python3
+      when: ansible_facts['os_family'] == "RedHat" and ansible_facts["distribution_major_version"] == "7"

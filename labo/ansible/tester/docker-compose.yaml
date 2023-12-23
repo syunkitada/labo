@@ -8,7 +8,6 @@ services:
     volumes:
       - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
       - /etc/passwd:/etc/passwd:ro
-      - /etc/sudoers:/etc/sudoers:ro
       - /etc/shadow:/etc/shadow:ro
       - /etc/group:/etc/group:ro
     networks:
@@ -24,7 +23,6 @@ services:
     volumes:
       - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
       - /etc/passwd:/etc/passwd:ro
-      - /etc/sudoers:/etc/sudoers:ro
       - /etc/shadow:/etc/shadow:ro
       - /etc/group:/etc/group:ro
     networks:
