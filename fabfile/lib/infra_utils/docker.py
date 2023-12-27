@@ -26,3 +26,14 @@ def get_docker_ps_map(c):
     for ps in docker_ps:
         docker_ps_map[ps["Names"]] = ps
     return docker_ps_map
+
+
+def get_docker_image_map(c):
+    result = c.sudo('docker images --format=\'{"Repository":"{{ .Repository }}","Tag":"{{ .Tag }}"}\'', hide=True).stdout
+    docker_images_json = "[" + ",".join(result.splitlines()) + "]"
+    docker_images = json.loads(docker_images_json)
+    docker_image_map = {}
+    for image in docker_images:
+        docker_image_map[image["Repository"]] = image
+
+    return docker_image_map

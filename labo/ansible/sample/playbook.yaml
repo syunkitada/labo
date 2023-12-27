@@ -1,21 +1,3 @@
-- name: My first play
-  hosts: myhosts
-  tasks:
-    - name: Ping my hosts
-      ansible.builtin.ping:
-
-    - name: Print message
-      ansible.builtin.debug:
-        msg: Hello world
-
-- name: Write hostname
-  hosts: all
-  tasks:
-    - name: write hostname using jnja2
-      ansible.builtin.template:
-        src: templates/test.j2
-        dest: /tmp/hostname
-
 - name: install ansible
   hosts: all
   tasks:

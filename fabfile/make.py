@@ -7,6 +7,7 @@ import yaml
 from invoke import context as invoke
 import fabric
 from lib import colors, infra_utils, node_utils, os_utils, spec_utils
+from infra import infra_context
 from tabulate import tabulate
 
 
@@ -83,7 +84,7 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
         _trace_route(cmds[1], c, context_config=context_config, spec=spec, debug=debug)
         return
 
-    infra_utils.envrc.cmd(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
+    infra_utils.envrc.cmd(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
 
     re_targets = []
     targets = target.split(":")
@@ -108,55 +109,61 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
             if _not_target(rspec, re_targets):
                 print(f"{cmd} infra {rspec['name']}: skipped")
                 continue
-            infra_utils.make(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
+            infra_utils.make(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
 
     if make_image:
         for name, rspec in spec.get("vm_image_map", {}).items():
             if _not_target(rspec, re_targets):
                 print(f"{cmd} image {name}: skipped")
                 continue
-            node_utils.make_vm_image(Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
+            node_utils.make_vm_image(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
 
     if make_node:
+        ictx = infra_context.InfraContext(c, spec, debug=debug, dryrun=Dryrun)
+        ictx.update()
+
         ctx_data = {
             "netns_map": os_utils.get_netns_map(c),
             "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
         }
 
         results = OrderedDict()
-        tasks = []
+        node_ctxs = []
         for rspec in spec.get("nodes", []):
             if _not_target(rspec, re_targets):
                 print(f"{cmd} node {rspec['name']}: skipped")
                 continue
-            tasks.append(
-                Task(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun, ctx_data=ctx_data)
+            node_ctxs.append(
+                NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun, ctx_data=ctx_data, ictx=ictx)
             )
             results[rspec["name"]] = []
 
+        if not Dryrun:
+            _validate_env(c, cmd, node_ctxs)
+
         while True:
             with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
-                tmp_results = pool.map(node_utils.make, tasks)
+                tmp_results = pool.map(node_utils.make, node_ctxs)
             for result in tmp_results:
                 results[result["name"]].append(result["result"])
 
-            next_tasks = []
-            for t in tasks:
-                # nextがインクリメントされた場合はそのタスクを継続します
+            next_node_ctxs = []
+            for t in node_ctxs:
+                # nextがインクリメントされたnode_ctxsのみ次のタスクを実行します
                 if t.next > 0:
-                    next_tasks.append(t)
-            if len(next_tasks) == 0:
+                    next_node_ctxs.append(t)
+            if len(next_node_ctxs) == 0:
                 break
-            tasks = next_tasks
+            node_ctxs = next_node_ctxs
 
         _print_results(results)
-        _dump_scripts(spec, cmd, tasks)
+        _dump_scripts(spec, cmd, node_ctxs)
 
         return
 
 
-class Task:
-    def __init__(self, context_config, spec, cmd, rspec, debug, dryrun, ctx_data={}):
+class NodeContext:
+    def __init__(self, context_config, spec, cmd, rspec, debug, dryrun, ctx_data={}, ictx=None):
         self.c = _new_runtime_context(context_config, spec)
         self.cmd = cmd
         self.spec = spec
@@ -166,6 +173,7 @@ class Task:
         self.debug = debug
         self.dryrun = dryrun
         self.rc = None
+        self.ictx = ictx
 
 
 def _new_runtime_context(context_config, spec):
@@ -386,7 +394,7 @@ def _trace_route(option, c, context_config, spec, debug):
             if dst_ip is not None:
                 break
 
-    task = Task(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
+    task = NodeContext(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
     src = {
         "node": src_node,
         "ip": src_ip,
@@ -421,3 +429,64 @@ def _dump_scripts(spec, cmd, tasks):
 
     with open(script_path, "w") as f:
         f.write("\n".join(cmds))
+
+
+def _validate_env(c, cmd, node_ctxs):
+    if cmd != "make":
+        return
+
+    def _get_local_dependencies(image):
+        dependencies = []
+        image = image.split(":")[0]
+        if image.find("local/") != 0:
+            return dependencies
+
+        dockerfile_path = os.path.join(image.replace("local", "images"), "Dockerfile")
+        if os.path.exists(dockerfile_path):
+            with open(dockerfile_path) as f:
+                for line in f.readlines():
+                    if line.find("FROM") == 0:
+                        from_image = line.split("FROM")[1].strip()
+                        if node_ctx.ictx.docker_image_map.get(image) is None:
+                            from_dependencies = _get_local_dependencies(from_image)
+                            dependencies.append([image, from_dependencies])
+                        break
+        else:
+            raise Exception(f"{image} Dockerfile({dockerfile_path}) is not exists")
+        return dependencies
+
+    dependencies = []
+    for node_ctx in node_ctxs:
+        dependencies += _get_local_dependencies(node_ctx.rspec["image"])
+
+    none_images = OrderedDict()
+
+    def _add_dependencies(dependency):
+        if len(dependency[1]) == 0:
+            none_images[dependency[0]] = {}
+        else:
+            for d in dependency[1]:
+                _add_dependencies(d)
+            none_images[dependency[0]] = {}
+
+    for dependency in dependencies:
+        _add_dependencies(dependency)
+
+    if len(none_images) > 0:
+        keys = none_images.keys()
+        print(f"You should make local images: {list(keys)}, before this task.")
+        print("\nYou should exec following commands.")
+        cmds = []
+        for none_image in keys:
+            image_name = none_image.split("local/")[0]
+            cmd = f"./scripts/image.sh create {image_name}"
+            cmds.append(cmd)
+            print(f"$ {cmd}")
+
+        user_input = input("\nDo you create images? (yes/no): ")
+        if user_input.lower() == "yes":
+            for cmd in cmds:
+                c.run(cmd)
+        else:
+            print(user_input)
+            exit(0)

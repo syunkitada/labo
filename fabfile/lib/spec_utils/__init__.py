@@ -8,7 +8,7 @@ def load_spec(file):
     spec = {}
     _load_file(spec, file)
 
-    spec["conf"] = _load_conf(spec)
+    spec["conf"] = _load_conf(spec, file)
     complete_spec(spec)
 
     return spec
@@ -24,7 +24,7 @@ def _load_file(spec, file):
     spec.update(_spec)
 
 
-def _load_conf(spec):
+def _load_conf(spec, file):
     conf_path = os.environ.get(
         "LABO_CONF",
         os.path.join(
@@ -33,8 +33,16 @@ def _load_conf(spec):
         ),
     )
 
-    if "_" in spec['common']['namespace']:
-        raise Exception("must not contain _ in namespace")
+    if "common" not in spec:
+        spec["common"] = {}
+
+    if "namespace" not in spec["common"]:
+        namespace = file.rsplit("/", 1)[1].split(".", 1)[0].replace('_', '-')
+        spec["_meta"] = {"spec_file": file}
+        spec["common"]["namespace"] = namespace
+
+    if "nfs_path" not in  spec["common"]:
+        spec["common"]["nfs_path"]  = "/mnt/nfs"
 
     conf = {
         "domain": f"{spec['common']['namespace']}.example.com",

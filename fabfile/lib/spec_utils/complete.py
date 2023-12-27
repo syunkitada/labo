@@ -101,7 +101,7 @@ def complete_spec(spec):
 
         if rspec["kind"] == "vm":
             vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])
-            rspec["_hostname"] = rspec["name"] + "." + spec["conf"]["domain"]
+            rspec["_hostname"] = rspec["name"].replace('_', '-') + "." + spec["conf"]["domain"]
             rspec["_image"] = vm_image_map[rspec["image"]]
             rspec["_vm_dir"] = vm_dir
             rspec["_image_path"] = os.path.join(vm_dir, "img")

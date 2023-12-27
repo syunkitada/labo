@@ -115,7 +115,7 @@ def _make_prepare(rc):
 
     # メモ: (負荷が高いと？)dockerでsystemdが起動できないことがある
     docker_options = [
-        f"-d  --rm --network none --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
+        f"-d  --rm --network {rspec.get('network', 'none')} --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
         "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
         f"-v {rspec['_script_dir']}:{rspec['_script_dir']}",
     ]
