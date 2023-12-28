@@ -5,16 +5,16 @@ re_route = re.compile("(\S+) from (\S+) dev (\S+)")
 
 
 class Context:
-    def __init__(self, t):
-        self.c = t.c
-        self.spec = t.spec
-        self.rspec = t.rspec
-        self.debug = t.debug
-        self.dryrun = t.dryrun
+    def __init__(self, nctx):
+        self.c = nctx.c
+        self.spec = nctx.spec
+        self.rspec = nctx.rspec
+        self.debug = nctx.debug
+        self.dryrun = nctx.dryrun
         self.full_cmds = []
-        if t.ctx_data is not None:
-            self.netns_map = t.ctx_data["netns_map"]
-            self.docker_ps_map = t.ctx_data["docker_ps_map"]
+        if nctx.ictx is not None:
+            self.netns_map = nctx.ictx.netns_map
+            self.docker_ps_map = nctx.ictx.docker_ps_map
 
     def dexec(self, cmd, *args, **kwargs):
         return self.c.sudo(f"docker exec {self.rspec['_hostname']} {cmd}", *args, **kwargs)

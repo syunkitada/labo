@@ -1,4 +1,4 @@
-from . import docker, envrc, mysql, nfs, pdns, shell
+from . import docker, mysql, nfs, pdns, shell
 
 
 def make(t):
@@ -14,8 +14,6 @@ def make(t):
         nfs.cmd(t)
     elif t.rspec["kind"] == "shell":
         shell.cmd(t)
-    elif t.rspec["kind"] == "envrc":
-        envrc.cmd(t)
     else:
         print(f"unsupported kind: kind={t.rspec['kind']}")
         exit(1)

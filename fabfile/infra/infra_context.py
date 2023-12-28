@@ -1,4 +1,5 @@
-from lib import os_utils, infra_utils
+from lib import os_utils
+from . import modules
 
 
 class InfraContext:
@@ -10,5 +11,5 @@ class InfraContext:
 
     def update(self):
         self.netns_map = os_utils.get_netns_map(self.c)
-        self.docker_ps_map = infra_utils.docker.get_docker_ps_map(self.c)
-        self.docker_image_map = infra_utils.docker.get_docker_image_map(self.c)
+        self.docker_ps_map = modules.docker.get_docker_ps_map(self.c)
+        self.docker_image_map = modules.docker.get_docker_image_map(self.c)

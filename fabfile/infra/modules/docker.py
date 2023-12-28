@@ -1,11 +1,11 @@
 import json
 
 
-def cmd(t):
-    if t.cmd == "dump":
-        print(t.rspec)
-    elif t.cmd == "make":
-        make(t.c, t.rspec)
+def cmd(nctx):
+    if nctx.cmd == "dump":
+        print(nctx.rspec)
+    elif nctx.cmd == "make":
+        make(nctx.c, nctx.rspec)
 
 
 def make(c, rspec):

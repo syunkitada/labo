@@ -6,13 +6,15 @@ from concurrent.futures import ThreadPoolExecutor
 import yaml
 from invoke import context as invoke
 import fabric
-from lib import colors, infra_utils, node_utils, os_utils, spec_utils
+from lib import colors, node_utils, os_utils, spec_utils, task_utils
 from infra import infra_context
+from node import node_context
+from lib.runtime import runtime_context
 from tabulate import tabulate
 
 
 @fabric.task
-def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
+def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_pool_size=5):
     """make -f [spec_file] -t [kind]:[name_regex] -c [cmd] (-p [parallel_pool_size])
 
     # target (default=node)
@@ -43,174 +45,71 @@ def make(c, file, target="node", cmd="make", debug=False, Dryrun=False, parallel
     print(f"completed spec was saved to {completed_spec_file}")
 
     cmds = cmd.split(":")
-    if cmd == "dump-spec":
+    if cmds[0] == "dump-spec":
         print(yaml.safe_dump(spec))
         return
-    elif cmd == "dump-net":
+    elif cmds[0] == "dump-net":
         _dump_net(spec)
         return
-    elif cmd == "dump-vm":
+    elif cmds[0] == "dump-vm":
         _dump_vm(spec)
         return
 
-    context_config = {}
-    context_config.update(
-        {
-            "run": {
-                "echo": True,
-                "echo_format": "{command}",
-            },
-            "sudo": {
-                "echo": True,
-                "echo_format": "{command}",
-            },
-            "local": {
-                "echo": True,
-                "echo_format": "{command}",
-            },
-        }
-    )
-    if os.environ.get("SUDO_USER") is None:
-        print("Use sudo")
-        exit(1)
-
-    c = _new_runtime_context(context_config, spec)
+    c = runtime_context.new(spec)
 
     if cmd == "dump-netdev":
         netns_map = os_utils.get_netns_map(c)
         _dump_netdev(spec, netns_map)
         return
-    elif cmds[0] == "route-trace":
-        _trace_route(cmds[1], c, context_config=context_config, spec=spec, debug=debug)
-        return
 
-    infra_utils.envrc.cmd(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=None, debug=debug, dryrun=Dryrun))
+    re_targets = task_utils.target.get_re_targets(target)
 
-    re_targets = []
-    targets = target.split(":")
-    target_kind = targets[0]
-    if len(targets) > 1:
-        target_strs = targets[1].split(",")
-        for t in target_strs:
-            re_targets.append(re.compile(t))
+    # TODO make_imageはコマンドとして分離する
+    # if target_kind == "image":
+    #     make_image = True
 
-    make_infra = False
-    make_image = False
-    make_node = False
-    if target_kind == "all" or target_kind == "infra":
-        make_infra = True
-    if target_kind == "all" or target_kind == "node":
-        make_node = True
-    if target_kind == "image":
-        make_image = True
+    # if make_image:
+    #     for name, rspec in spec.get("vm_image_map", {}).items():
+    #         if _not_target(rspec, re_targets):
+    #             print(f"{cmd} image {name}: skipped")
+    #             continue
+    #         node_utils.make_vm_image(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
 
-    if make_infra:
-        for rspec in spec.get("infras", []):
-            if _not_target(rspec, re_targets):
-                print(f"{cmd} infra {rspec['name']}: skipped")
-                continue
-            infra_utils.make(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
+    ictx = infra_context.InfraContext(c, spec, debug=debug, dryrun=Dryrun)
+    ictx.update()
 
-    if make_image:
-        for name, rspec in spec.get("vm_image_map", {}).items():
-            if _not_target(rspec, re_targets):
-                print(f"{cmd} image {name}: skipped")
-                continue
-            node_utils.make_vm_image(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
+    results = OrderedDict()
+    node_ctxs = []
+    for rspec in spec.get("nodes", []):
+        if not task_utils.target.is_target(rspec, re_targets):
+            continue
+        node_ctxs.append(
+            node_context.NodeContext(cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun, ictx=ictx)
+        )
+        results[rspec["name"]] = []
 
-    if make_node:
-        ictx = infra_context.InfraContext(c, spec, debug=debug, dryrun=Dryrun)
-        ictx.update()
+    if not Dryrun:
+        _validate_env(c, cmd, node_ctxs)
 
-        ctx_data = {
-            "netns_map": os_utils.get_netns_map(c),
-            "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
-        }
+    while True:
+        with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
+            tmp_results = pool.map(node_utils.make, node_ctxs)
+        for result in tmp_results:
+            results[result["name"]].append(result["result"])
 
-        results = OrderedDict()
-        node_ctxs = []
-        for rspec in spec.get("nodes", []):
-            if _not_target(rspec, re_targets):
-                print(f"{cmd} node {rspec['name']}: skipped")
-                continue
-            node_ctxs.append(
-                NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun, ctx_data=ctx_data, ictx=ictx)
-            )
-            results[rspec["name"]] = []
+        next_node_ctxs = []
+        for t in node_ctxs:
+            # nextがインクリメントされたnode_ctxsのみ次のタスクを実行します
+            if t.next > 0:
+                next_node_ctxs.append(t)
+        if len(next_node_ctxs) == 0:
+            break
+        node_ctxs = next_node_ctxs
 
-        if not Dryrun:
-            _validate_env(c, cmd, node_ctxs)
+    _print_results(results)
+    _dump_scripts(spec, cmd, node_ctxs)
 
-        while True:
-            with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
-                tmp_results = pool.map(node_utils.make, node_ctxs)
-            for result in tmp_results:
-                results[result["name"]].append(result["result"])
-
-            next_node_ctxs = []
-            for t in node_ctxs:
-                # nextがインクリメントされたnode_ctxsのみ次のタスクを実行します
-                if t.next > 0:
-                    next_node_ctxs.append(t)
-            if len(next_node_ctxs) == 0:
-                break
-            node_ctxs = next_node_ctxs
-
-        _print_results(results)
-        _dump_scripts(spec, cmd, node_ctxs)
-
-        return
-
-
-class NodeContext:
-    def __init__(self, context_config, spec, cmd, rspec, debug, dryrun, ctx_data={}, ictx=None):
-        self.c = _new_runtime_context(context_config, spec)
-        self.cmd = cmd
-        self.spec = spec
-        self.rspec = rspec
-        self.ctx_data = ctx_data
-        self.next = 0
-        self.debug = debug
-        self.dryrun = dryrun
-        self.rc = None
-        self.ictx = ictx
-
-
-def _new_runtime_context(context_config, spec):
-    """
-    new_runtime_contextは、ローカルでの実行の場合はinvokeのContextを返し、リモートでの実行の場合はfabricのConnectionを返します。
-    fabricはinvokeを利用されて実装されているので、ある程度の互換性を持っており、どちらを利用してるかを意識せずに実装できます。
-    """
-    common = spec.get("common")
-    host = None
-    connect_kwargs = {}
-    if common is not None:
-        host_pass = common.get("host_pass")
-        if host_pass is not None:
-            context_config["sudo"]["password"] = host_pass
-            connect_kwargs["password"] = host_pass
-        host_user = common.get("host_user")
-        if host_user is not None:
-            context_config["user"] = host_user
-        host = common.get("host")
-    if host is not None:
-        c = fabric.Connection(host, config=fabric.Config(context_config), connect_kwargs=connect_kwargs)
-        c.is_local = False
-    else:
-        c = invoke.Context(config=invoke.Config(context_config))
-        c.is_local = True
-
-    return c
-
-
-def _not_target(rspec, re_targets):
-    if len(re_targets) == 0:
-        return False
-    name = rspec["name"]
-    for r in re_targets:
-        if r.match(name):
-            return False
-    return True
+    return
 
 
 def _print_results(results):
@@ -353,58 +252,58 @@ def _dump_vm(spec):
     print(tabulate(table_rows, headers=headers, stralign="center", numalign="left", tablefmt="simple"))
 
 
-def _trace_route(option, c, context_config, spec, debug):
-    ctx_data = {
-        "netns_map": os_utils.get_netns_map(c),
-        "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
-    }
-    options = option.split("_")
-    srcs = options[0].split(".")
-    dsts = options[1].split(".")
-    src_node = spec["_node_map"][srcs[0]]
-    dst_node = spec["_node_map"][dsts[0]]
-    src_ip = None
-    dst_ip = None
-
-    for link in src_node.get("links", []):
-        for ip in link.get("ips", []):
-            src_ip = ip
-            break
-        if src_ip is not None:
-            break
-    if src_ip is None:
-        for link in src_node.get("_links", []):
-            for ip in link.get("peer_ips", []):
-                src_ip = ip
-                break
-            if src_ip is not None:
-                break
-
-    for link in dst_node.get("links", []):
-        for ip in link.get("ips", []):
-            dst_ip = ip
-            break
-        if dst_ip is not None:
-            break
-    if dst_ip is None:
-        for link in dst_node.get("_links", []):
-            for ip in link.get("peer_ips", []):
-                dst_ip = ip
-                break
-            if dst_ip is not None:
-                break
-
-    task = NodeContext(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
-    src = {
-        "node": src_node,
-        "ip": src_ip,
-    }
-    dst = {
-        "node": dst_node,
-        "ip": dst_ip,
-    }
-    node_utils.trace_route(task, src, dst)
-    return
+# def _trace_route(option, c, context_config, spec, debug):
+#     ctx_data = {
+#         "netns_map": os_utils.get_netns_map(c),
+#         "docker_ps_map": infra_utils.docker.get_docker_ps_map(c),
+#     }
+#     options = option.split("_")
+#     srcs = options[0].split(".")
+#     dsts = options[1].split(".")
+#     src_node = spec["_node_map"][srcs[0]]
+#     dst_node = spec["_node_map"][dsts[0]]
+#     src_ip = None
+#     dst_ip = None
+# 
+#     for link in src_node.get("links", []):
+#         for ip in link.get("ips", []):
+#             src_ip = ip
+#             break
+#         if src_ip is not None:
+#             break
+#     if src_ip is None:
+#         for link in src_node.get("_links", []):
+#             for ip in link.get("peer_ips", []):
+#                 src_ip = ip
+#                 break
+#             if src_ip is not None:
+#                 break
+# 
+#     for link in dst_node.get("links", []):
+#         for ip in link.get("ips", []):
+#             dst_ip = ip
+#             break
+#         if dst_ip is not None:
+#             break
+#     if dst_ip is None:
+#         for link in dst_node.get("_links", []):
+#             for ip in link.get("peer_ips", []):
+#                 dst_ip = ip
+#                 break
+#             if dst_ip is not None:
+#                 break
+# 
+#     task = NodeContext(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
+#     src = {
+#         "node": src_node,
+#         "ip": src_ip,
+#     }
+#     dst = {
+#         "node": dst_node,
+#         "ip": dst_ip,
+#     }
+#     node_utils.trace_route(task, src, dst)
+#     return
 
 
 def _dump_scripts(spec, cmd, tasks):
