@@ -8,7 +8,7 @@ from invoke import context as invoke
 import fabric
 from lib import colors, node_utils, os_utils, spec_utils, task_utils
 from infra import infra_context
-from node import node_context
+from node import node_context, node_manager
 from lib.runtime import runtime_context
 from tabulate import tabulate
 
@@ -93,7 +93,7 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
 
     while True:
         with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
-            tmp_results = pool.map(node_utils.make, node_ctxs)
+            tmp_results = pool.map(node_manager.make, node_ctxs)
         for result in tmp_results:
             results[result["name"]].append(result["result"])
 
@@ -340,7 +340,7 @@ def _validate_env(c, cmd, node_ctxs):
         if image.find("local/") != 0:
             return dependencies
 
-        dockerfile_path = os.path.join(image.replace("local", "images"), "Dockerfile")
+        dockerfile_path = os.path.join(image.replace("local", "images/docker"), "Dockerfile")
         if os.path.exists(dockerfile_path):
             with open(dockerfile_path) as f:
                 for line in f.readlines():
@@ -378,7 +378,7 @@ def _validate_env(c, cmd, node_ctxs):
         cmds = []
         for none_image in keys:
             image_name = none_image.split("local/")[0]
-            cmd = f"./scripts/image.sh create {image_name}"
+            cmd = f"./tools/docker-image.sh create {image_name}"
             cmds.append(cmd)
             print(f"$ {cmd}")
 

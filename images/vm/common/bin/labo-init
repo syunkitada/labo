@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set +x
+echo "start labo-init"
+
+function retry() {
+    local retries=$1
+    shift
+
+    local count=0
+    until "$@"; do
+        exit=$?
+        wait=$((2 ** $count))
+        count=$(($count + 1))
+        if [ $count -lt $retries ]; then
+            echo "Retry $count/$retries exited $exit, retrying in $wait seconds..."
+            sleep $wait
+        else
+            echo "Retry $count/$retries exited $exit, no more retries left."
+            return $exit
+        fi
+    done
+    return 0
+}
+
+# cidataをマウントする
+mkdir -p /mnt/cidata
+
+# mount実行時に以下のエラーで追加できない場合がるのでリトライする
+# mount: special device /dev/disk/by-label/cidata does not exist
+retry 10 mount /dev/disk/by-label/cidata /mnt/cidata
+
+# hostnameの設定
+host=`grep hostname: /mnt/cidata/meta-data | awk '{print $2}'`
+hostname $host
+echo $host > /etc/hostname
+grep "127.0.1.1 $host" /etc/hosts || echo "127.0.1.1 $host" >> /etc/hosts
+
+# sshの設定
+sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+sudo ssh-keygen -A
+systemctl enable ssh
+systemctl enable sshd
+systemctl restart ssh
+systemctl restart sshd
+
+# user-dataのスクリプトを開始
+if [ -e /mnt/cidata/user-data ]; then /bin/bash -Ex /mnt/cidata/user-data; fi
+
+# cidateをアンマウントする
+umount /mnt/cidata
+rm -rf /mnt/cidata

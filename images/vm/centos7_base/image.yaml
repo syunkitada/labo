@@ -1,0 +1,19 @@
+from: local/centos7
+steps:
+  - file:
+      src: ../common/system/labo-init.service
+      dst: /etc/systemd/system/labo-init.service
+      mod: 755
+  - file:
+      src: ../common/bin/labo-init
+      dst: /opt/labo/bin/labo-init
+      mod: 755
+  - cmd: systemctl enable labo-init
+  - cmd: yum remove -y cloud-init
+  - cmd: yum install -y dnsmasq tcpdump
+  - cmd: sed -i  's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+  # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
+  # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
+  - cmd: rm -rf /lib/udev/rules.d/80-net-setup-link.rules
+  # network-scripts/ifcfg-eth0(anacondaで作成された?)が残ってるので削除してく
+  - cmd: rm -rf /etc/sysconfig/network-scripts/ifcfg-eth0

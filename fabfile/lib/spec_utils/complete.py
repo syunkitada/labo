@@ -45,10 +45,10 @@ def complete_spec(spec):
     spec["_infra_map"] = infra_map
     spec["_env_map"] = env_map
 
-    vm_image_map = spec.get("vm_image_map", {})
-    for name, rspec in vm_image_map.items():
-        rspec["name"] = name
-        rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
+    # vm_image_map = spec.get("vm_image_map", {})
+    # for name, rspec in vm_image_map.items():
+    #     rspec["name"] = name
+    #     rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
 
     vpcgw_map = spec.get("vpcgw_map", {})
     for rspec in vpcgw_map.values():
@@ -102,7 +102,8 @@ def complete_spec(spec):
         if rspec["kind"] == "vm":
             vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])
             rspec["_hostname"] = rspec["name"].replace('_', '-') + "." + spec["conf"]["domain"]
-            rspec["_image"] = vm_image_map[rspec["image"]]
+            # FIXME
+            # rspec["_image"] = vm_image_map[rspec["image"]]
             rspec["_vm_dir"] = vm_dir
             rspec["_image_path"] = os.path.join(vm_dir, "img")
             rspec["_monitor_socket_path"] = os.path.join(vm_dir, "monitor.sock")

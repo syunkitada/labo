@@ -10,10 +10,10 @@ function create() {
 	fi
 
 	IMAGE_NAME=${1:?}
-	DOCKER_FILE="./images/${IMAGE_NAME}/Dockerfile"
+	DOCKER_FILE="./images/docker/${IMAGE_NAME}/Dockerfile"
 
 	if [ -e "${DOCKER_FILE}" ]; then
-		sudo docker build -t "local/${IMAGE_NAME}" ./images --file "${DOCKER_FILE}"
+		sudo docker build -t "local/${IMAGE_NAME}" ./images/docker --file "${DOCKER_FILE}"
 	else
 		echo "
 IMAGE_NAME=${IMAGE_NAME}
@@ -26,7 +26,7 @@ Available images are following."
 }
 
 function list() {
-	for image in $(ls ./images); do
+	for image in $(ls ./images/docker); do
 		echo "${image}"
 	done
 }
