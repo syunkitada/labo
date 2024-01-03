@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from collections import OrderedDict
+import re
 import subprocess
 import yaml
 import os
@@ -23,13 +25,48 @@ VM_ROOT = '/mnt/nfs/vms/'
 
 def main():
     if args.action == "list":
-        print("list")
+        list()
     elif args.action == "start":
         start()
+    elif args.action == "stop":
+        stop()
+    elif args.action == "delete":
+        delete()
     elif args.action == "console":
         console()
     elif args.action == "console-log":
         console_log()
+
+def list():
+    vms = OrderedDict()
+    vm_dirs = os.listdir(VM_ROOT)
+    for vm_dir in vm_dirs:
+        vms[vm_dir] = {
+            'status': 'stopped',
+        }
+
+    result = subprocess.run(["bash", "-c", "ps ax | grep '[q]emu-system'"], capture_output=True)
+    for line in result.stdout.splitlines():
+        line = line.decode('utf-8') 
+        bootdisk = re.findall('-drive id=bootdisk1,file=(.*),if=none ', line)
+        if len(bootdisk) != 1:
+            continue
+        splited_bootdisk = bootdisk[0].split("/")
+        vm_name = splited_bootdisk[-2]
+        if vm_name in vms:
+            vms[vm_name]['status'] = 'active'
+
+    for name, vm in vms.items():
+        print(name, vm)
+
+def delete():
+    stop()
+    cmds = ["rm", "-rf", os.path.join(VM_ROOT, args.vm_name[0])]
+    subprocess.run(cmds)
+
+def stop():
+    cmds = ["systemctl", "stop", args.vm_name[0]]
+    subprocess.run(cmds)
 
 def start():
     for name in args.vm_name:
@@ -90,25 +127,14 @@ def start_vm(spec):
         "-nographic",
     ]
     nic_options = []
-    for i, link in enumerate(spec.get("links", [])):
+    for _, link in enumerate(spec.get("links", [])):
         nic_options += [
-            # f"-netdev tap,ifname={link['name']},model=virtio-net-pci,script=no,script=no,downscript=no"
-            "-device", f"virtio-net-pci,netdev=n{i}",
-            "-netdev", f"tap,id=n{i},ifname={link['name']},script=no,downscript=no",
+            "-nic", f"tap,ifname={link['name']},model=virtio-net-pci,mac={link['mac']},script=no,script=no,downscript=no"
         ]
-        # nic_options += [
-        #     f"-nic tap,ifname={link['peer_name']},model=virtio-net-pci,mac={link['peer_mac']},script=no,script=no,downscript=no"
-        # ]
-
-    result = subprocess.run(["bash", "-c", f"ip netns | grep '^{spec['_name']}$'"])
-    if result.returncode == 1:
-        subprocess.run(["ip", "netns", "add", spec['_name']])
-
-    # subprocess.run(['ip', 'link', 'set', 'VM1_0_GW1', 'netns', 'centos7-VM1'])
 
     qemu_cmd += nic_options
-    subprocess.run(["systemctl", "reset-failed", "centos7-VM1"])
-    cmds = ["systemd-run", "-E", "NetworkNamespacePath=/var/run/netns/centos7-VM1", "--unit", spec['_name'], '--'] + qemu_cmd
+    subprocess.run(["systemctl", "reset-failed", spec['_name']])
+    cmds = ["systemd-run", "--unit", spec['_name'], '--'] + qemu_cmd
     print(cmds)
     subprocess.run(cmds)
 
@@ -149,17 +175,17 @@ def make_config_drive(spec):
         "sed -i '$ i %admin ALL=(ALL) ALL' /etc/sudoers",
     ]
 
-    # for i, link in enumerate(spec.get("_links", [])):
-    #     userdata += [
-    #         f"dev{i}=`grep {link['peer_mac']} /sys/class/net/*/address -l | awk -F '/' '{{print $5}}'`",
-    #         f"ip link set $dev{i} up",
-    #     ]
-    #     for ip in link.get("peer_ips", []):
-    #         userdata += [f"ip addr add {ip['inet']} dev $dev{i}"]
+    for i, link in enumerate(spec.get("links", [])):
+        userdata += [
+            f"dev{i}=`grep {link['mac']} /sys/class/net/*/address -l | awk -F '/' '{{print $5}}'`",
+            f"ip link set $dev{i} up",
+        ]
+        for inet in link.get("inets", []):
+            userdata += [f"ip addr add {inet} dev $dev{i}"]
 
-    # # setup routes
-    # for route in rspec.get("routes", []):
-    #     userdata += [f"ip route add {route['dst']} via {route['via']}"]
+    # setup routes
+    for route in spec.get("routes", []):
+        userdata += [f"ip route add {route['dst']} via {route['via']}"]
 
     # # osによって挙動を変える場合
     # if rspec["_image"]["base"] == "centos7":
@@ -191,33 +217,33 @@ def make_config_drive(spec):
     #         "systemctl restart systemd-resolved",
     #     ]
 
-    #     # resize ext4
-    #     userdata += [
-    #         # 初回起動時は実際のスペースが異なるのでFixする必要がある
-    #         # Warning: Not all of the space available to /dev/vda appears to be used, ... Fix/Ignore?
-    #         "parted '/dev/vda' ---pretend-input-tty <<EOF",
-    #         "resizepart",
-    #         "Fix",
-    #         "quit",
-    #         "EOF",
-    #         # 空きをすべて割り当てる
-    #         "parted '/dev/vda' ---pretend-input-tty <<EOF",
-    #         "resizepart",
-    #         "1",
-    #         "Yes",
-    #         "100%",
-    #         "quit",
-    #         "EOF",
-    #         # ext4のオンラインリサイズ
-    #         "resize2fs /dev/vda1",
-    #     ]
+    # resize ext4
+    # userdata += [
+    #     # 初回起動時は実際のスペースが異なるのでFixする必要がある
+    #     # Warning: Not all of the space available to /dev/vda appears to be used, ... Fix/Ignore?
+    #     "parted '/dev/vda' ---pretend-input-tty <<EOF",
+    #     "resizepart",
+    #     "Fix",
+    #     "quit",
+    #     "EOF",
+    #     # 空きをすべて割り当てる
+    #     "parted '/dev/vda' ---pretend-input-tty <<EOF",
+    #     "resizepart",
+    #     "1",
+    #     "Yes",
+    #     "100%",
+    #     "quit",
+    #     "EOF",
+    #     # ext4のオンラインリサイズ
+    #     "resize2fs /dev/vda1",
+    # ]
 
-    # nfs = rspec.get("nfs")
-    # if nfs is not None:
-    #     userdata += [
-    #         f"mkdir -p {nfs['path']}",
-    #         f"mount -t nfs {nfs['target']}:/ {nfs['path']}",
-    #     ]
+    nfs = spec.get("nfs")
+    if nfs is not None:
+        userdata += [
+            f"mkdir -p {nfs['path']}",
+            f"mount -t nfs {nfs['target']}:/ {nfs['path']}",
+        ]
 
     with open(spec["_userdata_path"], "w") as f:
         f.write("\n".join(userdata))

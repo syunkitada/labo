@@ -133,20 +133,6 @@ def custom(spec):
     except Exception as e:
         print(f"Failed run_steps: {e}")
 
-    # rspec["_tmp_mount_path"] = tmp_mount_path
-    # if rspec["base"] == "centos7":
-    #     _custom_common(c, spec, rspec)
-    #     _custom_centos7(c, spec, rspec)
-    # elif rspec["base"] == "rocky8":
-    #     _custom_common(c, spec, rspec)
-    #     _custom_rocky8(c, spec, rspec)
-    # elif rspec["base"] == "ubuntu20":
-    #     _custom_common(c, spec, rspec)
-    #     _ubuntu_common(c, spec, rspec)
-    # elif rspec["base"] == "ubuntu22":
-    #     _custom_common(c, spec, rspec)
-    #     _ubuntu_common(c, spec, rspec)
-
     umount(spec)
     subprocess.run(["cp", tmp_image_path, spec['_image_path']])
     return

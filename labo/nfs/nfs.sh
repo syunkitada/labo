@@ -3,18 +3,18 @@
 COMMAND="${@:-help}"
 
 function help() {
-    cat << EOS
+	cat <<EOS
 setup
 EOS
 }
 
 function setup() {
-    sudo apt install -y nfs-kernel-server nfs-common
+	sudo apt install -y nfs-kernel-server nfs-common
 
-    sudo mkdir -p /var/nfs/exports
-    sudo chown nobody.nogroup /var/nfs/exports
+	sudo mkdir -p /var/nfs/exports
+	sudo chown nobody.nogroup /var/nfs/exports
 
-cat << EOS | sudo tee /etc/exports
+	cat <<EOS | sudo tee /etc/exports
 # /etc/exports: the access control list for filesystems which may be exported
 #               to NFS clients.  See exports(5).
 #
@@ -27,17 +27,18 @@ cat << EOS | sudo tee /etc/exports
 #
 
 /var/nfs/exports 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
-/var/nfs/exports 192.168.100.0/24(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+/var/nfs/exports 10.0.0.0/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+/var/nfs/exports 172.16.0.0/12(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+/var/nfs/exports 192.168.0.0/16(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
 EOS
 
-    # exportfs
-    # NFSでエクスポートしているファイルシステムのテーブルを管理するために使うコマンド
-    # -a すべてのディレクトリをexport/unexportする
-    # -r すべてのディレクトリを再exportする、/var/lib/nfs/xtabを/etc/exportsと同期させる
-    sudo exportfs -ra
+	# exportfs
+	# NFSでエクスポートしているファイルシステムのテーブルを管理するために使うコマンド
+	# -a すべてのディレクトリをexport/unexportする
+	# -r すべてのディレクトリを再exportする、/var/lib/nfs/xtabを/etc/exportsと同期させる
+	sudo exportfs -ra
 
-    sudo mount -t nfs localhost:/ /mnt/nfs
+	sudo mount -t nfs localhost:/ /mnt/nfs
 }
-
 
 $COMMAND

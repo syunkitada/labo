@@ -58,8 +58,6 @@ def complete_spec(spec):
     _node_map = {}
     spec["_node_map"] = _node_map
     peer_links_map = {}
-    for rspec in spec.get("nodes", []):
-        peer_links_map[rspec["name"]] = []
 
     def apply_template(rspec):
         if "templates" not in rspec:
@@ -74,9 +72,9 @@ def complete_spec(spec):
         update_dict(tmp_spec, rspec)
         rspec.update(tmp_spec)
 
-    def _complete_node(i, rspec):
+    for rspec in spec.get("nodes", []):
+        peer_links_map[rspec["name"]] = []
         _node_map[rspec["name"]] = rspec
-
         apply_template(rspec)
         update_dict(rspec, node_map.get(rspec["name"], {}))
         for link in rspec.get("links", []):
@@ -84,6 +82,7 @@ def complete_spec(spec):
         if "frr" in rspec:
             apply_template(rspec["frr"])
 
+    def _complete_node(i, rspec):
         _complete_links(i, spec, rspec, rspec.get("links", []))
 
         for link in rspec.get("links", []):
@@ -341,6 +340,10 @@ def _complete_links(i, spec, rspec, links):
         _complete_ips(link.get("peer_ips", []), spec, rspec)
         if "mtu" not in link:
             link["mtu"] = rspec.get("mtu", 1500)
+        if spec['_node_map'][link['peer']]['kind'] == 'vm':
+            link["kind"] = "tap"
+        else:
+            link["kind"] = "veth"
         link["src_name"] = rspec["name"]
         link["link_name"] = f"{rspec['name']}_{j}_{link['peer']}"
         link["peer_name"] = f"{link['peer']}_{j}_{rspec['name']}"

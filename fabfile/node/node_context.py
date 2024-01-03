@@ -1,7 +1,7 @@
 from lib.runtime import runtime_context
 import os
 import re
-import yaml
+import yaml as pyyaml
 from lib import colors
 
 re_route = re.compile("(\S+) from (\S+) dev (\S+)")
@@ -84,6 +84,15 @@ class NodeContext:
 
         cmds.clear()
 
+    def write(self, file_path, txt=None, yaml=None, is_local=False):
+        if yaml is not None:
+            txt = pyyaml.dump(yaml, default_flow_style=False)
+        if txt is None:
+            raise Exception("txt is None")
+        if is_local:
+            with open(file_path, "w") as f:
+                f.write(txt)
+
     def exist_netdev(self, netdev):
         return self.rspec["_hostname"] in self.netns_map and netdev in self.netns_map[self.rspec["_hostname"]]["netdev_map"]
 
@@ -105,6 +114,8 @@ class NodeContext:
             cmds += [(f"ip addr add {ip['inet']} dev {dev}", skipped)]
 
     def append_local_cmds_add_link(self, cmds, link):
+        if link["kind"] != "veth":
+            return
         skipped = self.exist_netdev(link["link_name"])
         cmds += [(f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", skipped)]
 
