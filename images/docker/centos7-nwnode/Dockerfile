@@ -30,7 +30,7 @@ RUN yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-trai
     yum install -y openvswitch python-openvswitch
 
 # tools
-RUN yum install -y tcpdump traceroute vim ethtool sudo iputils httpd
+RUN yum install -y tcpdump traceroute vim ethtool sudo iputils httpd iptables
 
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]

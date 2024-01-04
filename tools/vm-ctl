@@ -59,14 +59,17 @@ def list():
     for name, vm in vms.items():
         print(name, vm)
 
+
 def delete():
     stop()
     cmds = ["rm", "-rf", os.path.join(VM_ROOT, args.vm_name[0])]
     subprocess.run(cmds)
 
+
 def stop():
     cmds = ["systemctl", "stop", args.vm_name[0]]
     subprocess.run(cmds)
+
 
 def start():
     for name in args.vm_name:
@@ -167,13 +170,20 @@ def make_config_drive(spec):
 
     # userの設定
     userdata += [
-        "groupadd admin",
-        "useradd -g admin admin",
-        "echo 'admin:admin' | chpasswd",
-        "mkdir -p /home/admin",
-        "chown -R admin:admin /home/admin",
-        "sed -i '$ i %admin ALL=(ALL) ALL' /etc/sudoers",
+        f"groupadd {spec['user']['name']}",
+        f"useradd -g {spec['user']['group']} {spec['user']['name']}",
+        f"echo '{spec['user']['name']}:{spec['user']['password']}' | chpasswd",
+        f"mkdir -p /home/{spec['user']['name']}",
+        f"chown -R {spec['user']['name']}:{spec['user']['group']} /home/{spec['user']['name']}",
+        f"sed -i '$ i %{spec['user']['name']} ALL=(ALL) NOPASSWD:ALL' /etc/sudoers",
     ]
+
+    with open(f"/root/.ssh/labo.pem.pub", "r") as f:
+        authorized_key = f.read()
+        userdata += [
+            "mkdir -p /home/admin/.ssh",
+            f'echo "{authorized_key}" > /home/admin/.ssh/authorized_keys',
+        ]
 
     for i, link in enumerate(spec.get("links", [])):
         userdata += [
@@ -183,60 +193,11 @@ def make_config_drive(spec):
         for inet in link.get("inets", []):
             userdata += [f"ip addr add {inet} dev $dev{i}"]
 
-    # setup routes
     for route in spec.get("routes", []):
         userdata += [f"ip route add {route['dst']} via {route['via']}"]
 
-    # # osによって挙動を変える場合
-    # if rspec["_image"]["base"] == "centos7":
-    #     # setup resolver
-    #     userdata += ["cat << 'EOS' > /etc/resolv.conf"]
-    #     for resolver in rspec.get("resolvers", []):
-    #         userdata += [f"nameserver {resolver}"]
-    #     userdata += ["EOS"]
-    # elif rspec["_image"]["base"] in ["ubuntu20", "ubuntu22"]:
-    #     userdata += [
-    #         "mkdir -p /etc/systemd/resolved.conf.d/",
-    #         "cat << 'EOT' > /etc/systemd/resolved.conf.d/labo.conf",
-    #     ]
-    #     for resolver in rspec.get("resolvers", []):
-    #         userdata += [
-    #             "[Resolve]",
-    #             f"DNS={resolver}",
-    #             # FallbackDNS=
-    #             # Domains=
-    #             "LLMNR=no",
-    #             "MulticastDNS=no",
-    #             "DNSSEC=no",
-    #             "Cache=yes",
-    #             "DNSStubListener=yes",
-    #         ]
-    #     userdata += [
-    #         "EOT",
-    #         "systemctl enable systemd-resolved",
-    #         "systemctl restart systemd-resolved",
-    #     ]
-
-    # resize ext4
-    # userdata += [
-    #     # 初回起動時は実際のスペースが異なるのでFixする必要がある
-    #     # Warning: Not all of the space available to /dev/vda appears to be used, ... Fix/Ignore?
-    #     "parted '/dev/vda' ---pretend-input-tty <<EOF",
-    #     "resizepart",
-    #     "Fix",
-    #     "quit",
-    #     "EOF",
-    #     # 空きをすべて割り当てる
-    #     "parted '/dev/vda' ---pretend-input-tty <<EOF",
-    #     "resizepart",
-    #     "1",
-    #     "Yes",
-    #     "100%",
-    #     "quit",
-    #     "EOF",
-    #     # ext4のオンラインリサイズ
-    #     "resize2fs /dev/vda1",
-    # ]
+    if 'resolvers' in spec:
+        userdata += [f"/opt/labo/bin/init-resolver {' '.join(spec['resolvers'])}"]
 
     nfs = spec.get("nfs")
     if nfs is not None:

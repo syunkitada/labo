@@ -99,20 +99,9 @@ def complete_spec(spec):
             _complete_ips(rspec["l3admin"].get("ips", []), spec, rspec)
 
         if rspec["kind"] == "vm":
-            vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])
             rspec["_hostname"] = rspec["name"].replace('_', '-') + "." + spec["conf"]["domain"]
-            # FIXME
-            # rspec["_image"] = vm_image_map[rspec["image"]]
-            rspec["_vm_dir"] = vm_dir
-            rspec["_image_path"] = os.path.join(vm_dir, "img")
-            rspec["_monitor_socket_path"] = os.path.join(vm_dir, "monitor.sock")
-            rspec["_serial_socket_path"] = os.path.join(vm_dir, "serial.sock")
-            rspec["_serial_log_path"] = os.path.join(vm_dir, "serial.log")
-            rspec["_config_image_path"] = os.path.join(vm_dir, "config.img")
-            rspec["_metadata_path"] = os.path.join(vm_dir, "meta-data")
-            rspec["_userdata_path"] = os.path.join(vm_dir, "user-data")
 
-        if rspec["kind"] == "container":
+        elif rspec["kind"] == "container":
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
             _complete_ips(rspec.get("lo_ips", []), spec, rspec)
             for bridge in rspec.get("bridges", []):
@@ -177,9 +166,6 @@ def complete_spec(spec):
             if "vpcgw" in rspec:
                 rspec["_vpcgw"] = vpcgw_map[rspec["vpcgw"]]
 
-        # end if rspec["kind"] == "container":
-        else:
-            rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
 
         for route in rspec.get("routes", []):
             route["dst"] = _complete_value(route["dst"], spec, rspec)

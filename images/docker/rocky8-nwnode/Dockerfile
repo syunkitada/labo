@@ -26,8 +26,10 @@ RUN yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga
     yum install -y rdo-openvswitch python3-rdo-openvswitch
 
 # tools
-RUN yum install -y tcpdump traceroute vim ethtool sudo iputils httpd wireshark
-RUN yum install -y man
+RUN yum install -y vim sudo man \
+                   iptables iputils ethtool \
+                   tcpdump traceroute wireshark \
+                   httpd
 
 RUN ls /lib/systemd/system/*.wants/* | grep -v journald | xargs rm -rf
 RUN systemctl disable rpcbind && \

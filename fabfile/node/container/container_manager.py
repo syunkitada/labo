@@ -126,6 +126,13 @@ def _make_prepare(nctx):
     ]
     nctx.exec(lcmds, title="prepare-docker", skipped=(rspec["_hostname"] in nctx.docker_ps_map), is_local=True)
 
+    lcmds = []
+    for route in rspec.get("local_routes", []):
+        lcmds += [
+            "ipaddr=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' " + rspec['_hostname'] + ")",
+            "ip route | grep \"" + route['dst'] + " via ${ipaddr}\" || ip route add " + route['dst'] + " via ${ipaddr}",
+        ]
+    nctx.exec(lcmds, title="local_routes", is_local=True)
 
 def _make(nctx):
     rspec = nctx.rspec

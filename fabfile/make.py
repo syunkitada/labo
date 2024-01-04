@@ -64,17 +64,6 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
 
     re_targets = task_utils.target.get_re_targets(target)
 
-    # TODO make_imageはコマンドとして分離する
-    # if target_kind == "image":
-    #     make_image = True
-
-    # if make_image:
-    #     for name, rspec in spec.get("vm_image_map", {}).items():
-    #         if _not_target(rspec, re_targets):
-    #             print(f"{cmd} image {name}: skipped")
-    #             continue
-    #         node_utils.make_vm_image(NodeContext(context_config=context_config, cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
-
     ictx = infra_context.InfraContext(c, spec, debug=debug, dryrun=Dryrun)
     ictx.update()
 
@@ -306,22 +295,20 @@ def _dump_vm(spec):
 #     return
 
 
-def _dump_scripts(spec, cmd, tasks):
+def _dump_scripts(spec, cmd, nodes):
     script_path = os.path.join(spec["_script_dir"], f"{cmd}.sh")
     separator = "#" + "-" * 100
     cmds = []
-    for t in tasks:
-        if t.rc is None:
-            continue
+    for nctx in nodes:
         cmds += [
             separator,
-            f"# {t.rspec['name']} start",
+            f"# {nctx.rspec['name']} start",
             separator,
         ]
-        cmds += t.rc.full_cmds
+        cmds += nctx.full_cmds
         cmds += [
             separator,
-            f"# {t.rspec['name']} end",
+            f"# {nctx.rspec['name']} end",
             separator,
             "",
         ]
@@ -378,7 +365,7 @@ def _validate_env(c, cmd, node_ctxs):
         cmds = []
         for none_image in keys:
             image_name = none_image.split("local/")[0]
-            cmd = f"./tools/docker-image.sh create {image_name}"
+            cmd = f"docker-image create {image_name}"
             cmds.append(cmd)
             print(f"$ {cmd}")
 

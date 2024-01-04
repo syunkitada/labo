@@ -20,6 +20,11 @@ def make(nctx):
             _make_prepare(nctx)
             nctx.next = 1
         elif nctx.next == 1:
+            # gateway側のルートの設定を待つ
+            # VMはsshでコマンドを実行するため、先にVMへのルートができるのを待つ
+            _wait_for_active(nctx)
+            nctx.next = 2
+        elif nctx.next == 2:
             _make(nctx)
             nctx.next = -1
     elif nctx.cmd == "clean":
@@ -48,6 +53,7 @@ def _cmd(nctx, cmd):
 
 
 def _make_prepare(nctx):
+    spec = nctx.spec
     rspec = nctx.rspec
     os.makedirs(rspec["_script_dir"], exist_ok=True)
     nctx.c.sudo(f"rm -rf {rspec['_script_dir']}/*", hide=True)
@@ -75,18 +81,24 @@ def _make_prepare(nctx):
         "disk": nctx.rspec["disk"],
         "links": links,
         "routes": rspec.get("routes", []),
-        # "nfs": {
-        #     "target": "",
-        #     "path": "",
-        # },
+        "nfs": spec["common"]["nfs"],
+        "resolvers": spec.get("common", {}).get("resolvers", []),
+        "user": nctx.rspec["user"],
     }
     nctx.write(f"/mnt/nfs/vms/{nctx.rspec['_hostname']}/vm.yaml", yaml=vm_yaml, is_local=True)
 
     lcmds = [
-        f"./tools/vm-ctl/main.py start {nctx.rspec['_hostname']}",
+        f"vm-ctl start {nctx.rspec['_hostname']}",
     ]
     nctx.exec(lcmds, title="prepare-vm", is_local=True)
 
 
-def _make(nctx):
+def _wait_for_active(nctx):
+    # TODO
     pass
+
+def _make(nctx):
+    rspec = nctx.rspec
+
+    if "cmds" in rspec:
+        nctx.exec(rspec.get("cmds", []), title="cmds")

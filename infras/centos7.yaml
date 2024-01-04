@@ -7,6 +7,8 @@ common:
   nfs:
     path: /mnt/nfs
     target: 192.168.10.121
+  resolvers:
+    - 192.168.10.121
 
 template_map:
   node:
@@ -31,8 +33,12 @@ template_map:
     ram: 4096
     disk: 40
     routes:
-      dst: default
-      via: 10.11.1.1
+      - dst: default
+        via: 10.11.1.1
+    user:
+      name: admin
+      password: admin
+      group: admin
 
 nodes:
   - name: GW1
@@ -43,6 +49,9 @@ nodes:
       - name: l2-br
         ips:
           - inet: <%=gateway_inet4(gw_network1)%>
+    local_routes:
+      - dst: 10.11.1.0/24
+        via: self
     routes:
       - dst: 10.11.0.0/16
         via: 10.11.1.2 dev l2-br
@@ -56,11 +65,13 @@ nodes:
         peer_ips:
           - inet: <%=assign_inet4(gw_network1)%>
     cmds:
-      - yum install -y iptables
       - iptables -t nat -L | grep 'MASQUERADE.*all.*10.11.0.0/16' || iptables -t nat -A POSTROUTING -p all -s 10.11.0.0/16 -j MASQUERADE
   - name: VM1
     templates:
       - vm
+    cmds:
+      - echo "hello hoge"
+      - echo "hello hoge" > /tmp/hoge
   - name: VM2
     templates:
       - vm

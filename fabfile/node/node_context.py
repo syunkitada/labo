@@ -16,14 +16,30 @@ class NodeContext:
         self.next = 0
         self.debug = debug
         self.dryrun = dryrun
-        self.rc = None  # fix?
         self.ictx = ictx
-        self.runtime = None  # fix?
         self.full_cmds = []
         self.childs = []
         if ictx is not None:
             self.netns_map = ictx.netns_map
             self.docker_ps_map = ictx.docker_ps_map
+
+    def _cmd(self, exec_filepath, log_filepath=None, is_local=False):
+        cmd = ""
+        if log_filepath is None:
+                cmd = f"bash -ex {exec_filepath}"
+        else:
+            if self.debug:
+                cmd = f"bash -ex {exec_filepath} 2>&1 | tee {log_filepath}"
+            else:
+                cmd = f"bash -ex {exec_filepath} &> {log_filepath}"
+
+        if is_local:
+            return cmd
+        elif self.rspec["kind"] == "container":
+            return f"docker exec {self.rspec['_hostname']} {cmd}"
+        elif self.rspec["kind"] == "vm":
+            return f"ssh -i /root/.ssh/labo.pem admin@10.11.1.2 sudo {cmd}"
+        return cmd
 
     def exec_without_log(self, cmd, *args, **kwargs):
         return self.c.sudo(f"docker exec {self.rspec['_hostname']} {cmd}", *args, **kwargs)
@@ -55,30 +71,24 @@ class NodeContext:
                     exec_cmds.append(cmd)
                 full_cmds.append(cmd)
 
-        with open(exec_filepath, "w") as f:
-            cmds_str = "\n".join(exec_cmds) + "\n"
-            if not is_local:
-                cmds_str = f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{cmds_str}'\n"
-            f.write(cmds_str)
-
         if len(exec_cmds) > 0:
+            with open(exec_filepath, "w") as f:
+                cmds_str = "\n".join(exec_cmds) + "\n"
+                f.write(cmds_str)
+
             if not self.dryrun:
-                if self.debug:
-                    self.c.sudo(f"bash -c 'bash -ex {exec_filepath} 2>&1 | tee {log_filepath}'")
-                else:
-                    self.c.sudo(f"bash -c 'bash -ex {exec_filepath} &> {log_filepath}'")
+                self.c.sudo(self._cmd(exec_filepath, log_filepath, is_local))
             else:
                 print(f"skipped exec {exec_filepath}, because of dryrun mode")
 
         with open(full_filepath, "w") as f:
             full_cmds_str = "\n".join(full_cmds) + "\n"
-            if not is_local:
-                full_cmds_str = f"docker exec {self.rspec['_hostname']} bash -ex -c '\n{full_cmds_str}'\n"
             f.write(full_cmds_str)
 
+        cmd = self._cmd(full_filepath, None, is_local)
         self.full_cmds += [
             f"# {self.rspec['name']}: {comment_name_prefix} {'-'*(80-len(comment_name_prefix))}",
-            full_cmds_str,
+            cmd,
             "",
         ]
 

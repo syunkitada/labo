@@ -1,0 +1,4 @@
+source .venv/bin/activate
+
+TOOLS_DIR=$(dirname $0)/tools
+export PATH="$TOOLS_DIR:$PATH"

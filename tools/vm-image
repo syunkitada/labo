@@ -20,7 +20,7 @@ VM_IMAGE_DIR = os.path.join(os.path.dirname(__file__), '../../images/vm')
 
 def main():
     if args.action == "list":
-        print("list")
+        list()
     else:
         if len(args.image_name) == 0:
             p.error(f"{args.action} require image_name")
@@ -40,9 +40,14 @@ def main():
             umount(spec)
 
 
+def list():
+    subprocess.run(["ls", VM_IMAGE_DIR])
+
+
 def delete(spec):
     if os.path.exists(spec["_image_path"]):
         subprocess.run(["rm", "-rf", spec["_image_path"]])
+
 
 def create(spec):
     os.makedirs(VM_IMAGE_DIR, exist_ok=True)
@@ -150,9 +155,9 @@ def run_steps(spec):
             dst_path = os.path.join(spec['_tmp_mount_path'], dst)
             dst_dir_path = os.path.dirname(dst_path)
             subprocess.run(["mkdir", "-p", dst_dir_path])
-            subprocess.run(["cp", src_path, dst_path])
-            print("debug cp", src_path, dst_path)
-            subprocess.run(["chmod", str(step['file']['mod']), dst_path])
+            subprocess.run(["cp", "-r", src_path, dst_path])
+            if 'mod' in step['file']:
+                subprocess.run(["chmod", str(step['file']['mod']), dst_path])
         elif 'cmd' in step:
             subprocess.run(["chroot", spec['_tmp_mount_path'], "bash", "-xec", step['cmd']])
 

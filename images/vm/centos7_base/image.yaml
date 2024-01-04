@@ -5,9 +5,8 @@ steps:
       dst: /etc/systemd/system/labo-init.service
       mod: 755
   - file:
-      src: ../common/bin/labo-init
-      dst: /opt/labo/bin/labo-init
-      mod: 755
+      src: ../common/bin
+      dst: /opt/labo/bin
   - cmd: systemctl enable labo-init
   - cmd: yum remove -y cloud-init
   - cmd: yum install -y dnsmasq tcpdump
