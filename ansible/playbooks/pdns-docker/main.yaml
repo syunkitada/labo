@@ -27,6 +27,11 @@
                       pschiffe/pdns-mysql
           )
 
+    - name: stop systemd-resolved
+      when: ansible_facts['os_family'] == "Debian"
+      ansible.builtin.shell: |
+        systemctl stop systemd-resolved
+
     - name: start pdns-recursor
       ansible.builtin.shell: |
         sudo docker ps | grep pdns-recursor && sudo docker kill pdns-recursor || echo "pdns-recursor not found"

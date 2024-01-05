@@ -1,54 +1,83 @@
+ipam:
+  gw_network1:
+    subnet: 10.11.1.0/24
+    kind: l2
+
 common:
-  namespace: local
+  nfs:
+    path: /mnt/nfs
+    target: 192.168.10.121
+  resolvers:
+    - 192.168.10.121
 
-infras:
-  - kind: mysql
-    name: mysql
-  - kind: pdns
-    name: resolver
-    ns: 192.168.210.1
-    records:
-      - type: a
-        name: docker-registry
-        content: 192.168.210.1
-  - kind: nfs
-    name: nfs
-    path: /var/nfs/exports
-    local_path: /mnt/nfs
-    exports:
-      - 192.168.210.0/24
-
-vm_images:
-  - name: centos7
-    url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2.xz
-    nfs: nfs1
-  - name: centos7_custom
-    base: centos7
-
-templates:
-  - name: vm1
+template_map:
+  node:
+    kind: container
+    image: local/rocky8-nwnode:latest
+    mtu: 9000
+    sysctl_map:
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.default.accept_ra: 0
+      net.ipv6.conf.all.accept_ra: 0
+      net.ipv6.conf.default.forwarding: 1
+      net.ipv6.conf.all.forwarding: 1
+      net.ipv4.conf.default.rp_filter: 0
+      net.ipv4.conf.all.rp_filter: 0
+      net.ipv4.conf.default.forwarding: 1
+      net.ipv4.conf.all.forwarding: 1
+  vm:
     kind: vm
+    image: centos7_base
     vcpus: 4
     ram: 4096
     disk: 40
-    image: centos7_custom
     routes:
-      default: 192.168.210.1
-    resolvers:
-      - 192.168.210.1
+      - dst: default
+        via: 10.11.1.1
+    user:
+      name: admin
+      password: admin
+      group: admin
 
 nodes:
-  - kind: gw
-    name: gw1
-    ip: 192.168.210.1/24
+  - name: GW1
+    network: bridge
+    templates:
+      - node
+    bridges:
+      - name: l2-br
+        ips:
+          - inet: <%=gateway_inet4(gw_network1)%>
+    local_routes:
+      - dst: 10.11.1.0/24
+        via: self
+    routes:
+      - dst: 10.11.0.0/16
+        via: 10.11.1.2 dev l2-br
     links:
-      - peer: vm1
+      - peer: VM1
+        bridge: l2-br
         peer_ips:
-          - inet: 192.168.210.11/24
-      - peer: vm2
+          - inet: <%=assign_inet4(gw_network1)%>
+      - peer: VM2
+        bridge: l2-br
         peer_ips:
-          - inet: 192.168.210.12/24
-  - name: vm1
-    templates: [vm1]
-  - name: vm2
-    templates: [vm1]
+          - inet: <%=assign_inet4(gw_network1)%>
+    cmds:
+      - iptables -t nat -L | grep 'MASQUERADE.*all.*10.11.0.0/16' || iptables -t nat -A POSTROUTING -p all -s 10.11.0.0/16 -j MASQUERADE
+  - name: VM1
+    templates:
+      - vm
+    cmds:
+      - echo "hello hoge"
+      - echo "hello hoge" > /tmp/hoge
+    # ansible:
+    #   vars:
+    #     docker:
+    #       insecure_docker_registry: docker-registry.local.example.com:5000
+    #   plays:
+    #     - docker
+  - name: VM2
+    templates:
+      - vm

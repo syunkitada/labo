@@ -7,9 +7,14 @@ steps:
   - file:
       src: ../common/bin
       dst: /opt/labo/bin
+  - file:
+      src: /etc/resolv.conf
+      dst: /etc/resolv.conf
   - cmd: systemctl enable labo-init
   - cmd: yum remove -y cloud-init
-  - cmd: yum install -y dnsmasq tcpdump
+  - cmd: yum install -y dnsmasq tcpdump python3
+  - cmd: pip3 install --upgrade pip
+  - cmd: export LANG=C.UTF-8; export LC_ALL=en_US.UTF-8; pip3 install ansible
   - cmd: sed -i  's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
   # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
   # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう

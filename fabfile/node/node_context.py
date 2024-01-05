@@ -98,6 +98,18 @@ class NodeContext:
         if is_local:
             with open(file_path, "w") as f:
                 f.write(txt)
+        else:
+            if file_path[0] != "/":
+                raise Exception("invalid file_path: {file_path}")
+            tmp_file_path = os.path.join(self.rspec["_script_dir"], file_path[1:])
+            os.makedirs(os.path.dirname(tmp_file_path), exist_ok=True)
+            with open(tmp_file_path, "w") as f:
+                f.write(txt)
+            cmds = [
+                f"mkdir -p {os.path.dirname(file_path)}",
+                f"cp {tmp_file_path} {file_path}",
+            ]
+            self.exec(cmds)
 
     def exist_netdev(self, netdev):
         return self.rspec["_hostname"] in self.netns_map and netdev in self.netns_map[self.rspec["_hostname"]]["netdev_map"]
@@ -175,6 +187,12 @@ class NodeContext:
         ]
 
     def ansible(self, ansible):
-        print("ansible start")
-        print(ansible['vars'])
-        print(ansible['plays'])
+        self.write("/etc/ansible/vars.yaml", pyyaml.dump(ansible['vars']))
+        cmds = [
+            "export PATH=$PATH:/usr/local/bin",
+        ]
+        for play in ansible.get("plays", []):
+            cmds += [
+                f"ansible-playbook /mnt/nfs/labo/ansible/playbooks/{play}/main.yaml",
+            ]
+        self.exec(cmds)

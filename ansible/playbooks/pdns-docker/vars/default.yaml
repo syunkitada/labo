@@ -1,4 +1,4 @@
-local_address: 127.0.0.1
+local_address: 0.0.0.0
 domains:
   - example.com
 records:

@@ -16,7 +16,7 @@ args = p.parse_args()
 
 IMAGE_ROOT = '/mnt/nfs/vm_images/'
 
-VM_IMAGE_DIR = os.path.join(os.path.dirname(__file__), '../../images/vm')
+VM_IMAGE_DIR = os.path.join(os.path.dirname(__file__), '../images/vm')
 
 def main():
     if args.action == "list":
