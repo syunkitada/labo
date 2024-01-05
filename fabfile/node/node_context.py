@@ -8,7 +8,7 @@ re_route = re.compile("(\S+) from (\S+) dev (\S+)")
 
 
 class NodeContext:
-    def __init__(self, spec, cmd, rspec, debug, dryrun, ictx=None):
+    def __init__(self, spec, cmd, rspec, debug, dryrun):
         self.c = runtime_context.new(spec)
         self.cmd = cmd
         self.spec = spec
@@ -16,12 +16,8 @@ class NodeContext:
         self.next = 0
         self.debug = debug
         self.dryrun = dryrun
-        self.ictx = ictx
         self.full_cmds = []
         self.childs = []
-        if ictx is not None:
-            self.netns_map = ictx.netns_map
-            self.docker_ps_map = ictx.docker_ps_map
 
     def _cmd(self, exec_filepath, log_filepath=None, is_local=False):
         cmd = ""
@@ -34,7 +30,7 @@ class NodeContext:
                 cmd = f"bash -ex {exec_filepath} &> {log_filepath}"
 
         if is_local:
-            return cmd
+            return f"PATH={os.environ['PATH']} {cmd}"
         elif self.rspec["kind"] == "container":
             return f"docker exec {self.rspec['_hostname']} {cmd}"
         elif self.rspec["kind"] == "vm":
@@ -115,13 +111,35 @@ class NodeContext:
     def exist_route6(self, route):
         return self.rspec["_hostname"] in self.netns_map and route["dst"] in self.netns_map[self.rspec["_hostname"]]["route6_map"]
 
+    def append_cmds_ip_route_add(self, cmds, dst, via):
+        cmds += [
+            'set +e',
+            f'exists_route=$(ip route | grep {dst})',
+            'set -e',
+            f'expected_route="{dst} via {via}"',
+            'if [ "${exists_route}" != "" ]; then',
+            'if [ "${exists_route}" != "${expected_route}" ]; then',
+            'ip route del $exists_route',
+            f'ip route add {dst} via {via}',
+            'fi',
+            'else',
+            f'ip route add {dst} via {via}',
+            'fi',
+        ]
+
     def append_cmds_ip_addr_add(self, cmds, ip, dev):
         if ip["version"] == 4:
-            skipped = self.exist_netdev(dev) and ip["inet"] in self.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet_map"]
-            cmds += [(f"ip addr add {ip['inet']} dev {dev}", skipped)]
+            cmds += [
+                f"if ! ip addr show dev {dev} | grep 'inet {ip['inet']}'; then",
+                f"ip addr add {ip['inet']} dev {dev}",
+                "fi",
+            ]
         elif ip["version"] == 6:
-            skipped = self.exist_netdev(dev) and ip["inet"] in self.netns_map[self.rspec["_hostname"]]["netdev_map"][dev]["inet6_map"]
-            cmds += [(f"ip addr add {ip['inet']} dev {dev}", skipped)]
+            cmds += [
+                f"if ! ip addr show dev {dev} | grep 'inet6 {ip['inet']}'; then",
+                f"ip addr add {ip['inet']} dev {dev}",
+                "fi",
+            ]
 
     def append_local_cmds_add_link(self, cmds, link):
         if link["kind"] != "veth":
@@ -130,12 +148,13 @@ class NodeContext:
         cmds += [(f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", skipped)]
 
     def append_local_cmds_set_link(self, cmds, link):
-        skipped = self.exist_netdev(link["link_name"])
         cmds += [
-            (f"ethtool -K {link['link_name']} tso off tx off", skipped),
-            (f"ip link set dev {link['link_name']} mtu {link['mtu']}", skipped),
-            (f"ip link set dev {link['link_name']} address {link['link_mac']}", skipped),
-            (f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up", skipped),
+            f"if ! ip netns exec {self.rspec['_hostname']} ip addr show dev {link['link_name']}; then",
+            f"ethtool -K {link['link_name']} tso off tx off",
+            f"ip link set dev {link['link_name']} mtu {link['mtu']}",
+            f"ip link set dev {link['link_name']} address {link['link_mac']}",
+            f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up",
+            "fi",
         ]
 
     def append_local_cmds_set_peer(self, cmds, link):
@@ -154,3 +173,8 @@ class NodeContext:
             (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", skipped),
             (f"ip link set {netdev_vlan} up", skipped),
         ]
+
+    def ansible(self, ansible):
+        print("ansible start")
+        print(ansible['vars'])
+        print(ansible['plays'])

@@ -1,0 +1,18 @@
+- name: include vars
+  hosts: localhost
+  tasks:
+    - include_tasks: ../common/tasks/include_vars.yaml
+
+- hosts: localhost
+  tasks:
+    - name: start
+      vars:
+        name: docker-registry
+      ansible.builtin.shell: |
+        docker ps | grep " {{ name }}$" ||
+        (
+          (sudo docker ps --all | grep " {{ name }}$" && sudo docker rm "{{ name }}" || echo "{{ name }} not found") &&
+           sudo docker run -d --rm --net host --name {{ name }} \
+                -v "/var/lib/{{ name }}":/var/lib/registry \
+                registry:2
+        )

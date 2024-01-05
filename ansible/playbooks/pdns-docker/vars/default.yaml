@@ -1,0 +1,8 @@
+local_address: 127.0.0.1
+domains:
+  - example.com
+records:
+  - domain: example.com
+    name: docker-registry.example.com
+    type: a
+    content: local.ipaddr

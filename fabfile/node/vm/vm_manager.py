@@ -35,7 +35,7 @@ def make(nctx):
 
 def _clean(nctx):
     lcmds = [
-        f"./tools/vm-ctl/main.py delete {nctx.rspec['_hostname']}",
+        f"vm-ctl delete {nctx.rspec['_hostname']}",
     ]
     nctx.exec(lcmds, title="delete-vm", is_local=True)
 
@@ -95,6 +95,7 @@ def _make_prepare(nctx):
 
 def _wait_for_active(nctx):
     # TODO
+
     pass
 
 def _make(nctx):
@@ -102,3 +103,6 @@ def _make(nctx):
 
     if "cmds" in rspec:
         nctx.exec(rspec.get("cmds", []), title="cmds")
+
+    if "ansible" in rspec:
+        nctx.ansible(rspec['ansible'])

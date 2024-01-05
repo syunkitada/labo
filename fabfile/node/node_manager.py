@@ -14,18 +14,6 @@ def make(nctx):
             container_manager.make(nctx)
         elif nctx.rspec["kind"] == "vm":
             vm_manager.make(nctx)
-        # result = nctx.cmd()
-        # if t.rspec["kind"] == "gw":
-        #     result = router.cmd(t.cmd, t.c, t.spec, t.rspec)
-        # if nctx.rspec["kind"] == "container":
-        #     if nctx.rc is None:
-        #         nctx.rc = container_context.Context(nctx)
-        #     result = container.cmd(nctx)
-        # elif t.rspec["kind"] == "vm":
-        #     result = vm.cmd(t.cmd, t.c, t.spec, t.rspec)
-        # else:
-        #     print(f"unsupported kind: kind={t.rspec['kind']}")
-        #     exit(1)
     except Exception as e:
         result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
         nctx.next = -1

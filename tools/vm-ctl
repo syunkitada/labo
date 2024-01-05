@@ -203,7 +203,7 @@ def make_config_drive(spec):
     if nfs is not None:
         userdata += [
             f"mkdir -p {nfs['path']}",
-            f"mount -t nfs {nfs['target']}:/ {nfs['path']}",
+            f"until mount -t nfs {nfs['target']}:/ {nfs['path']}; do echo 'waiting for mount nfs'; sleep 2; done",
         ]
 
     with open(spec["_userdata_path"], "w") as f:

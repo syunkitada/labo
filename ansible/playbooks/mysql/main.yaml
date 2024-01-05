@@ -1,0 +1,20 @@
+- name: include vars
+  hosts: localhost
+  tasks:
+    - include_tasks: ../common/tasks/include_vars.yaml
+
+- hosts: localhost
+  tasks:
+    - name: install
+      when: not is_container
+      include_tasks: tasks/install.yaml
+
+    - name: Start service docker, if not started
+      ansible.builtin.service:
+        name: mysql
+        state: started
+
+    - name: create user
+      ansible.builtin.shell: |
+        mysql -e "CREATE USER IF NOT EXISTS '{{ mysql.user }}'@'%' IDENTIFIED BY '{{ mysql.password }}'"
+        mysql -e "GRANT ALL ON *.* TO '{{ mysql.user }}'@'%'; FLUSH PRIVILEGES;"

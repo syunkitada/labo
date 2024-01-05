@@ -4,12 +4,18 @@ env:
 	.venv/bin/pip install -r requirements.txt
 	sudo mkdir -p /var/run/netns
 	sudo mkdir -p /root/.ssh
+	sudo mkdir -p /etc/ansible
+	test -e /etc/ansible/vars.yaml || sudo cp etc/ansible/vars.yaml /etc/ansible/
 	sudo test -e /root/.ssh/labo.pem || sudo ssh-keygen -t ed25519 -N '' -f /root/.ssh/labo.pem
 	sudo cp etc/ssh/config /root/.ssh/config
-	@docker
 
-docker:
-	./labo/docker/docker.sh setup
+infra:
+	bash -c "source binrc && labo-ansible-playbook nfs"
+	bash -c "source binrc && labo-ansible-playbook docker"
+	bash -c "source binrc && labo-ansible-playbook docker-registry-docker"
+	bash -c "source binrc && labo-ansible-playbook mysql-docker"
+	bash -c "source binrc && labo-ansible-playbook pdns-docker"
+
 # TODO
 # docker-registry:
 # 	./labo/docker/docker.sh setup-registry

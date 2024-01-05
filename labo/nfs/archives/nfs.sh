@@ -1,5 +1,9 @@
 #!/bin/bash -xe
 
+# This script is deprecated.
+# The recommended procedure is as follows.
+# $ sudo -E .venv/bin/ansible-playbook ansible/playbooks/nfs/main.yaml
+
 COMMAND="${@:-help}"
 
 function help() {

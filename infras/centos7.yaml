@@ -72,6 +72,12 @@ nodes:
     cmds:
       - echo "hello hoge"
       - echo "hello hoge" > /tmp/hoge
+    ansible:
+      vars:
+        docker:
+          insecure_docker_registry: docker-registry.local.example.com:5000
+      plays:
+        - docker
   - name: VM2
     templates:
       - vm

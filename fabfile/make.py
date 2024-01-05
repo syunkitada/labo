@@ -7,7 +7,6 @@ import yaml
 from invoke import context as invoke
 import fabric
 from lib import colors, node_utils, os_utils, spec_utils, task_utils
-from infra import infra_context
 from node import node_context, node_manager
 from lib.runtime import runtime_context
 from tabulate import tabulate
@@ -64,16 +63,13 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
 
     re_targets = task_utils.target.get_re_targets(target)
 
-    ictx = infra_context.InfraContext(c, spec, debug=debug, dryrun=Dryrun)
-    ictx.update()
-
     results = OrderedDict()
     node_ctxs = []
     for rspec in spec.get("nodes", []):
         if not task_utils.target.is_target(rspec, re_targets):
             continue
         node_ctxs.append(
-            node_context.NodeContext(cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun, ictx=ictx)
+            node_context.NodeContext(cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun)
         )
         results[rspec["name"]] = []
 
@@ -317,9 +313,23 @@ def _dump_scripts(spec, cmd, nodes):
         f.write("\n".join(cmds))
 
 
+# TODO refactoring
 def _validate_env(c, cmd, node_ctxs):
     if cmd != "make":
         return
+
+    def get_docker_image_map(c):
+        import json
+        result = c.sudo('docker images --format=\'{"Repository":"{{ .Repository }}","Tag":"{{ .Tag }}"}\'', hide=True).stdout
+        docker_images_json = "[" + ",".join(result.splitlines()) + "]"
+        docker_images = json.loads(docker_images_json)
+        docker_image_map = {}
+        for image in docker_images:
+            docker_image_map[image["Repository"]] = image
+
+        return docker_image_map
+
+    docker_image_map = get_docker_image_map(c)
 
     def _get_local_dependencies(image):
         dependencies = []
@@ -333,7 +343,7 @@ def _validate_env(c, cmd, node_ctxs):
                 for line in f.readlines():
                     if line.find("FROM") == 0:
                         from_image = line.split("FROM")[1].strip()
-                        if node_ctx.ictx.docker_image_map.get(image) is None:
+                        if docker_image_map.get(image) is None:
                             from_dependencies = _get_local_dependencies(from_image)
                             dependencies.append([image, from_dependencies])
                         break

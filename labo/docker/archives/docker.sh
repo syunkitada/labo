@@ -1,5 +1,9 @@
 #!/bin/bash -x
 
+# This script is deprecated.
+# The recommended procedure is as follows.
+# $ sudo -E .venv/bin/ansible-playbook ansible/playbooks/mysql-docker/main.yaml
+
 COMMAND="${*:-help}"
 
 function help() {

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script is deprecated.
+# The recommended procedure is as follows.
+# $ sudo-ansible ansible/playbooks/mysql-docker/main.yaml
+
 set -x
 
 test -e /tmp/.laboenvrc && source /tmp/.laboenvrc

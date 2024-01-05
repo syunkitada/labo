@@ -1,0 +1,12 @@
+source .venv/bin/activate
+
+TOOLS_DIR=${PWD}/$(dirname $0)/tools
+export PATH="$TOOLS_DIR:$PATH"
+
+function labo-ansible-playbook() {
+    sudo -E PATH="$PATH" bash -e -c "ansible-playbook ansible/playbooks/$1/main.yaml"
+}
+
+function labo-fab() {
+    sudo -E PATH="$PATH" bash -e -c "fab $*"
+}

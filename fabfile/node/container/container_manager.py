@@ -32,10 +32,8 @@ def make(nctx):
 
 def _clean(nctx):
     rspec = nctx.rspec
-    if rspec["_hostname"] in nctx.docker_ps_map:
-        nctx.c.sudo(f"docker kill {rspec['_hostname']}", hide=True)
-    if rspec["_hostname"] in nctx.netns_map:
-        nctx.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
+    nctx.c.sudo(f"docker kill {rspec['_hostname']}", hide=True, warn=True)
+    nctx.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
 
     for vm in rspec.get("vms", []):
         nctx.rspec = vm
@@ -120,18 +118,20 @@ def _make_prepare(nctx):
         f"-v {rspec['_script_dir']}:{rspec['_script_dir']}",
     ]
     lcmds = [
+        f"if ! docker inspect {rspec['_hostname']}; then",
         f"docker run {' '.join(docker_options)} {rspec['image']}",
         f"pid=`docker inspect {rspec['_hostname']}" + " --format '{{.State.Pid}}'`",
         "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{rspec['_hostname']}",
+        "fi",
     ]
-    nctx.exec(lcmds, title="prepare-docker", skipped=(rspec["_hostname"] in nctx.docker_ps_map), is_local=True)
+    nctx.exec(lcmds, title="prepare-docker", is_local=True)
 
     lcmds = []
     for route in rspec.get("local_routes", []):
         lcmds += [
             "ipaddr=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' " + rspec['_hostname'] + ")",
-            "ip route | grep \"" + route['dst'] + " via ${ipaddr}\" || ip route add " + route['dst'] + " via ${ipaddr}",
         ]
+        nctx.append_cmds_ip_route_add(lcmds, route['dst'], "${ipaddr}")
     nctx.exec(lcmds, title="local_routes", is_local=True)
 
 def _make(nctx):
@@ -145,11 +145,12 @@ def _make(nctx):
     for key, value in rspec.get("sysctl_map", {}).items():
         dcmds += [f"sysctl -w {key}={value}"]
     for bridge in rspec.get("bridges", []):
-        skipped = nctx.exist_netdev(bridge["name"])
         dcmds += [
-            (f"ip link add {bridge['name']} type bridge", skipped),
-            (f"ip link set {bridge['name']} up", skipped),
-            (f"ip link set dev {bridge['name']} mtu {bridge['mtu']}", skipped),
+            f"if ! ip addr show {bridge['name']}; then",
+            f"ip link add {bridge['name']} type bridge",
+            f"ip link set {bridge['name']} up",
+            f"ip link set dev {bridge['name']} mtu {bridge['mtu']}",
+            "fi",
         ]
         for ip in bridge.get("ips", []):
             nctx.append_cmds_ip_addr_add(dcmds, ip, bridge["name"])
@@ -189,8 +190,7 @@ def _make(nctx):
         dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", nctx.exist_iprule(iprule["rule"]))]
 
     for route in rspec.get("routes", []):
-        skipped = nctx.exist_route(route)
-        dcmds += [(f"ip route add {route['dst']} via {route['via']}", skipped)]
+        nctx.append_cmds_ip_route_add(dcmds, route['dst'], route['via'])
     for route in rspec.get("routes6", []):
         skipped = nctx.exist_route6(route)
         dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", skipped)]

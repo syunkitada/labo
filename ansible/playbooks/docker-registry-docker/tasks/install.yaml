@@ -1,0 +1,1 @@
+- include_tasks: ../../common/tasks/include_package_vars.yaml

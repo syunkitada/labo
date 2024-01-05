@@ -1,5 +1,9 @@
 #!/bin/bash -x
 
+# This script is deprecated.
+# The recommended procedure is as follows.
+# $ sudo-ansible ansible/playbooks/pdns-docker/main.yaml
+
 # settings
 # https://doc.powerdns.com/authoritative/settings.html
 
