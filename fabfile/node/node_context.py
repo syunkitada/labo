@@ -190,6 +190,8 @@ class NodeContext:
         self.write("/etc/ansible/vars.yaml", pyyaml.dump(ansible['vars']))
         cmds = [
             "export PATH=$PATH:/usr/local/bin",
+            "export LANG=C.UTF-8",
+            "export LC_ALL=en_US.UTF-8",
         ]
         for play in ansible.get("plays", []):
             cmds += [

@@ -205,6 +205,8 @@ def run_steps(spec):
         elif 'cmd' in step:
             must_run(["chroot", spec['_tmp_mount_path'], "sh", "-xec", step['cmd']])
 
+    must_run(["chroot", spec['_tmp_mount_path'], "grub-install", "/dev/nbd0"])
+
 
 def run(*args, **kwargs):
     result = subprocess.run(*args, **kwargs, capture_output=True)
