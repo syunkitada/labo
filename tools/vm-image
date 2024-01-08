@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import re
+import time
 import subprocess
 import yaml
 import os
@@ -41,12 +43,12 @@ def main():
 
 
 def list():
-    subprocess.run(["ls", VM_IMAGE_DIR])
+    must_run(["ls", VM_IMAGE_DIR])
 
 
 def delete(spec):
     if os.path.exists(spec["_image_path"]):
-        subprocess.run(["rm", "-rf", spec["_image_path"]])
+        must_run(["rm", "-rf", spec["_image_path"]])
 
 
 def create(spec):
@@ -60,24 +62,28 @@ def create(spec):
         spec['_base_image_path'] = ''
     elif spec['from'].startswith('local/'):
         spec['_base_image_path'] = spec['from'].replace('local/', IMAGE_ROOT)
-    custom(spec)
+        custom(spec)
 
 
 def download(spec):
     tmp_image_path = f"/tmp/{spec['_name']}.tmp"
     if not os.path.exists(tmp_image_path):
-        subprocess.run(["wget", "-O", tmp_image_path, spec['base']['url']])
+        result = must_run(["wget", "-O", tmp_image_path, spec['from']])
+        if result.returncode != 0:
+            os.remove(tmp_image_path)
+            raise Exception("failed to wget")
 
-    result = subprocess.run(["file", tmp_image_path], capture_output=True)
+    result = must_run(["file", tmp_image_path])
     file_info = result.stdout.decode('utf-8')
     if 'XZ compressed data' in file_info:
-        subprocess.run(["mv", tmp_image_path, f"{spec['_tmp_image_path']}.xz"])
-        subprocess.run(["xz", "-d", f"{spec['_tmp_image_path']}.xz"])
+        must_run(["mv", tmp_image_path, f"{spec['_tmp_image_path']}.xz"])
+        must_run(["xz", "-d", f"{spec['_tmp_image_path']}.xz"])
 
-    result = subprocess.run(["file", tmp_image_path], capture_output=True)
+    result = must_run(["file", tmp_image_path])
     file_info = result.stdout.decode('utf-8')
     if "QCOW" in file_info:
-        subprocess.run(['mv', tmp_image_path, spec['_image_path']])
+        must_run(['cp', tmp_image_path, spec['_image_path']])
+        must_run(['rm', tmp_image_path])
     else:
         raise Exception(f"Unsupported image format: {spec['_name']}")
 
@@ -102,44 +108,82 @@ def new_spec(name):
 
 
 def mount(spec, image_path):
-    subprocess.run(["modprobe", "nbd", "max_part=63"])
+    must_run(["modprobe", "nbd", "max_part=63"])
     umount(spec)
     os.makedirs(spec["_tmp_mount_path"], exist_ok=True)
-    subprocess.run(["qemu-nbd", "-c", "/dev/nbd0", image_path])
-    subprocess.run(["mount", "/dev/nbd0p1", spec["_tmp_mount_path"]])
-    subprocess.run(["mount", "-o", "bind", "/dev", f"{spec['_tmp_mount_path']}/dev"])
+    must_run(["qemu-nbd", "-c", "/dev/nbd0", image_path])
+
+    result = must_run(["/sbin/fdisk", "-l", "-u", "/dev/nbd0"])
+    linux_filesystem_device = ""
+    for line in result.stdout.decode('utf-8').splitlines():
+        splited_line = re.split(r' +', line)
+        if len(splited_line) == 7:
+            if splited_line[5] == "Linux":
+                linux_filesystem_device = splited_line[0]
+    if linux_filesystem_device == "":
+        raise Exception("linux_filesystem_device is not found")
+
+    must_run(["mount", linux_filesystem_device, spec["_tmp_mount_path"]], retry=3)
+    must_run(["mount", "-o", "bind", "/dev", f"{spec['_tmp_mount_path']}/dev"])
+    # must_run(["grub-install /dev/nbd0"]
     print(f"image_path={image_path}")
     print(f"mount_path={spec['_tmp_mount_path']}")
 
 
 def umount(spec):
-    result = subprocess.run(["mount"], capture_output=True)
-    result = result.stdout.decode('utf-8')
-    if spec['_tmp_mount_path'] in result:
-        subprocess.run(["umount", f"{spec['_tmp_mount_path']}/dev"])
-        subprocess.run(["umount", spec['_tmp_mount_path']])
-        subprocess.run(["qemu-nbd", "--disconnect", "/dev/nbd0"])
+    run(["umount", f"{spec['_tmp_mount_path']}/dev"])
+    run(["umount", spec['_tmp_mount_path']])
+    run(["qemu-nbd", "--disconnect", "/dev/nbd0"])
     print(f"umount {spec['_tmp_mount_path']}")
 
 
+def size_str_to_float(size_str):
+    if size_str[-1] == "G":
+        return float(size_str[:-1]) * 1024 * 1024 * 1024
+    elif size_str[-1] == "M":
+        return float(size_str[:-1]) * 1024 * 1024
+    elif size_str[-1] == "K":
+        return float(size_str[:-1]) * 1024
+    return int(size_str)
+
 def custom(spec):
+    tmp_base_image_path = f"/tmp/{spec['_name']}.base.tmp"
     tmp_image_path = f"/tmp/{spec['_name']}.tmp"
     tmp_mount_path = f"/tmp/{spec['_name']}.tmp.mount"
     spec['_root_dir'] = tmp_mount_path
 
-    subprocess.run(["cp", spec['_base_image_path'], tmp_image_path])
+    umount(spec)
+
+    must_run(["cp", spec['_base_image_path'], tmp_base_image_path])
+
+    result = must_run(["virt-filesystems", "--long", "--parts", "--blkdevs", "-h", "-a", tmp_base_image_path])
+    device_size = ""
+    part_size = 0
+    root_part = ""
+    for line in result.stdout.decode('utf-8').splitlines():
+        splited_line = re.split(r" +", line)
+        if splited_line[0] == "/dev/sda1":
+            tmp_size = size_str_to_float(splited_line[3])
+            if part_size < tmp_size:
+                root_part = splited_line[0]
+                part_size = tmp_size
+        elif splited_line[1] == "device":
+            device_size = splited_line[3]
+
+    # パッケージがインストールできるようにサイズを少しだけ拡張する
+    size = (size_str_to_float(device_size) + (2 * 1024 * 1024 * 1024)) / (1024 * 1024 * 1024)
+    size = "{:.1f}G".format(size)
+
+    must_run(['qemu-img', 'create', '-f', 'qcow2', tmp_image_path, size])
+    must_run(['virt-resize', '--align-first', 'never', '--expand', root_part, tmp_base_image_path, tmp_image_path])
 
     # mount --------------------
     mount(spec, spec["_tmp_image_path"])
 
-    print("debug custom")
-    try:
-        run_steps(spec)
-    except Exception as e:
-        print(f"Failed run_steps: {e}")
+    run_steps(spec)
 
     umount(spec)
-    subprocess.run(["cp", tmp_image_path, spec['_image_path']])
+    must_run(["cp", tmp_image_path, spec['_image_path']])
     return
 
 def run_steps(spec):
@@ -154,12 +198,34 @@ def run_steps(spec):
                 dst = dst[1:]
             dst_path = os.path.join(spec['_tmp_mount_path'], dst)
             dst_dir_path = os.path.dirname(dst_path)
-            subprocess.run(["mkdir", "-p", dst_dir_path])
-            subprocess.run(["cp", "-r", src_path, dst_path])
+            must_run(["mkdir", "-p", dst_dir_path])
+            must_run(["cp", "-r", src_path, dst_path])
             if 'mod' in step['file']:
-                subprocess.run(["chmod", str(step['file']['mod']), dst_path])
+                must_run(["chmod", str(step['file']['mod']), dst_path])
         elif 'cmd' in step:
-            subprocess.run(["chroot", spec['_tmp_mount_path'], "bash", "-xec", step['cmd']])
+            must_run(["chroot", spec['_tmp_mount_path'], "sh", "-xec", step['cmd']])
+
+
+def run(*args, **kwargs):
+    result = subprocess.run(*args, **kwargs, capture_output=True)
+    out = result.stdout.decode('utf-8')+result.stderr.decode('utf-8')
+    print("$ " + " ".join(*args))
+    if len(out) > 0:
+        print(result.stdout.decode('utf-8')+result.stderr.decode('utf-8'))
+    return result
+
+
+def must_run(*args, retry=0, interval=1, **kwargs):
+    result = run(*args, **kwargs)
+    if result.returncode != 0:
+        if retry == 0:
+            raise Exception("Failed to run: \n"
+                f"return_code={result.check_returncode}\n"
+                f"out={result.stdout.decode('utf-8')}\n"
+                f"err={result.stderr.decode('utf-8')}")
+        time.sleep(interval)
+        must_run(*args, **kwargs, retry=retry, interval=interval)
+    return result
 
 
 if __name__ == "__main__":

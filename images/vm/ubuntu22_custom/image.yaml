@@ -1,0 +1,25 @@
+from: local/ubuntu22
+steps:
+  - file:
+      src: ../common/system/labo-init.service
+      dst: /etc/systemd/system/labo-init.service
+      mod: 755
+  - file:
+      src: ../common/bin
+      dst: /opt/labo/bin
+  - cmd: rm /etc/resolv.conf
+  - file:
+      src: ../common/etc/resolv.conf
+      dst: /etc/resolv.conf
+  - cmd: systemctl enable labo-init
+  - cmd: apt update
+  - cmd: apt remove -y cloud-init
+  - cmd: apt remove -y cloud-guest-utils cloud-initramfs-copymods cloud-initramfs-dyn-netconf
+  # 80-net-setup-link.rules があると、udevによって自動でifcfg-eth0を生成してしまうため削除する
+  # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
+  - cmd: rm -rf /lib/udev/rules.d/80-net-setup-link.rules
+  - cmd: rm -rf /etc/sysconfig/network-scripts/ifcfg-eth0
+  - cmd: mkdir -p /run/systemd/resolve/
+  - cmd: apt install -y nfs-common python3-pip
+  - cmd: pip3 install --upgrade pip
+  - cmd: export LANG=C.UTF-8; export LC_ALL=en_US.UTF-8; pip3 install ansible

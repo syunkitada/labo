@@ -28,7 +28,7 @@ template_map:
       net.ipv4.conf.all.forwarding: 1
   vm:
     kind: vm
-    image: centos7_base
+    image: centos7_custom
     vcpus: 4
     ram: 4096
     disk: 40

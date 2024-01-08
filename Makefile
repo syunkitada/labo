@@ -10,11 +10,11 @@ env:
 	sudo cp etc/ssh/config /root/.ssh/config
 
 infra:
-	bash -c "source binrc && labo-ansible-playbook nfs"
-	bash -c "source binrc && labo-ansible-playbook docker"
-	bash -c "source binrc && labo-ansible-playbook docker-registry-docker"
-	bash -c "source binrc && labo-ansible-playbook mysql-docker"
-	bash -c "source binrc && labo-ansible-playbook pdns-docker"
+	bash -c "source laborc && labo-ansible-playbook nfs"
+	bash -c "source laborc && labo-ansible-playbook docker"
+	bash -c "source laborc && labo-ansible-playbook docker-registry-docker"
+	bash -c "source laborc && labo-ansible-playbook mysql-docker"
+	bash -c "source laborc && labo-ansible-playbook pdns-docker"
 
 # TODO
 # docker-registry:
