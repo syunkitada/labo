@@ -38,7 +38,7 @@
         sudo docker ps | grep pdns-recursor ||
           (
               (sudo docker ps --all | grep pdns-recursor && sudo docker rm pdns-recursor || echo "pdns-recursor not found") &&
-                  sudo docker run --rm -d --network host --name pdns-recursor \
+                  sudo docker run -d --network host --name pdns-recursor \
                       -e PDNS_local_address="{{ pdns_docker.local_address }}" \
                       -e PDNS_local_port=53 \
                       -e PDNS_forward_zones_recurse=.=8.8.8.8 \

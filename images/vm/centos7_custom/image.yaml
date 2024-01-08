@@ -3,7 +3,6 @@ steps:
   - file:
       src: ../common/system/labo-init.service
       dst: /etc/systemd/system/labo-init.service
-      mod: 755
   - file:
       src: ../common/bin
       dst: /opt/labo/bin

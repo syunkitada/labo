@@ -125,13 +125,16 @@ def mount(spec, image_path):
 
     must_run(["mount", linux_filesystem_device, spec["_tmp_mount_path"]], retry=3)
     must_run(["mount", "-o", "bind", "/dev", f"{spec['_tmp_mount_path']}/dev"])
-    # must_run(["grub-install /dev/nbd0"]
+    must_run(["mount", "-o", "bind", "/proc", f"{spec['_tmp_mount_path']}/proc"])
+    must_run(["mount", "-o", "bind", "/sys", f"{spec['_tmp_mount_path']}/sys"])
     print(f"image_path={image_path}")
     print(f"mount_path={spec['_tmp_mount_path']}")
 
 
 def umount(spec):
     run(["umount", f"{spec['_tmp_mount_path']}/dev"])
+    run(["umount", f"{spec['_tmp_mount_path']}/proc"])
+    run(["umount", f"{spec['_tmp_mount_path']}/sys"])
     run(["umount", spec['_tmp_mount_path']])
     run(["qemu-nbd", "--disconnect", "/dev/nbd0"])
     print(f"umount {spec['_tmp_mount_path']}")

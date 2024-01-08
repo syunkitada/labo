@@ -3,7 +3,6 @@ steps:
   - file:
       src: ../common/system/labo-init.service
       dst: /etc/systemd/system/labo-init.service
-      mod: 755
   - file:
       src: ../common/bin
       dst: /opt/labo/bin
@@ -19,6 +18,8 @@ steps:
   # デフォルトだとdhcpが利用されてしまうため、dhcpがタイムアウトで失敗するまで待たされてしまう
   - cmd: rm -rf /lib/udev/rules.d/80-net-setup-link.rules
   - cmd: rm -rf /etc/sysconfig/network-scripts/ifcfg-eth0
+  - cmd: systemctl disable systemd-networkd-wait-online.service
+  - cmd: systemctl mask systemd-networkd-wait-online.service
   - cmd: mkdir -p /run/systemd/resolve/
   - cmd: apt install -y nfs-common python3-pip
   - cmd: pip3 install --upgrade pip

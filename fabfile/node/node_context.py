@@ -34,7 +34,9 @@ class NodeContext:
         elif self.rspec["kind"] == "container":
             return f"docker exec {self.rspec['_hostname']} {cmd}"
         elif self.rspec["kind"] == "vm":
+            # FIXME
             return f"ssh -i /root/.ssh/labo.pem admin@10.11.1.2 sudo {cmd}"
+            # return f"ssh -i /root/.ssh/labo.pem admin@{self.rspec['_hostname']} sudo {cmd}"
         return cmd
 
     def exec_without_log(self, cmd, *args, **kwargs):
