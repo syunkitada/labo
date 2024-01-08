@@ -42,7 +42,7 @@ template_map:
 
 nodes:
   - name: GW1
-    network: bridge
+    network: labo-net
     templates:
       - node
     bridges:

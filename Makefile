@@ -15,6 +15,7 @@ infra:
 	bash -c "source laborc && labo-ansible-playbook docker-registry-docker"
 	bash -c "source laborc && labo-ansible-playbook mysql-docker"
 	bash -c "source laborc && labo-ansible-playbook pdns-docker"
+	sudo docker network create --driver bridge labo-net --subnet=172.30.0.0/16 || echo 'ignored'
 
 # TODO
 # docker-registry:

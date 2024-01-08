@@ -10,6 +10,10 @@ steps:
   - file:
       src: ../common/etc/resolv.conf
       dst: /etc/resolv.conf
+  - file:
+      src: policy-rc.d
+      dst: /usr/sbin/policy-rc.d
+      mode: 755
   - cmd: systemctl enable labo-init
   - cmd: apt update
   - cmd: apt remove -y cloud-init

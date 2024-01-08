@@ -203,8 +203,8 @@ def run_steps(spec):
             dst_dir_path = os.path.dirname(dst_path)
             must_run(["mkdir", "-p", dst_dir_path])
             must_run(["cp", "-r", src_path, dst_path])
-            if 'mod' in step['file']:
-                must_run(["chmod", str(step['file']['mod']), dst_path])
+            if 'mode' in step['file']:
+                must_run(["chmod", str(step['file']['mode']), dst_path])
         elif 'cmd' in step:
             must_run(["chroot", spec['_tmp_mount_path'], "sh", "-xec", step['cmd']])
 
