@@ -5,15 +5,15 @@ COMMAND="${*:-help}"
 function help() {
 	cat <<EOS
 # show records
-./record.sh list [domain]
-./record.sh list example.com
+record-ctl list [domain]
+record-ctl list example.com
 
 # create A record
-./record.sh create [domain] [record] [type] [content]
-./record.sh create example.com hoge.example.com a 192.168.1.1
+record-ctl create [domain] [record] [type] [content]
+record-ctl create example.com hoge.example.com a 192.168.1.1
 
 # delete record
-./record.sh delete hoge.example.com
+record-ctl delete hoge.example.com
 EOS
 }
 

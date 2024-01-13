@@ -2,10 +2,11 @@
 
 from collections import OrderedDict
 import re
-import subprocess
 import yaml
 import os
 import argparse
+from lib import command
+
 p = argparse.ArgumentParser()
 p.add_argument('action', choices=[
     'start', 'recreate', 'stop',
@@ -45,7 +46,7 @@ def list():
             'status': 'stopped',
         }
 
-    result = subprocess.run(["bash", "-c", "ps ax | grep '[q]emu-system'"], capture_output=True)
+    result = command.must_run(["bash", "-c", "ps ax | grep '[q]emu-system'"], capture_output=True)
     for line in result.stdout.splitlines():
         line = line.decode('utf-8') 
         bootdisk = re.findall('-drive id=bootdisk1,file=(.*),if=none ', line)
@@ -63,12 +64,13 @@ def list():
 def delete():
     stop()
     cmds = ["rm", "-rf", os.path.join(VM_ROOT, args.vm_name[0])]
-    subprocess.run(cmds)
+    command.must_run(cmds)
+    unregister_record(args.vm_name[0])
 
 
 def stop():
     cmds = ["systemctl", "stop", args.vm_name[0]]
-    subprocess.run(cmds)
+    command.run(cmds)
 
 
 def start():
@@ -92,7 +94,7 @@ def start():
 
 
 def check_vm_exists(spec):
-    result = subprocess.run(["bash", "-c", f"ps -ax | grep -v sudo | grep [q]emu-system-x86_64 | grep '/{spec['_name']}/'"])
+    result = command.run(["bash", "-c", f"ps -ax | grep -v sudo | grep [q]emu-system-x86_64 | grep '/{spec['_name']}/'"])
     if result.returncode == 1:
         return False
     return True
@@ -103,8 +105,8 @@ def start_vm(spec):
     print(spec)
     if not os.path.exists(spec["_image_path"]):
         src_image = os.path.join(IMAGE_ROOT, spec["image"])
-        subprocess.run(["cp", src_image, spec['_image_path']])
-        subprocess.run(["qemu-img", "resize", "--shrink", spec['_image_path'], f"{spec['disk']}G"])
+        command.must_run(["cp", src_image, spec['_image_path']])
+        command.must_run(["qemu-img", "resize", "--shrink", spec['_image_path'], f"{spec['disk']}G"])
     if check_vm_exists(spec):
         print("vm exists")
         return
@@ -136,17 +138,30 @@ def start_vm(spec):
         ]
 
     qemu_cmd += nic_options
-    subprocess.run(["systemctl", "reset-failed", spec['_name']])
+    command.run(["systemctl", "reset-failed", spec['_name']])
     cmds = ["systemd-run", "--unit", spec['_name'], '--'] + qemu_cmd
     print(cmds)
-    subprocess.run(cmds)
+    command.must_run(cmds)
+    register_record(spec)
+
+
+def register_record(spec):
+    for link in spec.get("links", []):
+        for inet in link.get("inets", []):
+            command.must_run(["record-ctl", "create", "example.com", spec["_name"], "a", inet.split("/")[0]])
+            break
+
+
+def unregister_record(name):
+    command.must_run(["record-ctl", "delete", name])
+
 
 def console():
     name = args.vm_name[0]
     vm_dir = os.path.join(VM_ROOT, name)
     spec = {}
     spec["_serial_socket_path"] = os.path.join(vm_dir, "serial.sock")
-    subprocess.run(["minicom", "-D", f"unix#{spec['_serial_socket_path']}"])
+    command.must_run(["minicom", "-D", f"unix#{spec['_serial_socket_path']}"])
 
 def console_log():
     name = args.vm_name[0]
@@ -157,7 +172,7 @@ def console_log():
         print(f.read())
 
 def monitor(spec):
-    subprocess.run(["minicom", "-D", f"unix#{spec['_monitor_socket_path']}"])
+    command.must_run(["minicom", "-D", f"unix#{spec['_monitor_socket_path']}"])
 
 def make_config_drive(spec):
     print("configdrive")
@@ -209,7 +224,7 @@ def make_config_drive(spec):
     with open(spec["_userdata_path"], "w") as f:
         f.write("\n".join(userdata))
 
-    subprocess.run(["genisoimage", "-o", spec['_config_image_path'], "-V", "cidata", "-r", "-J", spec['_metadata_path'], spec['_userdata_path']])
+    command.must_run(["genisoimage", "-o", spec['_config_image_path'], "-V", "cidata", "-r", "-J", spec['_metadata_path'], spec['_userdata_path']])
 
 
 if __name__ == "__main__":

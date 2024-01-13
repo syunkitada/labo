@@ -24,6 +24,8 @@
                       -e PDNS_gmysql_user="{{ mysql_docker.user }}" \
                       -e PDNS_gmysql_password="{{ mysql_docker.password }}" \
                       -e PDNS_gmysql_dbname=pdns \
+                      -e PDNS_log_dns_queries=yes \
+                      -e PDNS_loglevel=9 \
                       pschiffe/pdns-mysql
           )
 
@@ -41,8 +43,9 @@
                   sudo docker run -d --network host --name pdns-recursor \
                       -e PDNS_local_address="{{ pdns_docker.local_address }}" \
                       -e PDNS_local_port=53 \
-                      -e PDNS_forward_zones_recurse=.=8.8.8.8 \
-                      -e PDNS_forward_zones="{{ pdns_docker.domains | join(',') }}"=127.0.0.1:8053 \
+                      -e PDNS_dnssec=off \
+                      -e PDNS_forward_zones_recurse={{ pdns_docker.domains | join('=127.0.0.1:8053,') }}=127.0.0.1:8053,.=8.8.8.8 \
+                      -e PDNS_loglevel=9 \
                       pschiffe/pdns-recursor
           )
 

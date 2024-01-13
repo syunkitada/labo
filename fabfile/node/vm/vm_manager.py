@@ -1,27 +1,20 @@
 import os
 
+import time
 import yaml
-from lib import colors
 
 
 def make(nctx):
     if nctx.cmd == "dump":
         print(yaml.safe_dump(nctx.rspec))
-    elif nctx.cmd == "make":
-        if nctx.next == 0:
-            _make_prepare(nctx)
-            nctx.next = 1
-        elif nctx.next == 1:
-            _make(nctx)
-            nctx.next = -1
-    elif nctx.cmd == "remake":
-        if nctx.next == 0:
+    elif nctx.cmd == "make" or nctx.cmd == "remake":
+        if nctx.cmd == "remake":
             _clean(nctx)
+
+        if nctx.next == 0:
             _make_prepare(nctx)
             nctx.next = 1
         elif nctx.next == 1:
-            # gateway側のルートの設定を待つ
-            # VMはsshでコマンドを実行するため、先にVMへのルートができるのを待つ
             _wait_for_active(nctx)
             nctx.next = 2
         elif nctx.next == 2:
@@ -94,9 +87,14 @@ def _make_prepare(nctx):
 
 
 def _wait_for_active(nctx):
-    # TODO
+    # vmに疎通が取れるまでまつ
+    for i in range(1, 5):
+        result = nctx.exec_without_log("ls", warn=True)
+        if result.return_code == 0:
+            break
+        print(f"sleep {i * 2}")
+        time.sleep(i * 2)
 
-    pass
 
 def _make(nctx):
     rspec = nctx.rspec
