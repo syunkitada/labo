@@ -76,6 +76,8 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
     if not Dryrun:
         _validate_env(c, cmd, node_ctxs)
 
+    exit(0)
+
     while True:
         with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
             tmp_results = pool.map(node_manager.make, node_ctxs)
@@ -317,6 +319,8 @@ def _dump_scripts(spec, cmd, nodes):
 def _validate_env(c, cmd, node_ctxs):
     if cmd != "make":
         return
+
+    print("validate_env")
 
     def get_docker_image_map(c):
         import json
