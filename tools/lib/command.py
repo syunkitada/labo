@@ -8,12 +8,14 @@ path = os.environ['PATH'] + ":" + sys.path[0]
 os.environ['PATH'] = path
 
 
-def run(*args, **kwargs):
-    result = subprocess.run(*args, **kwargs, capture_output=True)
-    out = result.stdout.decode('utf-8')+result.stderr.decode('utf-8')
-    print("$ " + " ".join(*args))
-    if len(out) > 0:
-        print(result.stdout.decode('utf-8')+result.stderr.decode('utf-8'))
+def run(*args, hide=False, capture_output=True, **kwargs):
+    if not hide:
+        print("$ " + " ".join(*args))
+    result = subprocess.run(*args, **kwargs, capture_output=capture_output)
+    if capture_output and not hide:
+        out = result.stdout.decode('utf-8')+result.stderr.decode('utf-8')
+        if len(out) > 0:
+            print(result.stdout.decode('utf-8')+result.stderr.decode('utf-8'))
     return result
 
 

@@ -3,7 +3,7 @@ import traceback
 from fabric import Connection
 from lib import colors
 
-from . import container, container_context, router, vm, vm_image
+from . import container, container_context, router
 
 
 def make(t):
@@ -16,8 +16,6 @@ def make(t):
             if t.rc is None:
                 t.rc = container_context.Context(t)
             result = container.cmd(t)
-        elif t.rspec["kind"] == "vm":
-            result = vm.cmd(t.cmd, t.c, t.spec, t.rspec)
         else:
             print(f"unsupported kind: kind={t.rspec['kind']}")
             exit(1)

@@ -1,0 +1,111 @@
+imports:
+  - infra/ovs/vxlan/vxlan5.yaml
+
+ipam:
+  l3admin_network1:
+    subnet: 10.10.10.0/24
+    kind: l3
+
+template_map:
+  hv:
+    l3admin:
+      ips:
+        - inet: <%=assign_inet4(l3admin_network1)%>
+    ovs:
+      bridges:
+        - name: br-ex
+          kind: external-ha
+    frr:
+      id: "<%=l3admin.ips.0.ip%>"
+      asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
+      route_map:
+        DENY-ANY-v4:
+          policy: deny
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 deny 0.0.0.0/0
+        ADMIN-v4:
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=l3admin.ips.0.network%> le 32
+        VM-v4:
+          policy: deny
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 deny 0.0.0.0/0
+      bgp_peer_groups:
+        - name: ADMIN
+          route_map_v4_in: DENY-ANY-v4
+          route_map_v4_out: ADMIN-v4
+        - name: VM
+          route_map_v4_in: DENY-ANY-v4
+          route_map_v4_out: VM-v4
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+  gw:
+    l3admin:
+      ips:
+        - inet: <%=assign_inet4(l3admin_network1)%>
+    ovs:
+      bridges:
+        - name: br-ex
+          kind: external-ha
+    frr:
+      id: "<%=l3admin.ips.0.ip%>"
+      asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
+      route_map:
+        DENY-ANY-v4:
+          policy: deny
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 deny 0.0.0.0/0
+        ADMIN-v4:
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=l3admin.ips.0.network%> le 32
+        VM-v4:
+          policy: deny
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 deny 0.0.0.0/0
+      bgp_peer_groups:
+        - name: ADMIN
+          route_map_v4_in: DENY-ANY-v4
+          route_map_v4_out: ADMIN-v4
+        - name: VM
+          route_map_v4_in: DENY-ANY-v4
+          route_map_v4_out: VM-v4
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+
+node_map:
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          # cluster1
+          - name: HV1-L3
+            dst: <%=_node_map.HV1.l3admin.ips.0.ip%>
+          - name: HV2-L3
+            dst: <%=_node_map.HV2.l3admin.ips.0.ip%>
+          - name: GW1-L3
+            dst: <%=_node_map.GW1.l3admin.ips.0.ip%>
+          - name: GW2-L3
+            dst: <%=_node_map.GW2.l3admin.ips.0.ip%>
+          # cluster2
+          - name: HV3-L3
+            dst: <%=_node_map.HV3.l3admin.ips.0.ip%>
+          - name: HV4-L3
+            dst: <%=_node_map.HV4.l3admin.ips.0.ip%>
+          - name: GW3-L3
+            dst: <%=_node_map.GW3.l3admin.ips.0.ip%>
+          - name: GW4-L3
+            dst: <%=_node_map.GW4.l3admin.ips.0.ip%>

@@ -104,7 +104,7 @@ def start_vm(spec):
     print("start_vm")
     print(spec)
     if not os.path.exists(spec["_image_path"]):
-        src_image = os.path.join(IMAGE_ROOT, spec["image"])
+        src_image = os.path.join(IMAGE_ROOT, spec["image"].split('local/')[1])
         command.must_run(["cp", src_image, spec['_image_path']])
         command.must_run(["qemu-img", "resize", "--shrink", spec['_image_path'], f"{spec['disk']}G"])
     if check_vm_exists(spec):
@@ -161,7 +161,7 @@ def console():
     vm_dir = os.path.join(VM_ROOT, name)
     spec = {}
     spec["_serial_socket_path"] = os.path.join(vm_dir, "serial.sock")
-    command.must_run(["minicom", "-D", f"unix#{spec['_serial_socket_path']}"])
+    command.must_run(["minicom", "-D", f"unix#{spec['_serial_socket_path']}"], capture_output=False)
 
 def console_log():
     name = args.vm_name[0]

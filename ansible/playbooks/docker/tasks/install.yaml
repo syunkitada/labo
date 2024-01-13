@@ -1,11 +1,11 @@
 - include_tasks: ../../common/tasks/include_package_vars.yaml
 
-- name: install docker for rh7
+- name: install docker for rh
   when: ansible_facts['os_family'] == "RedHat"
   ansible.builtin.shell: |
     yum install -y yum-utils
     yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    yum install -y docker-ce docker-ce-cli containerd.io docker-compose
+    yum install -y docker-ce docker-ce-cli containerd.io
 
 - name: preinstall docker for ubuntu
   when: ansible_facts['os_family'] == "Debian"

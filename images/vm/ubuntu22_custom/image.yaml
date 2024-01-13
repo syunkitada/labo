@@ -1,4 +1,6 @@
 from: local/ubuntu22
+expand:
+  size: 1
 steps:
   - file:
       src: ../common/system/labo-init.service

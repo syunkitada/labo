@@ -1,0 +1,263 @@
+imports:
+  - infra/ovs/vxlan/vxlan5.1.yaml
+
+ipam:
+  t1vm_network1:
+    subnet: 10.100.0.0/24
+    kind: l2
+  t1vm_network2:
+    subnet: 10.100.1.0/24
+    kind: l2
+  t2vm_network1:
+    subnet: 10.100.0.0/24
+    kind: l2
+  t2vm_network2:
+    subnet: 10.100.1.0/24
+    kind: l2
+
+vpc_map:
+  vpc1:
+    id: 5000
+    network_gw_map:
+      gw1:
+        - name: t1vm_network1
+      gw2:
+        - name: t1vm_network2
+  vpc2:
+    id: 6000
+    network_gw_map:
+      gw1:
+        - name: t2vm_network1
+      gw2:
+        - name: t2vm_network2
+
+template_map:
+  hv:
+    ovs:
+      admin_ips:
+        - inet: <%=assign_inet4(ovsadmin_network1)%>
+      bridges:
+        - name: br-ex
+          kind: external-ha
+        - name: br-t1
+          kind: vxlan-tenant-vm
+          tenant: 5000
+        - name: br-t2
+          kind: vxlan-tenant-vm
+          tenant: 6000
+          disable_tenant_fullmesh: true
+    frr:
+      route_map:
+        VM-v4:
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 6 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+        - <%=ovs.admin_ips.0.inet%>
+  cluster1_gw:
+    ovs:
+      admin_ips:
+        - inet: <%=vpcgw_map.gw1.vtep.inet%>
+    frr:
+      route_map:
+        VM-v4:
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+            - seq 6 permit <%=ipam.eip_network1.subnet%> le 32
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+        - <%=ovs.admin_ips.0.inet%>
+        - <%=ipam.eip_network1.subnet%>
+  cluster2_gw:
+    ovs:
+      admin_ips:
+        - inet: <%=vpcgw_map.gw2.vtep.inet%>
+    frr:
+      route_map:
+        VM-v4:
+          policy: permit
+          order: 5
+          version: 4
+          prefix_list:
+            - seq 5 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+            - seq 6 permit <%=ipam.eip_network2.subnet%> le 32
+      ipv4_networks:
+        - <%=l3admin.ips.0.inet%>
+        - <%=ovs.admin_ips.0.inet%>
+        - <%=ipam.eip_network2.subnet%>
+  gw:
+    ovs:
+      bridges:
+        - name: br-ex
+          kind: external-ha
+          links:
+            - peer: br-aclgw
+              flows:
+                - kind: ingress
+            - peer: br-aclex
+              flows:
+                - kind: egress
+        - name: br-tun
+          kind: vxlan-tenant-vpcgw
+          links:
+            - peer: br-aclgw
+              flows:
+                - kind: ingress
+            - peer: br-aclvpc
+              flows:
+                - kind: egress
+        - name: br-aclgw
+          kind: aclgw
+          links:
+            - peer: br-aclvpc
+              flows:
+                - kind: ingress
+                  match_kind: vpc-eip
+            - peer: br-aclex
+              flows:
+                - kind: ingress
+        - name: br-aclex
+        - name: br-aclvpc
+  vm:
+    mtu: 1500
+    routes:
+      - dst: default
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
+
+node_map:
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          - name: HV1.ovs
+            dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
+          - name: HV2.ovs
+            dst: <%=_node_map.HV2.ovs.admin_ips.0.ip%>
+          - name: HV3.ovs
+            dst: <%=_node_map.HV3.ovs.admin_ips.0.ip%>
+          - name: HV4.ovs
+            dst: <%=_node_map.HV4.ovs.admin_ips.0.ip%>
+          - name: GWCluster1.ovs
+            dst: <%=vpcgw_map.gw1.vtep.ip%>
+          - name: GWCluster2.ovs
+            dst: <%=vpcgw_map.gw2.vtep.ip%>
+          - name: t1vm1.eip
+            dst: <%=_node_map.t1vm1._links.0.peer_ips.0.eip%>
+          - name: t1vm2.eip
+            dst: <%=_node_map.t1vm2._links.0.peer_ips.0.eip%>
+          - name: t1vm3.eip
+            dst: <%=_node_map.t1vm3._links.0.peer_ips.0.eip%>
+          - name: t1vm4.eip
+            dst: <%=_node_map.t1vm4._links.0.peer_ips.0.eip%>
+          - name: t2vm1.eip
+            dst: <%=_node_map.t2vm1._links.0.peer_ips.0.eip%>
+          - name: t2vm2.eip
+            dst: <%=_node_map.t2vm2._links.0.peer_ips.0.eip%>
+  HV1:
+    vm_links:
+      - peer: t1vm1
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
+      - peer: t2vm1
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
+    vms:
+      - name: t1vm1
+        tenant: 5000
+        templates:
+          - node
+          - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t1vm2
+                dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
+              - name: t1vm3
+                dst: <%=_node_map.t1vm3._links.0.peer_ips.0.ip%>
+              - name: t1vm4
+                dst: <%=_node_map.t1vm4._links.0.peer_ips.0.ip%>
+              - name: t2vm1.eip
+                dst: <%=_node_map.t2vm1._links.0.peer_ips.0.eip%>
+              - name: t2vm2.eip
+                dst: <%=_node_map.t2vm2._links.0.peer_ips.0.eip%>
+      - name: t2vm1
+        tenant: 6000
+        templates:
+          - node
+          - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t2vm2
+                dst: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
+  HV2:
+    vm_links:
+      - peer: t1vm2
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
+      - peer: t2vm2
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network1)%>
+            eip: <%=assign_ip4(eip_network1)%>
+    vms:
+      - name: t1vm2
+        tenant: 5000
+        templates:
+          - node
+          - vm
+      - name: t2vm2
+        tenant: 6000
+        templates:
+          - node
+          - vm
+  HV3:
+    vm_links:
+      - peer: t1vm3
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network2)%>
+            eip: <%=assign_ip4(eip_network2)%>
+      - peer: t2vm3
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network2)%>
+            eip: <%=assign_ip4(eip_network2)%>
+    vms:
+      - name: t1vm3
+        tenant: 5000
+        templates:
+          - node
+          - vm
+      - name: t2vm3
+        tenant: 6000
+        templates:
+          - node
+          - vm
+  HV4:
+    vm_links:
+      - peer: t1vm4
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network2)%>
+            eip: <%=assign_ip4(eip_network2)%>
+      - peer: t2vm4
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network2)%>
+            eip: <%=assign_ip4(eip_network2)%>
+    vms:
+      - name: t1vm4
+        tenant: 5000
+        templates:
+          - node
+          - vm
+      - name: t2vm4
+        tenant: 6000
+        templates:
+          - node
+          - vm
