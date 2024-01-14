@@ -1,7 +1,6 @@
 imports:
-  - infra/local/remote.yaml
-  - infra/ovs/clos/clos1.yaml
-  - infra/ovs/clos/clos1.1.yaml
+  - infras/ovs/clos/clos1.yaml
+  - infras/ovs/clos/clos1.1.yaml
 
 ipam:
   vm_network1:

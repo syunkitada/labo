@@ -347,6 +347,8 @@ def _complete_ips(ips, spec, rspec):
 def _complete_ip(ip, spec, rspec):
     ip["inet"] = _complete_value(ip["inet"], spec, rspec)
     ip_interface = ipaddress.ip_interface(ip["inet"])
+    ip["inet_compressed"] = ip_interface.compressed
+    ip["inet_exploded"] = ip_interface.exploded
     ip["ip"] = str(ip_interface.ip)
     ip["version"] = ip_interface.version
     ip["network"] = str(ip_interface.network)

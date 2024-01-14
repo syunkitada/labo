@@ -187,7 +187,7 @@ def _make(nctx):
         nctx.append_cmds_ip_addr_add(dcmds, rspec["sid"], rspec["sid"]["dev"])
 
     for iprule in rspec.get("ip_rules", []):
-        dcmds += [(f"ip rule add {iprule['rule']} prio {iprule['prio']}", nctx.exist_iprule(iprule["rule"]))]
+        dcmds += nctx.wrap_if_exist_iprule(iprule["rule"], [f"ip rule add {iprule['rule']} prio {iprule['prio']}"])
 
     for route in rspec.get("routes", []):
         nctx.append_cmds_ip_route_add(dcmds, route['dst'], route['via'])
@@ -205,15 +205,13 @@ def _make(nctx):
 
     l3admin = rspec.get("l3admin")
     if l3admin is not None:
-        skipped = nctx.exist_netdev("l3admin")
-        dcmds += [
-            ("ip link add l3admin type dummy", skipped),
-            ("ip link set up l3admin", skipped),
-        ]
+        dcmds += nctx.wrap_if_exist_netdev("l3admin", [
+            "ip link add l3admin type dummy",
+            "ip link set up l3admin",
+        ])
 
         iprule = "from all table 300"
-        skipped = nctx.exist_iprule(iprule)
-        dcmds += [(f"ip rule add {iprule} prio 30", skipped)]
+        dcmds += nctx.wrap_if_exist_iprule(iprule, [f"ip rule add {iprule} prio 30"])
 
         for ip in l3admin.get("ips", []):
             nctx.append_cmds_ip_addr_add(dcmds, ip, "l3admin")

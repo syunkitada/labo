@@ -24,9 +24,10 @@ def make(rc):
                 rc.append_cmds_ip_addr_add(cmds, ex_ip, br_name)
                 table = f"20{i}"
                 iprule = f"from {ex_ip['ip']} table {table}"
-                skipped = rc.exist_iprule(iprule)
+                cmds += rc.wrap_if_exist_iprule([
+                    f"ip rule add {iprule} prio 25",
+                ])
                 cmds += [
-                    (f"ip rule add {iprule} prio 25", skipped),
                     f"ip route replace table {table} 0.0.0.0/0 dev {br_name} src {ex_ip['ip']}",
                 ]
 
@@ -35,16 +36,15 @@ def make(rc):
                     peer_ovs = vlan.get("peer_ovs")
                     if peer_ovs is not None and peer_ovs["peer"] == br_name:
                         cmds += [f"ovs-vsctl --may-exist add-port {br_name} {link['peer_name']}.{vlan_id}"]
-                        dryrun = rc.exist_netdev(peer_ovs["peer_name"])
                         link_name = f"{br_name}-{peer_ovs['peer_name']}"
-                        cmds += [
-                            (f"ip link add {link_name} type veth peer name {peer_ovs['peer_name']}", dryrun),
-                            (f"ip link set dev {link_name} mtu {link['mtu']}", dryrun),
-                            (f"ip link set {link_name} up", dryrun),
-                            (f"ethtool -K {link_name} tso off tx off", dryrun),
-                            (f"ip link set dev {peer_ovs['peer_name']} up", dryrun),
-                            (f"ethtool -K {peer_ovs['peer_name']} tso off tx off", dryrun),
-                        ]
+                        cmds += rc.wrap_if_exist_netdev(peer_ovs["peer_name"], [
+                            f"ip link add {link_name} type veth peer name {peer_ovs['peer_name']}",
+                            f"ip link set dev {link_name} mtu {link['mtu']}",
+                            f"ip link set {link_name} up",
+                            f"ethtool -K {link_name} tso off tx off",
+                            f"ip link set dev {peer_ovs['peer_name']} up",
+                            f"ethtool -K {peer_ovs['peer_name']} tso off tx off",
+                        ])
                         cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {link_name}"]
 
             group1_ports = []

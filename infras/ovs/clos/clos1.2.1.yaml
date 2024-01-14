@@ -1,8 +1,7 @@
 # clos1.2に加えて、br-exにipを付けて疎通取れるようにする
 imports:
-  - infra/local/remote.yaml
-  - infra/ovs/clos/clos1.yaml
-  - infra/ovs/clos/clos1.1.yaml
+  - infras/ovs/clos/clos1.yaml
+  - infras/ovs/clos/clos1.1.yaml
 
 ipam:
   ovsadmin_network1:

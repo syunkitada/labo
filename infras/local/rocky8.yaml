@@ -66,8 +66,8 @@ nodes:
     templates:
       - vm
     cmds:
-      - echo "hello hoge"
-      - echo "hello hoge" > /tmp/hoge
+      - modprobe openvswitch
+      - modprobe vxlan
     ansible:
       vars:
         docker_insecure_registries: [docker-registry.example.com:5000]

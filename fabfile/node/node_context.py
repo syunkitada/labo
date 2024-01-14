@@ -118,11 +118,20 @@ class NodeContext:
             ]
             self.exec(cmds)
 
-    def exist_netdev(self, netdev):
-        return self.rspec["_hostname"] in self.netns_map and netdev in self.netns_map[self.rspec["_hostname"]]["netdev_map"]
+    def wrap_if_exist_netdev_netns(self, netdev, cmds):
+        cmds.insert(0, f"if ! ip netns exec {self.rspec['_hostname']} ip addr show dev {netdev}; then")
+        cmds.append("fi")
+        return cmds
 
-    def exist_iprule(self, iprule):
-        return self.rspec["_hostname"] in self.netns_map and iprule in self.netns_map[self.rspec["_hostname"]]["rule_map"]
+    def wrap_if_exist_netdev(self, netdev, cmds):
+        cmds.insert(0, f"if ! ip addr show dev {netdev}; then")
+        cmds.append("fi")
+        return cmds
+
+    def wrap_if_exist_iprule(self, iprule, cmds):
+        cmds.insert(0, f"if ! ip rule | sed -e 's/lookup/table/g' | grep '{iprule}'; then")
+        cmds.append("fi")
+        return cmds
 
     def exist_route(self, route):
         return self.rspec["_hostname"] in self.netns_map and route["dst"] in self.netns_map[self.rspec["_hostname"]]["route_map"]
@@ -155,7 +164,7 @@ class NodeContext:
             ]
         elif ip["version"] == 6:
             cmds += [
-                f"if ! ip addr show dev {dev} | grep 'inet6 {ip['inet']}'; then",
+                f"if ! ip addr show dev {dev} | grep 'inet6 {ip['inet_compressed']}'; then",
                 f"ip addr add {ip['inet']} dev {dev}",
                 "fi",
             ]
@@ -163,35 +172,32 @@ class NodeContext:
     def append_local_cmds_add_link(self, cmds, link):
         if link["kind"] != "veth":
             return
-        skipped = self.exist_netdev(link["link_name"])
-        cmds += [(f"ip link add {link['link_name']} type veth peer name {link['peer_name']}", skipped)]
+        cmds += self.wrap_if_exist_netdev_netns(link['link_name'], [
+            f"ip link add {link['link_name']} type veth peer name {link['peer_name']}",
+        ])
 
     def append_local_cmds_set_link(self, cmds, link):
-        cmds += [
-            f"if ! ip netns exec {self.rspec['_hostname']} ip addr show dev {link['link_name']}; then",
+        cmds += self.wrap_if_exist_netdev_netns(link['link_name'], [
             f"ethtool -K {link['link_name']} tso off tx off",
             f"ip link set dev {link['link_name']} mtu {link['mtu']}",
             f"ip link set dev {link['link_name']} address {link['link_mac']}",
             f"ip link set dev {link['link_name']} netns {self.rspec['_hostname']} up",
-            "fi",
-        ]
+        ])
 
     def append_local_cmds_set_peer(self, cmds, link):
-        skipped = self.exist_netdev(link["peer_name"])
-        cmds += [
-            (f"ethtool -K {link['peer_name']} tso off tx off", skipped),
-            (f"ip link set dev {link['peer_name']} mtu {link['mtu']}", skipped),
-            (f"ip link set dev {link['peer_name']} address {link['peer_mac']}", skipped),
-            (f"ip link set dev {link['peer_name']} netns {self.rspec['_hostname']} up", skipped),
-        ]
+        cmds += self.wrap_if_exist_netdev_netns(link['peer_name'], [
+            f"ethtool -K {link['peer_name']} tso off tx off",
+            f"ip link set dev {link['peer_name']} mtu {link['mtu']}",
+            f"ip link set dev {link['peer_name']} address {link['peer_mac']}",
+            f"ip link set dev {link['peer_name']} netns {self.rspec['_hostname']} up",
+        ])
 
     def append_cmds_add_vlan(self, cmds, netdev, vlan_id):
         netdev_vlan = f"{netdev}.{vlan_id}"
-        skipped = self.exist_netdev(netdev_vlan)
-        cmds += [
-            (f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}", skipped),
-            (f"ip link set {netdev_vlan} up", skipped),
-        ]
+        cmds += self.wrap_if_exist_netdev(netdev_vlan, [
+            f"ip link add link {netdev} name {netdev_vlan} type vlan id {vlan_id}",
+            f"ip link set {netdev_vlan} up",
+        ])
 
     def ansible(self, ansible):
         self.write("/etc/ansible/vars.yaml", pyyaml.dump(ansible['vars']))

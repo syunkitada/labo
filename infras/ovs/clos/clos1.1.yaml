@@ -1,6 +1,5 @@
 imports:
-  - infra/local/remote.yaml
-  - infra/ovs/clos/clos1.yaml
+  - infras/ovs/clos/clos1.yaml
 
 ipam:
   l3admin_network1:
