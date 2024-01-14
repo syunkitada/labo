@@ -2,12 +2,10 @@
   when: external_playbooks is defined
   loop: "{{ external_playbooks }}"
   ansible.builtin.include_vars:
-    name: "{{ item | replace('-', '_') }}"
     file: "{{ playbook_dir }}/../{{ item }}/vars/default.yaml"
 
 - name: include default vars
   ansible.builtin.include_vars:
-    name: "{{ playbook_dir | basename | replace('-', '_') }}"
     file: "{{ playbook_dir }}/vars/default.yaml"
 - name: include node vars
   when:

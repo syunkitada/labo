@@ -40,10 +40,9 @@ def _new_runtime_context(context_config, spec):
         if host_pass is not None:
             context_config["sudo"]["password"] = host_pass
             connect_kwargs["password"] = host_pass
-        host_user = common.get("host_user")
-        if host_user is not None:
-            context_config["user"] = host_user
         host = common.get("host")
+        context_config["user"] = common.get("host_user", "admin")
+        connect_kwargs["key_filename"] = "/root/.ssh/labo.pem"
     if host is not None:
         c = fabric.Connection(host, config=fabric.Config(context_config), connect_kwargs=connect_kwargs)
         c.is_local = False

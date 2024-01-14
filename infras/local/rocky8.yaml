@@ -70,7 +70,6 @@ nodes:
       - echo "hello hoge" > /tmp/hoge
     ansible:
       vars:
-        docker:
-          insecure_docker_registry: docker-registry.local.example.com:5000
+        docker_insecure_registries: [docker-registry.example.com:5000]
       plays:
         - docker

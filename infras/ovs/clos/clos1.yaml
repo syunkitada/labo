@@ -1,13 +1,12 @@
-imports:
-  - infra/local/remote.yaml
+# imports:
+#   - infras/local/remote.yaml
 
 common:
-  namespace: clos1
-  host: 192.168.210.11
-  host_user: admin
-  host_pass: admin
-  nfs_path: /mnt/nfs
-  insecure_docker_registry: docker-registry.local.example.com:5000
+  host: VM1.rocky8.example.com
+  # host_user: admin
+  # host_pass: admin
+  # nfs_path: /mnt/nfs
+  # insecure_docker_registry: docker-registry.local.example.com:5000
 
 ipam:
   outer_network1:
@@ -26,7 +25,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5000/local/rocky8-nwnode:latest
     mtu: 9000
     sysctl_map:
       net.ipv6.conf.default.disable_ipv6: 0

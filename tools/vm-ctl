@@ -196,8 +196,8 @@ def make_config_drive(spec):
     with open(f"/root/.ssh/labo.pem.pub", "r") as f:
         authorized_key = f.read()
         userdata += [
-            "mkdir -p /home/admin/.ssh",
-            f'echo "{authorized_key}" > /home/admin/.ssh/authorized_keys',
+            f"mkdir -p /home/{spec['user']['name']}/.ssh",
+            f'echo "{authorized_key}" > /home/{spec["user"]["name"]}/.ssh/authorized_keys',
         ]
 
     for i, link in enumerate(spec.get("links", [])):

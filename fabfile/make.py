@@ -73,8 +73,8 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
         )
         results[rspec["name"]] = []
 
-    if not Dryrun:
-        _validate_env(c, cmd, node_ctxs)
+    if not Dryrun and cmd == "make":
+        spec_utils.check_requrements(c, node_ctxs)
 
     while True:
         with ThreadPoolExecutor(max_workers=parallel_pool_size) as pool:
@@ -315,6 +315,7 @@ def _dump_scripts(spec, cmd, nodes):
 
 # TODO refactoring
 def _validate_env(c, cmd, node_ctxs):
+    # TODO exec local
     if cmd != "make":
         return
 

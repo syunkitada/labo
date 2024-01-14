@@ -2,6 +2,7 @@ import os
 
 import yaml
 from lib.spec_utils.complete import complete_spec, update_dict
+from .validator import *
 
 
 def load_spec(file):
