@@ -1,5 +1,5 @@
 imports:
-  - infra/ovs/vxlan/vxlan5.1.yaml
+  - infras/ovs/vxlan/vxlan5.1.yaml
 
 ipam:
   t1vm_network1:
@@ -160,7 +160,7 @@ node_map:
           - name: t2vm2.eip
             dst: <%=_node_map.t2vm2._links.0.peer_ips.0.eip%>
   HV1:
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
@@ -169,7 +169,7 @@ node_map:
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
             eip: <%=assign_ip4(eip_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         tenant: 5000
         templates:
@@ -199,7 +199,7 @@ node_map:
               - name: t2vm2
                 dst: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
   HV2:
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
@@ -208,7 +208,7 @@ node_map:
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
             eip: <%=assign_ip4(eip_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         tenant: 5000
         templates:
@@ -220,7 +220,7 @@ node_map:
           - node
           - vm
   HV3:
-    vm_links:
+    child_links:
       - peer: t1vm3
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network2)%>
@@ -229,7 +229,7 @@ node_map:
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network2)%>
             eip: <%=assign_ip4(eip_network2)%>
-    vms:
+    childs:
       - name: t1vm3
         tenant: 5000
         templates:
@@ -241,7 +241,7 @@ node_map:
           - node
           - vm
   HV4:
-    vm_links:
+    child_links:
       - peer: t1vm4
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network2)%>
@@ -250,7 +250,7 @@ node_map:
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network2)%>
             eip: <%=assign_ip4(eip_network2)%>
-    vms:
+    childs:
       - name: t1vm4
         tenant: 5000
         templates:

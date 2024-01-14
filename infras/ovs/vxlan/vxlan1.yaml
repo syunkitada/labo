@@ -1,10 +1,8 @@
 # 以下を参考にした構成です(vxlanで疎通が取れるまで)
 # - https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/
-imports:
-  - infra/local/remote.yaml
 
 common:
-  namespace: ovs-vxlan1
+  host: VM1.rocky8.example.com
 
 ipam:
   network1:
@@ -20,7 +18,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5000/labo/rocky8-nwnode:latest
     mtu: 1500
   vm:
     mtu: 1500
@@ -38,14 +36,14 @@ nodes:
           - inet: <%=assign_inet4(network1)%>
         peer_ips:
           - inet: <%=assign_inet4(network1)%>
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         templates:
           - node
@@ -77,14 +75,14 @@ nodes:
   - name: n2
     templates:
       - node
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         templates:
           - node

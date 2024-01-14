@@ -1,6 +1,6 @@
 # clos構成でvxlan
 imports:
-  - infra/ovs/vxlan/vxlan3.1.yaml
+  - infras/ovs/vxlan/vxlan3.1.yaml
 
 ipam:
   ovsadmin_network1:
@@ -21,6 +21,7 @@ template_map:
       bridges:
         - name: br-ex
           kind: external-ha
+          # FIXME: this is broken
         - name: br-t1
           kind: vxlan-tenant-vm
           tenant: 5000
@@ -54,14 +55,14 @@ node_map:
           - name: HV2.ovs
             dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
   HV1:
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         tenant: 5000
         templates:
@@ -83,14 +84,14 @@ node_map:
               - name: t2vm2
                 dst: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
   HV2:
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         tenant: 5000
         templates:

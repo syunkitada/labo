@@ -99,21 +99,21 @@ def make(rc):
             _append_flows_for_dummy_arp(br_flows, "LOCAL")
 
         elif br_kind == "internal-vm":
-            for vm_link in rspec.get("vm_links", []):
-                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
-                vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
-                for ip in vm_link.get("peer_ips", []):
+            for child_link in rspec.get("child_links", []):
+                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {child_link['link_name']}"]
+                child_link_mac = f"0x{child_link['peer_mac'].replace(':', '')}"
+                for ip in child_link.get("peer_ips", []):
                     for _link in bridge.get("_links", []):
                         br_flows += [
                             # ingress
                             # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
                             f"priority=700,ip,in_port={_link['peer_name']},nw_dst={ip['ip']}"
-                            + f" actions=mod_dl_dst:{vm_link['peer_mac']},output:{vm_link['link_name']}",
+                            + f" actions=mod_dl_dst:{child_link['peer_mac']},output:{child_link['link_name']}",
                             # egress
-                            f"priority=700,ip,in_port={vm_link['link_name']},nw_src={ip['ip']} actions=output:{_link['peer_name']}",
+                            f"priority=700,ip,in_port={child_link['link_name']},nw_src={ip['ip']} actions=output:{_link['peer_name']}",
                         ]
 
-                        _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
+                        _append_flows_for_dummy_arp(br_flows, child_link["link_name"])
 
         elif br_kind == "vxlan-vpc-vm":
             vxlan_eth = f"vxlan{bridge['vpc_id']}"
@@ -125,20 +125,20 @@ def make(rc):
                 f"ovs-vsctl --may-exist add-port {br_name} {vxlan_eth} --"
                 f" set interface {vxlan_eth} type=vxlan options:remote_ip=flow options:key={bridge['vpc_id']}{vxlan_options}"
             ]
-            for vm_link in rspec.get("vm_links", []):
-                if bridge["vpc_id"] != vm_link["vpc_id"]:
+            for child_link in rspec.get("child_links", []):
+                if bridge["vpc_id"] != child_link["vpc_id"]:
                     continue
-                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
-                vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
-                for ip in vm_link.get("peer_ips", []):
+                cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {child_link['link_name']}"]
+                child_link_mac = f"0x{child_link['peer_mac'].replace(':', '')}"
+                for ip in child_link.get("peer_ips", []):
                     br_flows += [
                         # ingress
                         # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
                         f"priority=700,ip,,nw_dst={ip['ip']}"
-                        + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+                        + f" actions=load:{child_link_mac}->NXM_OF_ETH_DST[],output:{child_link['link_name']}",
                     ]
 
-                    _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
+                    _append_flows_for_dummy_arp(br_flows, child_link["link_name"])
 
                 # 同一vpc間通信はHV to HVでフルメッシュのリンクにする
                 # disableの場合はGW経由での通信となる
@@ -152,7 +152,8 @@ def make(rc):
             for vip in spec.get("vip_map", {}).values():
                 if vip["vpc_id"] == bridge["vpc_id"]:
                     br_flows += [
-                        f"priority=700,ip,nw_dst={vip['vip']['ip']} actions=set_field:{vip['tun_vip']['ip']}->tun_dst,{vxlan_eth}",
+                        # FIXME
+                        # f"priority=700,ip,nw_dst={vip['vip']['ip']} actions=set_field:{vip['tun_vip']['ip']}->tun_dst,{vxlan_eth}",
                     ]
 
             # 行先不明ならGWへ
@@ -233,20 +234,20 @@ def make(rc):
                             br_flows += [
                                 f"priority=700,in_port={vxlan_eth},ip actions=set_field:{ip['ip']}->nw_dst,set_field:{tun_dst}->tun_dst,IN_PORT",
                             ]
-            # for vm_link in rspec.get("vm_links", []):
-            #     if bridge["vpc_id"] != vm_link["vpc_id"]:
+            # for child_link in rspec.get("child_links", []):
+            #     if bridge["vpc_id"] != child_link["vpc_id"]:
             #         continue
-            #     cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {vm_link['link_name']}"]
-            #     vm_link_mac = f"0x{vm_link['peer_mac'].replace(':', '')}"
-            #     for ip in vm_link.get("peer_ips", []):
+            #     cmds += [f"ovs-vsctl --no-wait --may-exist add-port {br_name} {child_link['link_name']}"]
+            #     child_link_mac = f"0x{child_link['peer_mac'].replace(':', '')}"
+            #     for ip in child_link.get("peer_ips", []):
             #         br_flows += [
             #             # ingress
             #             # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
             #             f"priority=700,ip,,nw_dst={ip['ip']}"
-            #             + f" actions=load:{vm_link_mac}->NXM_OF_ETH_DST[],output:{vm_link['link_name']}",
+            #             + f" actions=load:{child_link_mac}->NXM_OF_ETH_DST[],output:{child_link['link_name']}",
             #         ]
 
-            #         _append_flows_for_dummy_arp(br_flows, vm_link["link_name"])
+            #         _append_flows_for_dummy_arp(br_flows, child_link["link_name"])
 
             #     # 同一vpc間通信はHV to HVでフルメッシュのリンクにする
             #     # disableの場合はGW経由での通信となる

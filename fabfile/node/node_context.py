@@ -240,14 +240,19 @@ class NodeContext:
             if test["kind"] == "ping":
                 for target in test["targets"]:
                     msg, err = _ping(target)
+                    if err is None:
+                        ok_msgs.append(f"{test['kind']}: {msg}")
+                    else:
+                        status += 1
+                        ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
             elif test["kind"] == "cmd":
                 if "cmd" in test:
                     msg, err = _cmd(test["cmd"])
-            if err is None:
-                ok_msgs.append(f"{test['kind']}: {msg}")
-            else:
-                status += 1
-                ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
+                    if err is None:
+                        ok_msgs.append(f"{test['kind']}: {msg}")
+                    else:
+                        status += 1
+                        ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
 
         if len(ok_msgs) > 0:
             ok_msgs.insert(0, "ok_results")

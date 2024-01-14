@@ -11,9 +11,9 @@ def make(nctx):
     result = None
     try:
         if nctx.rspec["kind"] == "container":
-            container_manager.make(nctx)
+            result = container_manager.make(nctx)
         elif nctx.rspec["kind"] == "vm":
-            vm_manager.make(nctx)
+            result = vm_manager.make(nctx)
     except Exception as e:
         result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
         nctx.next = -1

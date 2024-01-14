@@ -183,7 +183,8 @@ def make(rc):
             vtysh_cmds += [f"neighbor {bgp_peer_group['name']} route-map {bgp_peer_group['route_map_v4_in']} in"]
         if "route_map_v4_out" in bgp_peer_group:
             vtysh_cmds += [f"neighbor {bgp_peer_group['name']} route-map {bgp_peer_group['route_map_v4_out']} out"]
-    vtysh_cmds += ["neighbor ADMIN activate"]
+    for bgp_peer_group in frr.get("bgp_peer_groups", []):
+        vtysh_cmds += [f"neighbor {bgp_peer_group['name']} activate"]
     vtysh_cmds += ["exit-address-family"]
 
     vtysh_cmds += ["address-family ipv6 unicast"]
@@ -196,7 +197,8 @@ def make(rc):
             vtysh_cmds += [f"neighbor {bgp_peer_group['name']} route-map {bgp_peer_group['route_map_v6_in']} in"]
         if "route_map_v6_out" in bgp_peer_group:
             vtysh_cmds += [f"neighbor {bgp_peer_group['name']} route-map {bgp_peer_group['route_map_v6_out']} out"]
-    vtysh_cmds += ["neighbor ADMIN activate"]
+    for bgp_peer_group in frr.get("bgp_peer_groups", []):
+        vtysh_cmds += [f"neighbor {bgp_peer_group['name']} activate"]
     vtysh_cmds += ["exit-address-family"]
 
     if "srv6_vpn" in frr:

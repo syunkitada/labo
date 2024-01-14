@@ -1,9 +1,6 @@
 # vxlan2 に加え、ノード間にルータを挟んだ構成です
-imports:
-  - infra/local/remote.yaml
-
 common:
-  namespace: ovs-vxlan2
+  host: VM1.rocky8.example.com
 
 ipam:
   network1:
@@ -51,14 +48,14 @@ nodes:
     routes:
       - dst: default
         via: <%=_links.0.ips.0.ip%>
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         templates:
           - node
@@ -97,14 +94,14 @@ nodes:
     routes:
       - dst: default
         via: <%=_links.0.ips.0.ip%>
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         templates:
           - node

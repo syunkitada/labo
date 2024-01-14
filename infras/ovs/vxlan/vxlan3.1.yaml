@@ -1,5 +1,5 @@
 imports:
-  - infra/ovs/vxlan/vxlan3.yaml
+  - infras/ovs/vxlan/vxlan3.yaml
 
 ipam:
   l3admin_network1:
