@@ -29,26 +29,7 @@ def complete_spec(spec):
 
     env_map = {}
 
-    infra_map = {}
-    for rspec in spec.get("infras", []):
-        if rspec["name"] == "mysql":
-            env_map["MYSQL_ROOT_PASSWORD"] = rspec.get("root_password", "rootpass")
-            env_map["MYSQL_ADMIN_USER"] = rspec.get("admin_user", "admin")
-            env_map["MYSQL_ADMIN_PASSWORD"] = rspec.get("admin_password", "adminpass")
-        elif rspec["name"] == "pdns":
-            env_map["PDNS_LOCAL_ADDRESS"] = rspec.get("local_address", "127.0.0.1")
-            env_map["PDNS_DOMAIN"] = spec["conf"]["domain"]
-            for record in rspec.get("records", []):
-                record["fqdn"] = record["name"] + "." + spec["conf"]["domain"]
-
-        infra_map[rspec["name"]] = rspec
-    spec["_infra_map"] = infra_map
     spec["_env_map"] = env_map
-
-    # vm_image_map = spec.get("vm_image_map", {})
-    # for name, rspec in vm_image_map.items():
-    #     rspec["name"] = name
-    #     rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
 
     vpcgw_map = spec.get("vpcgw_map", {})
     for rspec in vpcgw_map.values():
@@ -72,7 +53,7 @@ def complete_spec(spec):
         update_dict(tmp_spec, rspec)
         rspec.update(tmp_spec)
 
-    for rspec in spec.get("nodes", []):
+    def _init_node(rspec):
         peer_links_map[rspec["name"]] = []
         _node_map[rspec["name"]] = rspec
         apply_template(rspec)
@@ -81,6 +62,13 @@ def complete_spec(spec):
             apply_template(link)
         if "frr" in rspec:
             apply_template(rspec["frr"])
+
+        for child in rspec.get("childs", []):
+            _init_node(child)
+
+    for rspec in spec.get("nodes", []):
+        _init_node(rspec)
+
 
     def _complete_node(i, rspec):
         _complete_links(i, spec, rspec, rspec.get("links", []))
@@ -138,14 +126,14 @@ def complete_spec(spec):
                         ovs_peer_links_map[link["peer"]].append(link)
                     bridge["_links"] = ovs_peer_links_map.get(br_name, [])
 
-            _complete_links(i, spec, rspec, rspec.get("vm_links", []))
-            for vm in rspec.get("vms", []):
-                peer_links_map[vm["name"]] = []
-            for link in rspec.get("vm_links", []):
+            _complete_links(i, spec, rspec, rspec.get("child_links", []))
+            for child in rspec.get("childs", []):
+                peer_links_map[child["name"]] = []
+            for link in rspec.get("child_links", []):
                 peer_links_map[link["peer"]].append(link)
-            for vmi, vm in enumerate(rspec.get("vms", [])):
-                vm["hv"] = rspec
-                _complete_node(vmi, vm)
+            for childi, child in enumerate(rspec.get("childs", [])):
+                child["parent"] = rspec
+                _complete_node(childi, child)
 
             frr = rspec.get("frr")
             if frr is not None:
@@ -189,8 +177,8 @@ def complete_spec(spec):
                 for target in test["targets"]:
                     target["dst"] = _complete_value(target["dst"], spec, rspec)
 
-        for vmi, vm in enumerate(rspec.get("vms", [])):
-            _complete_node_at_last(vmi, vm)
+        for childi, child in enumerate(rspec.get("childs", [])):
+            _complete_node_at_last(childi, child)
 
         if "ovs" in rspec:
             ovs = rspec["ovs"]
@@ -224,13 +212,13 @@ def complete_spec(spec):
                     vpcgw = vpcgw_map[bridge["vpcgw"]]
                     bridge["_vpcgw"] = vpcgw
                     vpc_links_map = vpcgw["_vpc_links_map"]
-                    for vm_link in rspec.get("vm_links", []):
-                        if vm_link["vpc_id"] != bridge["vpc_id"]:
+                    for child_link in rspec.get("child_links", []):
+                        if child_link["vpc_id"] != bridge["vpc_id"]:
                             continue
-                        if vm_link["vpc_id"] not in vpc_links_map:
-                            vpc_links_map[vm_link["vpc_id"]] = []
-                        for ip in vm_link["peer_ips"]:
-                            vpc_links_map[vm_link["vpc_id"]].append(
+                        if child_link["vpc_id"] not in vpc_links_map:
+                            vpc_links_map[child_link["vpc_id"]] = []
+                        for ip in child_link["peer_ips"]:
+                            vpc_links_map[child_link["vpc_id"]].append(
                                 {
                                     "ip": ip["ip"],
                                     "eip": ip["eip"],

@@ -38,7 +38,7 @@ template_map:
       ipv4_networks:
         - <%=l3admin.ips.0.inet%>
         - <%=ovs.admin_ips.0.inet%>
-        - <%=vm_links.0.peer_ips.0.ip%>/32
+        - <%=child_links.0.peer_ips.0.ip%>/32
   vm:
     mtu: 1500
     routes:
@@ -55,11 +55,11 @@ node_map:
           - name: HV1.ovs
             dst: <%=_node_map.HV1.ovs.admin_ips.0.ip%>
   HV1:
-    vm_links:
+    child_links:
       - peer: vm1
         peer_ips:
           - inet: <%=assign_inet4(vm_network1)%>
-    vms:
+    childs:
       - name: vm1
         templates:
           - node

@@ -24,7 +24,7 @@ def make(rc):
                 rc.append_cmds_ip_addr_add(cmds, ex_ip, br_name)
                 table = f"20{i}"
                 iprule = f"from {ex_ip['ip']} table {table}"
-                cmds += rc.wrap_if_exist_iprule([
+                cmds += rc.wrap_if_exist_iprule(iprule, [
                     f"ip rule add {iprule} prio 25",
                 ])
                 cmds += [

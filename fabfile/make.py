@@ -65,13 +65,19 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
 
     results = OrderedDict()
     node_ctxs = []
-    for rspec in spec.get("nodes", []):
+    def init_node_ctx(rspec):
         if not task_utils.target.is_target(rspec, re_targets):
-            continue
+            return
         node_ctxs.append(
             node_context.NodeContext(cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun)
         )
         results[rspec["name"]] = []
+
+        for child in rspec.get("childs", []):
+            init_node_ctx(child)
+
+    for rspec in spec.get("nodes", []):
+        init_node_ctx(rspec)
 
     if not Dryrun and cmd == "make":
         spec_utils.check_requrements(c, node_ctxs)
@@ -151,7 +157,7 @@ def _dump_net(spec):
     # vmsをtopologyに追加
     topo_index = len(topology)
     for node in nodes:
-        for vm in node.get("vms", []):
+        for vm in node.get("childs", []):
             topology += [[None] * topo_width]
             topo_nodes.append(vm)
             node_topo_index_map[vm["name"]] = topo_index
@@ -160,7 +166,7 @@ def _dump_net(spec):
     for i, node in enumerate(topo_nodes):
         for link in node.get("links", []):
             _link_topology(i, node_topo_index_map[link["peer"]], link["link_name"], link["peer_name"])
-        for link in node.get("vm_links", []):
+        for link in node.get("child_links", []):
             _link_topology(i, node_topo_index_map[link["peer"]], link["link_name"], link["peer_name"])
 
     table_rows = []

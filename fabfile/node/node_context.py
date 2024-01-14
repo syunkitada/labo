@@ -211,3 +211,53 @@ class NodeContext:
                 f"ansible-playbook /mnt/nfs/labo/ansible/playbooks/{play}/main.yaml",
             ]
         self.exec(cmds)
+
+    def test(self):
+        def _ping(target):
+            result = self.exec_without_log(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
+            msg = f"{self.rspec['name']}: ping to {target['name']}(dst={target['dst']})"
+            if result.return_code == 0:
+                return msg, None
+            else:
+                return msg, result.stdout + result.stderr
+
+        def _cmd(cmd):
+            msg = f"{self.rspec['name']}: {cmd}"
+            result = self.exec_without_log(cmd, hide=True, warn=True)
+            if result.return_code == 0:
+                return msg, None
+            else:
+                return msg, result.stdout + result.stderr
+
+        rspec = self.rspec
+        status = 0
+        msgs = []
+        ok_msgs = []
+        ng_msgs = []
+        for test in rspec.get("tests", []):
+            msg = ""
+            err = None
+            if test["kind"] == "ping":
+                for target in test["targets"]:
+                    msg, err = _ping(target)
+            elif test["kind"] == "cmd":
+                if "cmd" in test:
+                    msg, err = _cmd(test["cmd"])
+            if err is None:
+                ok_msgs.append(f"{test['kind']}: {msg}")
+            else:
+                status += 1
+                ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
+
+        if len(ok_msgs) > 0:
+            ok_msgs.insert(0, "ok_results")
+            msgs.append(colors.ok("\n".join(ok_msgs)))
+        if len(ng_msgs) > 0:
+            ng_msgs.insert(0, "ng_results")
+            msgs.append(colors.crit("\n".join(ng_msgs)))
+
+        msgs.append("")
+        return {
+            "status": status,
+            "msg": "\n".join(msgs),
+        }

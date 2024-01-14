@@ -1,7 +1,6 @@
 import os
 
 import yaml
-from lib import colors
 
 from . import container_frr, container_ovs
 
@@ -9,16 +8,10 @@ from . import container_frr, container_ovs
 def make(nctx):
     if nctx.cmd == "dump":
         print(yaml.safe_dump(nctx.rspec))
-    elif nctx.cmd == "make":
+    elif nctx.cmd == "make" or nctx.cmd == "remake":
         if nctx.next == 0:
-            _make_prepare(nctx)
-            nctx.next = 1
-        elif nctx.next == 1:
-            _make(nctx)
-            nctx.next = -1
-    elif nctx.cmd == "remake":
-        if nctx.next == 0:
-            _clean(nctx)
+            if nctx.cmd == "remake":
+                _clean(nctx)
             _make_prepare(nctx)
             nctx.next = 1
         elif nctx.next == 1:
@@ -27,76 +20,13 @@ def make(nctx):
     elif nctx.cmd == "clean":
         _clean(nctx)
     elif nctx.cmd == "test":
-        return _test(nctx)
+        return nctx.test()
 
 
 def _clean(nctx):
     rspec = nctx.rspec
     nctx.c.sudo(f"docker kill {rspec['_hostname']}", hide=True, warn=True)
     nctx.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
-
-    for vm in rspec.get("vms", []):
-        nctx.rspec = vm
-        _clean(nctx)
-
-
-def _test(nctx):
-    rspec = nctx.rspec
-    status = 0
-    msgs = []
-    ok_msgs = []
-    ng_msgs = []
-    for test in rspec.get("tests", []):
-        msg = ""
-        err = None
-        if test["kind"] == "ping":
-            for target in test["targets"]:
-                msg, err = _ping(rc, target)
-        elif test["kind"] == "cmd":
-            if "cmd" in test:
-                msg, err = _cmd(rc, test["cmd"])
-        if err is None:
-            ok_msgs.append(f"{test['kind']}: {msg}")
-        else:
-            status += 1
-            ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
-
-    if len(ok_msgs) > 0:
-        ok_msgs.insert(0, "ok_results")
-        msgs.append(colors.ok("\n".join(ok_msgs)))
-    if len(ng_msgs) > 0:
-        ng_msgs.insert(0, "ng_results")
-        msgs.append(colors.crit("\n".join(ng_msgs)))
-
-    for vm in rspec.get("vms", []):
-        nctx.rspec = vm
-        result = _test(rc)
-        status += result["status"]
-        msgs.append(result["msg"])
-
-    msgs.append("")
-    return {
-        "status": status,
-        "msg": "\n".join(msgs),
-    }
-
-
-def _ping(nctx, target):
-    result = nctx.dexec(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
-    msg = f"{nctx.rspec['name']}: ping to {target['name']}(dst={target['dst']})"
-    if result.return_code == 0:
-        return msg, None
-    else:
-        return msg, result.stdout + result.stderr
-
-
-def _cmd(nctx, cmd):
-    msg = f"{nctx.rspec['name']}: {cmd}"
-    result = nctx.dexec(cmd, hide=True, warn=True)
-    if result.return_code == 0:
-        return msg, None
-    else:
-        return msg, result.stdout + result.stderr
 
 
 def _make_prepare(nctx):
@@ -107,7 +37,7 @@ def _make_prepare(nctx):
     lcmds = []
     for link in rspec.get("links", []):
         nctx.append_local_cmds_add_link(lcmds, link)
-    for link in rspec.get("vm_links", []):
+    for link in rspec.get("child_links", []):
         nctx.append_local_cmds_add_link(lcmds, link)
     nctx.exec(lcmds, title="prepare-links", is_local=True)
 
@@ -160,7 +90,7 @@ def _make(nctx):
         nctx.append_local_cmds_set_link(lcmds, link)
     for link in rspec.get("_links", []):
         nctx.append_local_cmds_set_peer(lcmds, link)
-    for link in rspec.get("vm_links", []):
+    for link in rspec.get("child_links", []):
         nctx.append_local_cmds_set_link(lcmds, link)
     nctx.exec(lcmds, title="prepare-links", is_local=True)
 
