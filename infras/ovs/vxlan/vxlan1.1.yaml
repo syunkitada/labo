@@ -1,10 +1,7 @@
 # 以下を参考にした構成です(mirror portの設定まで)
 # - https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/
-imports:
-  - infra/local/remote.yaml
-
 common:
-  namespace: ovs-vxlan1
+  host: VM1.rocky8.example.com
 
 ipam:
   network1:
@@ -38,14 +35,14 @@ nodes:
           - inet: <%=assign_inet4(network1)%>
         peer_ips:
           - inet: <%=assign_inet4(network1)%>
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         templates:
           - node
@@ -119,14 +116,14 @@ nodes:
   - name: n2
     templates:
       - node
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         templates:
           - node

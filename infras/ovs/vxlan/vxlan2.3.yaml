@@ -24,11 +24,8 @@
 # Cached: 127.0.0.0/8 dev lo SRC 127.0.0.1 local
 # Cached: 10.10.1.0/24 dev br-ex SRC 10.10.1.2
 # Cached: 0.0.0.0/0 dev br-ex GW 10.10.1.1 SRC 10.10.1.2
-imports:
-  - infra/local/remote.yaml
-
 common:
-  namespace: ovs-vxlan2
+  host: VM1.rocky8.example.com
 
 ipam:
   network1:
@@ -47,7 +44,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5000/labo/rocky8-nwnode:latest
     mtu: 1500
   vm:
     mtu: 1500
@@ -76,14 +73,14 @@ nodes:
     routes:
       - dst: default
         via: <%=_links.0.ips.0.ip%>
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         templates:
           - node
@@ -133,14 +130,14 @@ nodes:
     routes:
       - dst: default
         via: <%=_links.0.ips.0.ip%>
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         templates:
           - node

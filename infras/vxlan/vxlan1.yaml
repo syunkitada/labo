@@ -1,9 +1,3 @@
-imports:
-  - infra/local/remote.yaml
-
-common:
-  namespace: vxlan
-
 ipam:
   network1:
     subnet: 10.10.1.0/24
@@ -18,7 +12,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
+    image: local/rocky8-nwnode:latest
     mtu: 1500
 
 nodes:

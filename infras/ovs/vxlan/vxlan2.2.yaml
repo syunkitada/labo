@@ -1,10 +1,8 @@
 # vxlan2.1のovsの設定をcmdsではなくモジュールで設定したもの
 # 参考: https://docs.openvswitch.org/en/latest/howto/userspace-tunneling/
-imports:
-  - infra/local/remote.yaml
-
+# FIXME
 common:
-  namespace: ovs-vxlan3
+  host: VM1.rocky8.example.com
 
 ipam:
   network1:
@@ -23,7 +21,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5000/labo/rocky8-nwnode:latest
     mtu: 1500
   vm:
     mtu: 1500
@@ -60,14 +58,14 @@ nodes:
         - name: br-t2
           kind: vxlan-tenant-vm
           tenant: 6000
-    vm_links:
+    child_links:
       - peer: t1vm1
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm1
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm1
         tenant: 5000
         templates:
@@ -102,14 +100,14 @@ nodes:
         - name: br-t2
           kind: vxlan-tenant-vm
           tenant: 6000
-    vm_links:
+    child_links:
       - peer: t1vm2
         peer_ips:
           - inet: <%=assign_inet4(t1vm_network1)%>
       - peer: t2vm2
         peer_ips:
           - inet: <%=assign_inet4(t2vm_network1)%>
-    vms:
+    childs:
       - name: t1vm2
         tenant: 5000
         templates:
