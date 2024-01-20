@@ -10,7 +10,7 @@
         docker ps | grep " mysql$" ||
         (
           (docker ps --all | grep " mysql$" && sudo docker rm mysql || echo "mysql not found") &&
-          docker run -v /var/lib/docker-mysql:/var/lib/mysql --net=host --name mysql -e MYSQL_ROOT_PASSWORD={{ mysql_docker.root_password }} -d mysql
+          docker run -v /var/lib/docker-mysql:/var/lib/mysql --net=host --name mysql -e MYSQL_ROOT_PASSWORD={{ mysql_docker_root_password }} -d mysql
         )
 
     - name: write hostname using jnja2
@@ -28,8 +28,8 @@
 
     - name: create user
       ansible.builtin.shell: |
-        mysql-docker -e "CREATE USER IF NOT EXISTS '{{ mysql_docker.user }}'@'%' IDENTIFIED BY '{{ mysql_docker.password }}'"
-        mysql-docker -e "GRANT ALL ON *.* TO '{{ mysql_docker.user }}'@'%'; FLUSH PRIVILEGES;"
+        mysql-docker -e "CREATE USER IF NOT EXISTS '{{ mysql_docker_user }}'@'%' IDENTIFIED BY '{{ mysql_docker_password }}'"
+        mysql-docker -e "GRANT ALL ON *.* TO '{{ mysql_docker_user }}'@'%'; FLUSH PRIVILEGES;"
 
     - name: write hostname using jnja2
       ansible.builtin.template:

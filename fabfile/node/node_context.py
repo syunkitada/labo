@@ -54,7 +54,7 @@ class NodeContext:
             file_name_prefix = f"{self.rspec['_script_index']}"
             comment_name_prefix = f"{self.rspec['_script_index']}"
         else:
-            file_name_prefix = f"{self.rspec['_script_index']}_{title.replace(' ', '-')}"
+            file_name_prefix = f"{self.rspec['_script_index']}_{title.replace(' ', '-').replace('/', '-')}"
             comment_name_prefix = f"{self.rspec['_script_index']}: {title}"
 
         exec_filepath = os.path.join(self.rspec["_script_dir"], f"{file_name_prefix}_exec.sh")
@@ -200,17 +200,17 @@ class NodeContext:
         ])
 
     def ansible(self, ansible):
-        self.write("/etc/ansible/vars.yaml", pyyaml.dump(ansible['vars']))
-        cmds = [
-            "export PATH=$PATH:/usr/local/bin",
-            "export LANG=C.UTF-8",
-            "export LC_ALL=en_US.UTF-8",
-        ]
+        self.write("/etc/ansible/vars.yaml", pyyaml.dump(ansible.get('vars', {})))
         for play in ansible.get("plays", []):
+            cmds = [
+                "export PATH=$PATH:/usr/local/bin",
+                "export LANG=C.UTF-8",
+                "export LC_ALL=en_US.UTF-8",
+            ]
             cmds += [
                 f"ansible-playbook /mnt/nfs/labo/ansible/playbooks/{play}/main.yaml",
             ]
-        self.exec(cmds)
+            self.exec(cmds, title=f"ansible_{play}")
 
     def test(self):
         def _ping(target):

@@ -44,9 +44,16 @@ def _make_prepare(nctx):
     # メモ: (負荷が高いと？)dockerでsystemdが起動できないことがある
     docker_options = [
         f"-d  --rm --network {rspec.get('network', 'none')} --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
-        "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
+        # "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
+        "-v /mnt/nfs:/mnt/nfs:ro",
         f"-v {rspec['_script_dir']}:{rspec['_script_dir']}",
+        "--cgroup-parent docker.slice",
+        "--cgroupns private",
     ]
+
+    for port in rspec.get("ports", []):
+        docker_options += [f"-p {port}"]
+
     lcmds = [
         f"if ! docker inspect {rspec['_hostname']}; then",
         f"docker run {' '.join(docker_options)} {rspec['image']}",
@@ -167,9 +174,5 @@ def _make(nctx):
     if "cmds" in rspec:
         nctx.exec(rspec.get("cmds", []), title="cmds")
 
-    for child in nctx.childs:
-        _make(child)
-    # for vm in rspec.get("vms", []):
-    #     nctx.rspec = vm
-    #     _make_prepare(rc)
-    #     _make(rc)
+    if "ansible" in rspec:
+        nctx.ansible(rspec['ansible'])

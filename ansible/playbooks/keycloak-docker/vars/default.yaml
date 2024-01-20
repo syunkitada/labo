@@ -1,0 +1,3 @@
+keycloak_docker_version: 23.0.4
+keycloak_docker_admin_user: admin
+keycloak_docker_admin_password: admin

@@ -1,0 +1,38 @@
+- ansible.builtin.template:
+    src: keystone.conf.j2
+    dest: /etc/keystone/keystone.conf
+  register: keystone_conf
+
+- ansible.builtin.template:
+    src: adminrc.j2
+    dest: /etc/adminrc
+
+- name: init db
+  ansible.builtin.shell: |
+    mysql -e 'CREATE DATABASE IF NOT EXISTS keystone'
+
+    /opt/keystone/bin/keystone-manage db_sync
+
+    /opt/keystone/bin/keystone-manage fernet_setup --keystone-user root --keystone-group root
+    /opt/keystone/bin/keystone-manage credential_setup --keystone-user root --keystone-group root
+
+    /opt/keystone/bin/keystone-manage bootstrap --bootstrap-password "{{ keystone_admin_password }}" \
+      --bootstrap-admin-url "http://{{ keystone_host }}:5000/v3/" \
+      --bootstrap-internal-url "http://{{ keystone_host }}:5000/v3/" \
+      --bootstrap-public-url "http://{{ keystone_host }}:5000/v3/" \
+      --bootstrap-region-id "{{ keystone_region }}"
+
+- name: start keystone
+  ansible.builtin.shell: |
+    systemctl status keystone-public || systemd-run --unit keystone-public -- \
+      /opt/keystone/bin/keystone-wsgi-public --port 5000
+
+- name: create user
+  ansible.builtin.shell: |
+    source /etc/adminrc
+
+    timeout 5 bash -c 'until openstack token issue; do sleep 1; done'
+
+    openstack project show service || openstack project create --domain default --description "Service Project" service
+    openstack user show "{{ keystone_service_user }}" || openstack user create --domain default --password "{{ keystone_service_password }}" "{{ keystone_service_user }}"
+    openstack role add --project service --user "{{ keystone_service_user }}" admin

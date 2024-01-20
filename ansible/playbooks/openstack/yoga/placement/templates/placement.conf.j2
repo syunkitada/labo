@@ -1,0 +1,18 @@
+[DEFAULT]
+log_file = /var/log/placement/placement.log
+
+[placement_database]
+connection = mysql+pymysql://{{ placement_mysql_user }}:{{ placement_mysql_password }}@{{ placement_mysql_host }}/placement
+
+[api]
+auth_strategy = keystone
+
+[keystone_authtoken]
+auth_url = http://{{ placement_keystone_host }}:5000
+memcached_servers = {{ placement_keystone_host }}:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = {{ placement_keystone_service_user }}
+password = {{ placement_keystone_service_password }}

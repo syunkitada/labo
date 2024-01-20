@@ -1,0 +1,19 @@
+- name: include vars
+  hosts: localhost
+  tasks:
+    - include_tasks: ../common/tasks/include_vars.yaml
+
+- hosts: localhost
+  tasks:
+    - name: create user
+      vars:
+        docker_name: keycloak
+      ansible.builtin.shell: |
+        docker ps | grep " {{ docker_name }}$" ||
+        (
+          (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+          docker run --net=host -d --name {{ docker_name }} \
+            -e KEYCLOAK_ADMIN={{ keycloak_docker_admin_user }} \
+            -e KEYCLOAK_ADMIN_PASSWORD={{ keycloak_docker_admin_password }} \
+            quay.io/keycloak/keycloak:{{ keycloak_docker_version }} start-dev
+        )

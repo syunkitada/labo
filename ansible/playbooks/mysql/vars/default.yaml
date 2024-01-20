@@ -1,2 +1,2 @@
-user: admin
-password: adminpass
+mysql_user: admin
+mysql_password: adminpass

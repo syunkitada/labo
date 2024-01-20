@@ -1,0 +1,6 @@
+- include_tasks: ../../common/tasks/include_package_vars.yaml
+
+- name: install
+  ansible.builtin.yum:
+    name: memcached
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts["distribution_major_version"] == "8"

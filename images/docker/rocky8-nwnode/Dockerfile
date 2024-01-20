@@ -14,8 +14,6 @@ ENV FRRVER="frr-stable"
 #     rm -f /lib/systemd/system/basic.target.wants/*;\
 #     rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-RUN yum install -y systemd
-
 # frr
 RUN yum install -y https://rpm.frrouting.org/repo/$FRRVER-repo-1-0.el8.noarch.rpm && \
     yum install -y frr frr-pythontools

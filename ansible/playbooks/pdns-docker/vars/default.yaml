@@ -1,7 +1,7 @@
-local_address: 0.0.0.0
-domains:
+pdns_docker_local_address: 0.0.0.0
+pdns_docker_domains:
   - example.com
-records:
+pdns_docker_records:
   - domain: example.com
     name: docker-registry.example.com
     type: a

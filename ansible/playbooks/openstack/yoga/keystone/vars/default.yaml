@@ -1,0 +1,11 @@
+keystone_venv: /opt/keystone
+
+keystone_mysql_host: localhost
+keystone_mysql_user: admin
+keystone_mysql_password: adminpass
+
+keystone_region: region
+keystone_host: localhost
+keystone_admin_password: adminpass
+keystone_service_user: system
+keystone_service_password: systempass

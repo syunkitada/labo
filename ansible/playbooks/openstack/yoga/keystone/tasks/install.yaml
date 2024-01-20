@@ -1,0 +1,24 @@
+- include_tasks: ../../../../common/tasks/include_package_vars.yaml
+
+- name: install
+  ansible.builtin.shell: |
+    python3 -m venv {{ keystone_venv }} --system-site-packages
+    mkdir -p /etc/keystone
+    mkdir -p /var/log/keystone
+
+- name: install
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ keystone_venv }}/requirements.txt"
+
+- name: install requirements
+  ansible.builtin.shell: |
+    {{ keystone_venv }}/bin/pip install pip --upgrade
+    {{ keystone_venv }}/bin/pip install -r {{ keystone_venv }}/requirements.txt
+
+- name: install keystone
+  ansible.builtin.shell: |
+    mkdir -p {{ keystone_venv }}/src
+    cd {{ keystone_venv }}/src
+    test -e keystone || git clone https://github.com/openstack/keystone.git -b stable/yoga && \
+    cd keystone && {{ keystone_venv }}/bin/python setup.py install

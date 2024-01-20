@@ -1,2 +1,1 @@
-mysql:
-  version: aaa
+mysql_docker_version: latest

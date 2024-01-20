@@ -1,0 +1,16 @@
+- include_tasks: ../../../../common/tasks/include_package_vars.yaml
+
+- name: install
+  ansible.builtin.shell: |
+    python3 -m venv {{ ostools_venv }} --system-site-packages
+
+- name: install
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ ostools_venv }}/requirements.txt"
+
+- name: install
+  ansible.builtin.shell: |
+    {{ ostools_venv }}/bin/pip install pip --upgrade
+    {{ ostools_venv }}/bin/pip install -r /opt/ostools/requirements.txt
+    test -e /usr/bin/openstack || ln -s /opt/ostools/bin/openstack /usr/bin/openstack

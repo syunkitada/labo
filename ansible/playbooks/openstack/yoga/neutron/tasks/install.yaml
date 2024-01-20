@@ -1,0 +1,46 @@
+- include_tasks: ../../../../common/tasks/include_package_vars.yaml
+
+# - name: install requirements packages
+#   yum:
+#     name:
+#       - python3-pyOpenSSL
+#       - python3-cryptography
+
+- name: install venv
+  ansible.builtin.shell: |
+    set -e
+    python3 -m venv {{ neutron_venv }} --system-site-packages
+    {{ neutron_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/neutron
+    mkdir -p /etc/neutron
+    mkdir -p /etc/neutron/plugins/ml2
+    mkdir -p /var/lib/neutron
+
+- name: put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ neutron_venv }}/requirements.txt"
+
+- name: install neutron
+  shell: |
+    set -e
+    {{ neutron_venv }}/bin/pip install -r {{ neutron_venv }}/requirements.txt
+
+- name: install neutron
+  shell: |
+    set -e
+    mkdir -p {{ neutron_venv }}/src
+    cd {{ neutron_venv }}/src
+    test -e neutron || git clone https://github.com/openstack/neutron.git -b stable/yoga
+    cd neutron
+    {{ neutron_venv }}/bin/python setup.py install
+    cp etc/api-paste.ini /etc/neutron/
+    cp etc/rootwrap.conf /etc/neutron/
+
+- name: install neutron
+  shell: |
+    set -e
+    cd {{ neutron_venv }}/src
+    test -e neutron-lib || git clone https://github.com/openstack/neutron-lib.git -b stable/yoga
+    cd neutron-lib
+    {{ neutron_venv }}/bin/python setup.py install

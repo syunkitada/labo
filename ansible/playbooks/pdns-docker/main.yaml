@@ -21,8 +21,8 @@
                       -e PDNS_default_ttl=1500 \
                       -e PDNS_gmysql_host=127.0.0.1 \
                       -e PDNS_gmysql_port=3306 \
-                      -e PDNS_gmysql_user="{{ mysql_docker.user }}" \
-                      -e PDNS_gmysql_password="{{ mysql_docker.password }}" \
+                      -e PDNS_gmysql_user="{{ mysql_docker_user }}" \
+                      -e PDNS_gmysql_password="{{ mysql_docker_password }}" \
                       -e PDNS_gmysql_dbname=pdns \
                       -e PDNS_log_dns_queries=yes \
                       -e PDNS_loglevel=9 \
@@ -41,21 +41,21 @@
           (
               (sudo docker ps --all | grep pdns-recursor && sudo docker rm pdns-recursor || echo "pdns-recursor not found") &&
                   sudo docker run -d --network host --name pdns-recursor \
-                      -e PDNS_local_address="{{ pdns_docker.local_address }}" \
+                      -e PDNS_local_address="{{ pdns_docker_local_address }}" \
                       -e PDNS_local_port=53 \
                       -e PDNS_dnssec=off \
-                      -e PDNS_forward_zones_recurse={{ pdns_docker.domains | join('=127.0.0.1:8053,') }}=127.0.0.1:8053,.=8.8.8.8 \
+                      -e PDNS_forward_zones_recurse={{ pdns_docker_domains | join('=127.0.0.1:8053,') }}=127.0.0.1:8053,.=8.8.8.8 \
                       -e PDNS_loglevel=9 \
                       pschiffe/pdns-recursor
           )
 
     - name: create domains
-      loop: "{{ pdns_docker.domains }}"
+      loop: "{{ pdns_docker_domains }}"
       ansible.builtin.shell: |
         domain-ctl create {{ item }} {{ local.ipaddr }}
 
     - name: create records
-      loop: "{{ pdns_docker.records }}"
+      loop: "{{ pdns_docker_records }}"
       ansible.builtin.shell: |
         record-ctl create {{ item.domain }} {{ item.name }} {{ item.type }} {{ item.content | replace('local.ipaddr', local.ipaddr) }}
 

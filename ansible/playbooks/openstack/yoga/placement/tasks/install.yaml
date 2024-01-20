@@ -1,0 +1,31 @@
+- include_tasks: ../../../../common/tasks/include_package_vars.yaml
+
+# - name: install requirements packages
+#   yum:
+#     name:
+#       - python3-pyOpenSSL
+#       - python3-cryptography
+
+- name: install venv
+  ansible.builtin.shell: |
+    set -e
+    python3 -m venv {{ placement_venv }} --system-site-packages
+    {{ placement_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/placement
+    mkdir -p /etc/placement
+
+- name: put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ placement_venv }}/requirements.txt"
+
+- name: install placement
+  shell: |
+    set -e
+    {{ placement_venv }}/bin/pip install -r {{ placement_venv }}/requirements.txt
+
+    mkdir -p {{ placement_venv }}/src
+    cd {{ placement_venv }}/src
+    test -e placement || git clone https://github.com/openstack/placement.git -b stable/yoga
+    cd placement
+    {{ placement_venv }}/bin/python setup.py install

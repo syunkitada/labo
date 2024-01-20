@@ -1,0 +1,34 @@
+- include_tasks: ../../../../common/tasks/include_package_vars.yaml
+
+# - name: install requirements packages
+#   yum:
+#     name:
+#       - python3-pyOpenSSL
+#       - python3-cryptography
+
+- name: install venv
+  ansible.builtin.shell: |
+    set -e
+    python3 -m venv {{ nova_venv }} --system-site-packages
+    {{ nova_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/nova
+    mkdir -p /etc/nova
+    mkdir -p /var/lib/nova/instances
+
+- name: put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ nova_venv }}/requirements.txt"
+
+- name: install nova
+  shell: |
+    set -e
+    {{ nova_venv }}/bin/pip install -r {{ nova_venv }}/requirements.txt
+
+    mkdir -p {{ nova_venv }}/src
+    cd {{ nova_venv }}/src
+    test -e nova || git clone https://github.com/openstack/nova.git -b stable/yoga
+    cd nova
+    {{ nova_venv }}/bin/python setup.py install
+
+    cp etc/nova/api-paste.ini /etc/nova/
