@@ -6,6 +6,7 @@ nodes:
     ports:
       - 80:80
       - 443:443
+      - 5000:5000
     ansible:
       vars:
         my_ip: 172.17.0.3
@@ -18,6 +19,8 @@ nodes:
         - openstack/yoga/horizon
         - openstack/yoga/glance
         - openstack/yoga/placement
+        - openstack/yoga/nova
+        - openstack/yoga/neutron
   - name: node1
     kind: container
     image: local/rocky8-base:latest

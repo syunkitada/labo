@@ -1,10 +1,23 @@
 - include_tasks: ../../../../common/tasks/include_package_vars.yaml
 
+- name: install requirements packages
+  yum:
+    name:
+      - httpd
+      - mod_auth_mellon
+      - python3-mod_wsgi
+
+- name: install
+  ansible.builtin.shell: |
+    chown -R nobody:nobody /var/log/httpd
+    sed -i 's/Listen 80//g' /etc/httpd/conf/httpd.conf
+
 - name: install
   ansible.builtin.shell: |
     python3 -m venv {{ keystone_venv }} --system-site-packages
     mkdir -p /etc/keystone
     mkdir -p /var/log/keystone
+    chown -R nobody:nobody /var/log/keystone/
 
 - name: install
   ansible.builtin.copy:

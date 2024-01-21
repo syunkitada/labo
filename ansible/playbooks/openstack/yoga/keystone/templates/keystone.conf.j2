@@ -6,3 +6,8 @@ connection = mysql+pymysql://{{ keystone_mysql_user }}:{{ keystone_mysql_passwor
 
 [token]
 provider = fernet
+
+[cache]
+enabled = true
+backend = dogpile.cache.memcached
+backend_argument = url:127.0.0.1:11211

@@ -1,16 +1,16 @@
 - include_tasks: ../../../../common/tasks/include_package_vars.yaml
 
+- name: install requirements packages
+  yum:
+    name:
+      - gettext
+
 - name: install venv
   ansible.builtin.shell: |
     python3 -m venv {{ horizon_venv }} --system-site-packages
     {{ horizon_venv }}/bin/pip install pip --upgrade
     mkdir -p /var/log/horizon
     mkdir -p /etc/openstack-dashboard/
-
-- name: install requirements packages
-  yum:
-    name:
-      - gettext
 
 - name: put requirements.txt
   ansible.builtin.copy:
