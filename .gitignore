@@ -1,5 +1,4 @@
-tmp
-tmp.md
+tmp*
 *.tmp
 
 # python
@@ -7,3 +6,6 @@ venv
 .venv
 .pytest_cache
 *.pyc
+
+# ansible
+galaxy_cache

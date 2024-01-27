@@ -1,0 +1,58 @@
+- name: start pdns-mysql on docker
+  become: true
+  vars:
+    docker_name: pdns-mysql
+  shell: |
+    docker ps | grep " {{ docker_name }}$" ||
+    (
+      (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+      docker run -d --rm --net=host --name {{ docker_name }} \
+        -e PDNS_local_address=127.0.0.1 \
+        -e PDNS_local_port=8053 \
+        -e PDNS_master=yes \
+        -e PDNS_default_ttl=1500 \
+        -e PDNS_gmysql_host="{{ pdns_docker_mysql_host }}" \
+        -e PDNS_gmysql_port={{ pdns_docker_mysql_port }} \
+        -e PDNS_gmysql_user="{{ pdns_docker_mysql_user }}" \
+        -e PDNS_gmysql_password="{{ pdns_docker_mysql_password }}" \
+        -e PDNS_gmysql_dbname=pdns \
+        -e PDNS_log_dns_queries=yes \
+        -e PDNS_loglevel=9 \
+        pschiffe/pdns-mysql
+    )
+
+- name: stop systemd-resolved
+  become: true
+  when: ansible_facts['os_family'] == "Debian"
+  shell: |
+    systemctl stop systemd-resolved
+
+- name: start pdns-recursor on docker
+  become: true
+  vars:
+    docker_name: pdns-recursor
+  shell: |
+    docker ps | grep " {{ docker_name }}$" ||
+    (
+      (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+      docker run -d --rm --net=host --name {{ docker_name }} \
+        -e PDNS_local_address="{{ pdns_docker_local_address }}" \
+        -e PDNS_local_port=53 \
+        -e PDNS_dnssec=off \
+        -e PDNS_forward_zones_recurse={{ pdns_docker_domains | join('=127.0.0.1:8053,') }}=127.0.0.1:8053,.=8.8.8.8 \
+        -e PDNS_loglevel=9 \
+        pschiffe/pdns-recursor
+    )
+
+- name: create domains
+  loop: "{{ pdns_docker_domains }}"
+  shell: |
+    labo-domain-ctl create {{ item }} {{ local_ipaddr }}
+
+- name: create records
+  loop: "{{ pdns_docker_records }}"
+  shell: |
+    labo-record-ctl create {{ item.domain }} {{ item.name }} {{ item.type }} {{ item.content }}
+
+# MEMO 0.0.0.0でリッスンする場合は、ubuntuだとsystemd-resolvedがスタブとして起動してるとバッティングするので止めておく必要がある
+# sudo systemctl stop systemd-resolved

@@ -28,7 +28,7 @@ def make(nctx):
 
 def _clean(nctx):
     lcmds = [
-        f"vm-ctl delete {nctx.rspec['_hostname']}",
+        f"labo-vm-ctl delete {nctx.rspec['_hostname']}",
     ]
     nctx.exec(lcmds, title="delete-vm", is_local=True)
 
@@ -81,7 +81,7 @@ def _make_prepare(nctx):
     nctx.write(f"/mnt/nfs/vms/{nctx.rspec['_hostname']}/vm.yaml", yaml=vm_yaml, is_local=True)
 
     lcmds = [
-        f"vm-ctl start {nctx.rspec['_hostname']}",
+        f"labo-vm-ctl start {nctx.rspec['_hostname']}",
     ]
     nctx.exec(lcmds, title="prepare-vm", is_local=True)
 

@@ -1,0 +1,13 @@
+pdns_docker_mysql_host: 127.0.0.1
+pdns_docker_mysql_port: 3306
+pdns_docker_mysql_user: admin
+pdns_docker_mysql_password: adminpass
+
+pdns_docker_local_address: 0.0.0.0
+pdns_docker_domains:
+  - example.com
+pdns_docker_records:
+  - domain: example.com
+    name: docker-registry.example.com
+    type: a
+    content: "{{ local_ipaddr }}"

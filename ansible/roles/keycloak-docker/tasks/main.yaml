@@ -1,0 +1,13 @@
+- name: start keycloak on docker
+  become: true
+  vars:
+    docker_name: keycloak
+  ansible.builtin.shell: |
+    docker ps | grep " {{ docker_name }}$" ||
+    (
+      (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+      docker run -d --rm --net=host --name {{ docker_name }} \
+        -e KEYCLOAK_ADMIN={{ keycloak_docker_admin_user }} \
+        -e KEYCLOAK_ADMIN_PASSWORD={{ keycloak_docker_admin_password }} \
+        quay.io/keycloak/keycloak:{{ keycloak_docker_version }} start-dev
+    )

@@ -24,7 +24,7 @@ def check_image_requirements(c, node_ctxs):
 
 
     def get_vm_image_map(c):
-        result = c.run('vm-image list', hide=True).stdout
+        result = c.run('labo-vm-image list', hide=True).stdout
         vm_image_map = {}
         for line in result.splitlines():
             vm_image_map[line] = {}
@@ -105,7 +105,7 @@ def check_image_requirements(c, node_ctxs):
         cmds = []
         for none_image in keys:
             image_name = none_image.split("local/")[1]
-            cmd = f"docker-image create {image_name}"
+            cmd = f"labo-docker-image create {image_name}"
             cmds.append(cmd)
             print(f"$ {cmd}")
 
@@ -124,7 +124,7 @@ def check_image_requirements(c, node_ctxs):
         cmds = []
         for none_image in keys:
             image_name = none_image.split("local/")[1]
-            cmd = f"vm-image create {image_name}"
+            cmd = f"labo-vm-image create {image_name}"
             cmds.append(cmd)
             print(f"$ {cmd}")
 

@@ -5,13 +5,13 @@ COMMAND="${*:-help}"
 function help() {
 	cat <<EOS
 # show domains
-$ domain-ctl list
+$ labo-domain-ctl list
 
 # create domain
-$ domain-ctl create example.com [ns]
+$ labo-domain-ctl create example.com [ns]
 
 # delete domain
-$ domain-ctl delete example.com
+$ labo-domain-ctl delete example.com
 EOS
 }
 

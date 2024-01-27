@@ -200,17 +200,28 @@ class NodeContext:
         ])
 
     def ansible(self, ansible):
-        self.write("/etc/ansible/vars.yaml", pyyaml.dump(ansible.get('vars', {})))
-        for play in ansible.get("plays", []):
-            cmds = [
-                "export PATH=$PATH:/usr/local/bin",
-                "export LANG=C.UTF-8",
-                "export LC_ALL=en_US.UTF-8",
-            ]
-            cmds += [
-                f"ansible-playbook /mnt/nfs/labo/ansible/playbooks/{play}/main.yaml",
-            ]
-            self.exec(cmds, title=f"ansible_{play}")
+        self.write("/etc/ansible/host_vars/localhost.yaml", pyyaml.dump(ansible.get('vars', {})))
+        roles = []
+        for role in ansible.get("roles", []):
+            roles.append({
+                "name": role,
+                "tags": [role],
+            })
+
+        playbook_yaml = [{
+            "hosts": "localhost",
+            "roles": roles,
+        }]
+        self.write("/etc/ansible/playbook.yaml", pyyaml.dump(playbook_yaml))
+
+        cmds = [
+            "export PATH=$PATH:/usr/local/bin",
+            "export LANG=C.UTF-8",
+            "export LC_ALL=en_US.UTF-8",
+            "test -L /etc/ansible/roles || ln -s /mnt/nfs/labo/ansible/roles /etc/ansible/roles",
+            f"ansible-playbook /etc/ansible/playbook.yaml",
+        ]
+        self.exec(cmds, title=f"ansible-playbook")
 
     def test(self):
         def _ping(target):

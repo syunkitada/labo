@@ -1,0 +1,41 @@
+- name: start mysql on docker
+  become: true
+  vars:
+    docker_name: mysql
+  ansible.builtin.shell: |
+    docker ps | grep " {{ docker_name }}$" ||
+    (
+      (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+      docker run -d --rm --net=host --name {{ docker_name }} \
+        -v /var/lib/docker-mysql:/var/lib/mysql \
+        -e MYSQL_ROOT_PASSWORD={{ mysql_docker_root_password }} \
+        mysql
+    )
+
+- name: write hostname using jnja2
+  become: true
+  ansible.builtin.template:
+    src: templates/mysql-docker.j2
+    dest: /usr/bin/mysql-docker
+    mode: 0755
+
+- name: waiting for activating
+  become: true
+  ansible.builtin.shell: |
+    NEXT_WAIT_TIME=0
+    until mysql-docker -e "show databases;" || [ $NEXT_WAIT_TIME -eq 4 ]; do
+        sleep $((NEXT_WAIT_TIME++))
+    done
+
+- name: create user
+  become: true
+  ansible.builtin.shell: |
+    mysql-docker -e "CREATE USER IF NOT EXISTS '{{ mysql_docker_user }}'@'%' IDENTIFIED BY '{{ mysql_docker_password }}'"
+    mysql-docker -e "GRANT ALL ON *.* TO '{{ mysql_docker_user }}'@'%'; FLUSH PRIVILEGES;"
+
+- name: write hostname using jnja2
+  become: true
+  ansible.builtin.template:
+    src: templates/my.cnf.j2
+    dest: ~/my.cnf
+    mode: 0600

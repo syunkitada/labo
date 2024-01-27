@@ -1,9 +1,0 @@
-- name: include vars
-  hosts: localhost
-  tasks:
-    - include_tasks: ../../../common/tasks/include_vars.yaml
-
-- hosts: localhost
-  tasks:
-    - name: install
-      include_tasks: tasks/install.yaml

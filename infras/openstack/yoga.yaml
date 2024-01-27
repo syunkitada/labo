@@ -8,9 +8,7 @@ nodes:
       - 443:443
       - 5000:5000
     ansible:
-      vars:
-        my_ip: 172.17.0.3
-      plays:
+      roles:
         - mysql
         - memcached
         - rabbitmq

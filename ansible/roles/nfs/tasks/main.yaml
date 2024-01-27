@@ -1,0 +1,22 @@
+- name: install
+  include_tasks: install.yaml
+
+- name: write /var/nfs/exports
+  when: ansible_facts['os_family'] == "Debian"
+  become: true
+  ansible.builtin.template:
+    src: templates/exports.j2
+    dest: /var/nfs/exports
+    mode: 0600
+
+- name: export
+  when: ansible_facts['os_family'] == "Debian"
+  become: true
+  ansible.builtin.shell: |
+    # exportfs
+    # NFSでエクスポートしているファイルシステムのテーブルを管理するために使うコマンド
+    # -a すべてのディレクトリをexport/unexportする
+    # -r すべてのディレクトリを再exportする、/var/lib/nfs/xtabを/etc/exportsと同期させる
+    exportfs -ra
+
+    mount -t nfs localhost:/ /mnt/nfs

@@ -1,0 +1,11 @@
+- name: docker network inspect
+  become: true
+  shell: |
+    docker network inspect {{ item.name }} 2>&1 | grep ' {{ item.name }} not found'
+  register: docker_network_inspect
+  failed_when: docker_network_inspect.rc not in [0, 1]
+
+- name: create network
+  become: true
+  when: docker_network_inspect.rc == 0
+  command: docker network create --driver {{ item.driver }} {{ item.option }} {{ item.name }}
