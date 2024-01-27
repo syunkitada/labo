@@ -44,12 +44,20 @@ def _make_prepare(nctx):
     # メモ: (負荷が高いと？)dockerでsystemdが起動できないことがある
     docker_options = [
         f"-d  --rm --network {rspec.get('network', 'none')} --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
-        # "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
         "-v /mnt/nfs:/mnt/nfs:ro",
         f"-v {rspec['_script_dir']}:{rspec['_script_dir']}",
-        "--cgroup-parent docker.slice",
-        "--cgroupns private",
     ]
+
+    cgroup = nctx.c.sudo("stat -fc %T /sys/fs/cgroup/").stdout
+    if cgroup == "tmpfs":
+        docker_options += [
+            "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
+        ]
+    elif cgroup == "cgroup2fs":
+        docker_options += [
+            "--cgroup-parent docker.slice",
+            "--cgroupns private",
+        ]
 
     for port in rspec.get("ports", []):
         docker_options += [f"-p {port}"]

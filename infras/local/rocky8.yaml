@@ -70,6 +70,6 @@ nodes:
       - modprobe vxlan
     ansible:
       vars:
-        docker_insecure_registries: [docker-registry.example.com:5000]
-      plays:
+        docker_insecure_registries: [docker-registry.example.com:5050]
+      roles:
         - docker

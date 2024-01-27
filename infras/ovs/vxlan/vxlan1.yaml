@@ -18,7 +18,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.example.com:5000/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5050/labo/rocky8-nwnode:latest
     mtu: 1500
   vm:
     mtu: 1500

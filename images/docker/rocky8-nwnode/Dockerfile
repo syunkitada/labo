@@ -1,18 +1,7 @@
-FROM rockylinux:8
+FROM local/rocky8-base
 
 ENV container docker
 ENV FRRVER="frr-stable"
-
-# setup for systemd
-# RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
-#     systemd-tmpfiles-setup.service ] || rm -f $i; done); \
-#     rm -f /lib/systemd/system/multi-user.target.wants/*;\
-#     rm -f /etc/systemd/system/*.wants/*;\
-#     rm -f /lib/systemd/system/local-fs.target.wants/*; \
-#     rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
-#     rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
-#     rm -f /lib/systemd/system/basic.target.wants/*;\
-#     rm -f /lib/systemd/system/anaconda.target.wants/*;
 
 # frr
 RUN yum install -y https://rpm.frrouting.org/repo/$FRRVER-repo-1-0.el8.noarch.rpm && \
@@ -23,15 +12,5 @@ RUN yum install -y https://rpm.frrouting.org/repo/$FRRVER-repo-1-0.el8.noarch.rp
 RUN yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm && \
     yum install -y rdo-openvswitch python3-rdo-openvswitch
 
-# tools
-RUN yum install -y vim sudo man \
-                   iptables iputils ethtool \
-                   tcpdump traceroute wireshark \
-                   httpd
-
-RUN ls /lib/systemd/system/*.wants/* | grep -v journald | xargs rm -rf
-RUN systemctl disable rpcbind && \
-    systemctl disable crond
-
-VOLUME [ "/sys/fs/cgroup" ]
-CMD ["/usr/sbin/init"]
+# debug tools
+RUN yum install -y httpd
