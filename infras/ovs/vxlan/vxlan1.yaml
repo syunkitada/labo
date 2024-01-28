@@ -2,7 +2,7 @@
 # - https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/
 
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   network1:
@@ -18,7 +18,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.example.com:5050/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5050/local/rocky8-nwnode:latest
     mtu: 1500
   vm:
     mtu: 1500

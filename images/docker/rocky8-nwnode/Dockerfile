@@ -12,5 +12,5 @@ RUN yum install -y https://rpm.frrouting.org/repo/$FRRVER-repo-1-0.el8.noarch.rp
 RUN yum install -y https://repos.fedorapeople.org/repos/openstack/openstack-yoga/rdo-release-yoga-1.el8.noarch.rpm && \
     yum install -y rdo-openvswitch python3-rdo-openvswitch
 
-# debug tools
+# tools
 RUN yum install -y httpd

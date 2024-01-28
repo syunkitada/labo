@@ -28,7 +28,7 @@ template_map:
       net.ipv4.conf.all.forwarding: 1
   vm:
     kind: vm
-    image: ubuntu22_custom
+    image: local/ubuntu22_custom
     vcpus: 4
     ram: 4096
     disk: 40
@@ -66,11 +66,10 @@ nodes:
     templates:
       - vm
     cmds:
-      - echo "hello hoge"
-      - echo "hello hoge" > /tmp/hoge
+      - modprobe openvswitch
+      - modprobe vxlan
     ansible:
       vars:
-        docker:
-          insecure_docker_registry: docker-registry.local.example.com:5000
-      plays:
+        docker_insecure_registries: [docker-registry.example.com:5050]
+      roles:
         - docker

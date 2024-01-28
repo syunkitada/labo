@@ -28,6 +28,9 @@ def _clean(nctx):
     nctx.c.sudo(f"docker kill {rspec['_hostname']}", hide=True, warn=True)
     nctx.c.sudo(f"rm -rf /var/run/netns/{rspec['_hostname']}", hide=True)
 
+    for link in nctx.rspec.get("_links", []):
+        nctx.c.sudo(f"ip link del {link['link_name']}", warn=True)
+
 
 def _make_prepare(nctx):
     rspec = nctx.rspec
@@ -43,7 +46,7 @@ def _make_prepare(nctx):
 
     # メモ: (負荷が高いと？)dockerでsystemdが起動できないことがある
     docker_options = [
-        f"-d  --rm --network {rspec.get('network', 'none')} --privileged --cap-add=SYS_ADMIN --name {rspec['_hostname']}",
+        f"-d  --rm --network {rspec.get('network', 'none')} --privileged --name {rspec['_hostname']}",
         "-v /mnt/nfs:/mnt/nfs:ro",
         f"-v {rspec['_script_dir']}:{rspec['_script_dir']}",
     ]
@@ -51,10 +54,12 @@ def _make_prepare(nctx):
     cgroup = nctx.c.sudo("stat -fc %T /sys/fs/cgroup/").stdout
     if cgroup == "tmpfs":
         docker_options += [
-            "-v /sys/fs/cgroup:/sys/fs/cgroup:ro",
+            "-v /sys/fs/cgroup:/sys/fs/cgroup:rw",
+            "--cgroupns host",
         ]
     elif cgroup == "cgroup2fs":
         docker_options += [
+            "--cap-add=SYS_ADMIN",
             "--cgroup-parent docker.slice",
             "--cgroupns private",
         ]
