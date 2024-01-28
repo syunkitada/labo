@@ -15,37 +15,40 @@ template_map:
       bridges:
         - name: br-ex
           kind: external-ha
-    frr:
-      id: "<%=l3admin.ips.0.ip%>"
-      asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
-      route_map:
-        DENY-ANY-v4:
-          policy: deny
-          order: 5
-          version: 4
-          prefix_list:
-            - seq 5 deny 0.0.0.0/0
-        ADMIN-v4:
-          policy: permit
-          order: 5
-          version: 4
-          prefix_list:
-            - seq 5 permit <%=l3admin.ips.0.network%> le 32
-        VM-v4:
-          policy: deny
-          order: 5
-          version: 4
-          prefix_list:
-            - seq 5 deny 0.0.0.0/0
-      bgp_peer_groups:
-        - name: ADMIN
-          route_map_v4_in: DENY-ANY-v4
-          route_map_v4_out: ADMIN-v4
-        - name: VM
-          route_map_v4_in: DENY-ANY-v4
-          route_map_v4_out: VM-v4
-      ipv4_networks:
-        - <%=l3admin.ips.0.inet%>
+    ansible:
+      vars:
+        frr_router_id: "<%=l3admin.ips.0.ip%>"
+        frr_asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
+        frr_route_map:
+          DENY-ANY-v4:
+            policy: deny
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 deny 0.0.0.0/0
+          ADMIN-v4:
+            policy: permit
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 permit <%=l3admin.ips.0.network%> le 32
+          VM-v4:
+            policy: deny
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 deny 0.0.0.0/0
+        frr_bgp_peer_groups:
+          - name: ADMIN
+            route_map_v4_ins: [DENY-ANY-v4]
+            route_map_v4_outs: [ADMIN-v4]
+          - name: VM
+            route_map_v4_ins: [DENY-ANY-v4]
+            route_map_v4_outs: [VM-v4]
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+      roles:
+        - frr
 
 node_map:
   CL1:

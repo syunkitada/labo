@@ -180,6 +180,63 @@ def complete_spec(spec):
         for childi, child in enumerate(rspec.get("childs", [])):
             _complete_node_at_last(childi, child)
 
+        if "ansible" in rspec:
+            if 'frr' in rspec['ansible']['roles']:
+                frr_interfaces = []
+                for link in rspec.get("links", []):
+                    if "bgp_peer_group" in link:
+                        frr_interfaces += [{
+                            "name": link['link_name'],
+                            "bgp_peer_group": link['bgp_peer_group'],
+                        }]
+                    for vlan_id, vlan in link.get("vlan_map", {}).items():
+                        if "bgp_peer_group" in vlan:
+                            frr_interfaces += [{
+                                "name": f"{link['link_name']}.{vlan_id}",
+                                "bgp_peer_group": vlan['bgp_peer_group'],
+                            }]
+                for link in rspec.get("_links", []):
+                    if "bgp_peer_group" in link:
+                        frr_interfaces += [{
+                            "name": link['peer_name'],
+                            "bgp_peer_group": link['bgp_peer_group'],
+                        }]
+                    for vlan_id, vlan in link.get("vlan_map", {}).items():
+                        if "bgp_peer_group" in vlan:
+                            if "peer_ovs" in vlan:
+                                frr_interfaces += [{
+                                    "name": vlan['peer_ovs']['peer_name'],
+                                    "bgp_peer_group": vlan['bgp_peer_group'],
+                                }]
+                            else:
+                                frr_interfaces += [{
+                                    "name": f"{link['peer_name']}.{vlan_id}",
+                                    "bgp_peer_group": vlan['bgp_peer_group'],
+                                }]
+
+                rspec['ansible']['vars']['frr_interfaces'] = frr_interfaces
+
+            if "vars" in rspec['ansible']:
+                def _complete_dict(data):
+                    if isinstance(data, list):
+                        for i, value in enumerate(data):
+                            if isinstance(value, str):
+                                data[i] = _complete_value(value, spec, rspec)
+                            if isinstance(value, dict):
+                                _complete_dict(value)
+                            if isinstance(value, list):
+                                _complete_dict(value)
+                    if isinstance(data, dict):
+                        for key, value in data.items():
+                            if isinstance(value, str):
+                                data[key] = _complete_value(value, spec, rspec)
+                            if isinstance(value, dict):
+                                _complete_dict(value)
+                            if isinstance(value, list):
+                                _complete_dict(value)
+
+                _complete_dict(rspec['ansible']['vars'])
+
         if "ovs" in rspec:
             ovs = rspec["ovs"]
             for bridge in ovs.get("bridges", []):

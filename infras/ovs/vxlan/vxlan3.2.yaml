@@ -39,17 +39,18 @@ template_map:
         - name: br-t2
           kind: vxlan-vpc-vm
           vpc_id: 6000
-    frr:
-      route_map:
-        VM-v4:
-          policy: permit
-          order: 5
-          version: 4
-          prefix_list:
-            - seq 6 permit <%=ipam.ovsadmin_network1.subnet%> le 32
-      ipv4_networks:
-        - <%=l3admin.ips.0.inet%>
-        - <%=ovs.admin_ips.0.inet%>
+    ansible:
+      vars:
+        frr_route_map:
+          VM-v4:
+            policy: permit
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 6 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+          - <%=ovs.admin_ips.0.inet%>
   vm:
     mtu: 1500
     routes:
