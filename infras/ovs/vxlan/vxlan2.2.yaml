@@ -2,7 +2,7 @@
 # 参考: https://docs.openvswitch.org/en/latest/howto/userspace-tunneling/
 # FIXME
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   network1:

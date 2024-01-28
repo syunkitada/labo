@@ -4,7 +4,9 @@
   shell: |
     yum install -y yum-utils
     yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    yum install -y docker-ce docker-ce-cli containerd.io
+    yum install -y docker-ce-3:24.0.8-1.el8 \
+                   docker-ce-cli-1:24.0.8-1.el8 \
+                   containerd.io-1.6.26-3.1.el8
 
 - name: install docker for ubuntu
   when: ansible_facts['os_family'] == "Debian"

@@ -1,6 +1,6 @@
 # vxlan1のvxlan optionをremote_ip=flowにした構成です
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   network1:

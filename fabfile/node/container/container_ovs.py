@@ -134,7 +134,7 @@ def make(rc):
                     br_flows += [
                         # ingress
                         # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
-                        f"priority=700,ip,,nw_dst={ip['ip']}"
+                        f"priority=800,ip,nw_dst={ip['ip']}"
                         + f" actions=load:{child_link_mac}->NXM_OF_ETH_DST[],output:{child_link['link_name']}",
                     ]
 

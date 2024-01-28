@@ -54,6 +54,7 @@ def _make_prepare(nctx):
     cgroup = nctx.c.sudo("stat -fc %T /sys/fs/cgroup/").stdout
     if cgroup == "tmpfs":
         docker_options += [
+            "--cap-add=SYS_ADMIN",
             "-v /sys/fs/cgroup:/sys/fs/cgroup:rw",
             "--cgroupns host",
         ]

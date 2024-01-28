@@ -25,7 +25,7 @@
 # Cached: 10.10.1.0/24 dev br-ex SRC 10.10.1.2
 # Cached: 0.0.0.0/0 dev br-ex GW 10.10.1.1 SRC 10.10.1.2
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   network1:

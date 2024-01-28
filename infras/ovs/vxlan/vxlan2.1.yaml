@@ -1,6 +1,6 @@
 # vxlan2 に加え、ノード間にルータを挟んだ構成です
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   network1:

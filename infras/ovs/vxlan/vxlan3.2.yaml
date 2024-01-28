@@ -1,5 +1,4 @@
 # clos構成でvxlan
-# FIXME
 imports:
   - infras/ovs/vxlan/vxlan3.1.yaml
 
@@ -14,6 +13,18 @@ ipam:
     subnet: 10.100.0.0/24
     kind: l2
 
+vpc_map:
+  vpc1:
+    id: 5000
+    network_gw_map:
+      gw1:
+        - name: t1vm_network1
+  vpc2:
+    id: 6000
+    network_gw_map:
+      gw1:
+        - name: t2vm_network1
+
 template_map:
   hv:
     ovs:
@@ -22,13 +33,12 @@ template_map:
       bridges:
         - name: br-ex
           kind: external-ha
-          # FIXME: this is broken
         - name: br-t1
-          kind: vxlan-tenant-vm
-          tenant: 5000
+          kind: vxlan-vpc-vm
+          vpc_id: 5000
         - name: br-t2
-          kind: vxlan-tenant-vm
-          tenant: 6000
+          kind: vxlan-vpc-vm
+          vpc_id: 6000
     frr:
       route_map:
         VM-v4:
@@ -65,7 +75,7 @@ node_map:
           - inet: <%=assign_inet4(t2vm_network1)%>
     childs:
       - name: t1vm1
-        tenant: 5000
+        vpc_id: 5000
         templates:
           - node
           - vm
@@ -75,7 +85,7 @@ node_map:
               - name: t1vm2
                 dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
       - name: t2vm1
-        tenant: 6000
+        vpc_id: 6000
         templates:
           - node
           - vm
@@ -94,12 +104,12 @@ node_map:
           - inet: <%=assign_inet4(t2vm_network1)%>
     childs:
       - name: t1vm2
-        tenant: 5000
+        vpc_id: 5000
         templates:
           - node
           - vm
       - name: t2vm2
-        tenant: 6000
+        vpc_id: 6000
         templates:
           - node
           - vm

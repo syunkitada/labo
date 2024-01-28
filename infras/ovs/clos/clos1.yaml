@@ -1,5 +1,5 @@
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   outer_network1:

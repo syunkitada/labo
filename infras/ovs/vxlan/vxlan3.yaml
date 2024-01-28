@@ -1,6 +1,5 @@
-# FIXME
 common:
-  host: VM1.rocky8.example.com
+  host: VM1.ubuntu22.example.com
 
 ipam:
   outer_network1:
@@ -19,7 +18,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.example.com:5000/labo/rocky8-nwnode:latest
+    image: docker-registry.example.com:5050/local/rocky8-nwnode:latest
     mtu: 9000
     sysctl_map:
       net.ipv6.conf.default.disable_ipv6: 0

@@ -207,24 +207,24 @@ def complete_spec(spec):
                     tun_dst = rspec["_links"][0]["peer_ips"][0]["ip"]
                     if "admin_ips" in rspec["ovs"]:
                         tun_dst = rspec["ovs"]["admin_ips"][0]["ip"]
-                    if "vpcgw" not in bridge:
-                        bridge["vpcgw"] = rspec["vpcgw"]
-                    vpcgw = vpcgw_map[bridge["vpcgw"]]
-                    bridge["_vpcgw"] = vpcgw
-                    vpc_links_map = vpcgw["_vpc_links_map"]
-                    for child_link in rspec.get("child_links", []):
-                        if child_link["vpc_id"] != bridge["vpc_id"]:
-                            continue
-                        if child_link["vpc_id"] not in vpc_links_map:
-                            vpc_links_map[child_link["vpc_id"]] = []
-                        for ip in child_link["peer_ips"]:
-                            vpc_links_map[child_link["vpc_id"]].append(
-                                {
-                                    "ip": ip["ip"],
-                                    "eip": ip["eip"],
-                                    "tun_dst": tun_dst,
-                                }
-                            )
+                    # if "vpcgw" not in bridge:
+                    #     bridge["vpcgw"] = rspec["vpcgw"]
+                    # vpcgw = vpcgw_map[bridge["vpcgw"]]
+                    # bridge["_vpcgw"] = vpcgw
+                    # vpc_links_map = vpcgw["_vpc_links_map"]
+                    # for child_link in rspec.get("child_links", []):
+                    #     if child_link["vpc_id"] != bridge["vpc_id"]:
+                    #         continue
+                    #     if child_link["vpc_id"] not in vpc_links_map:
+                    #         vpc_links_map[child_link["vpc_id"]] = []
+                    #     for ip in child_link["peer_ips"]:
+                    #         vpc_links_map[child_link["vpc_id"]].append(
+                    #             {
+                    #                 "ip": ip["ip"],
+                    #                 "eip": ip["eip"],
+                    #                 "tun_dst": tun_dst,
+                    #             }
+                    #         )
 
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
