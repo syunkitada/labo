@@ -17,8 +17,3 @@
 - name: vtysh
   shell: |
     systemctl reload frr
-
-# - name: debug
-#   ansible.builtin.shell: |
-#     mysql -e "CREATE USER IF NOT EXISTS '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}'"
-#     mysql -e "GRANT ALL ON *.* TO '{{ mysql_user }}'@'%'; FLUSH PRIVILEGES;"

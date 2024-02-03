@@ -22,4 +22,15 @@ Listen 5000
             Allow from all
         </IfVersion>
     </Directory>
+
+    # https://github.com/OpenIDC/mod_auth_openidc/wiki/OAuth-2.0-Resource-Server#keycloak
+    OIDCOAuthVerifyJwksUri "{{ keystone_oidc_oauth_verify_jwks_uri }}"
+    OIDCIDTokenIatSlack 3600
+
+    <Location /v3/OS-FEDERATION/identity_providers/{{ keystone_oidc_device_auth_identity_provider }}/protocols/openid/auth>
+        LogLevel debug
+        AuthType oauth20
+        Require valid-user
+    </Location>
+
 </VirtualHost>

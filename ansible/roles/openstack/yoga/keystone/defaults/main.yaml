@@ -9,3 +9,6 @@ keystone_host: localhost
 keystone_admin_password: adminpass
 keystone_service_user: system
 keystone_service_password: systempass
+
+keystone_oidc_device_auth_oauth_verify_jwks_uri: "https://192.168.10.121:8443/realms/test/protocol/openid-connect/certs"
+keystone_oidc_device_auth_identity_provider: keycloak-device

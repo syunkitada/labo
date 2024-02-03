@@ -1,0 +1,84 @@
+log file /var/log/frr/frr.log
+
+debug bgp keepalives
+debug bgp neighbor-events
+debug bgp updates
+
+ip forwarding
+ipv6 forwarding
+!
+
+
+{% for name, route_map in frr_route_map.items() %}
+{% for prefix in route_map['prefix_list'] %}
+ip prefix-list {{ name }} {{ prefix }}
+{% endfor %}
+route-map {{ name }} {{route_map['policy']}} {{route_map['order']}}
+{% if route_map["version"] == 4 %}
+    match ip address prefix-list {{ name }}
+{% elif route_map["version"] == 6 %}
+    match ipv6 address prefix-list {{ name }}
+{% endif %}
+!
+
+{% endfor %}
+
+
+{% for interface in frr_interfaces %}
+interface {{ interface['name'] }}
+  ipv6 nd ra-interval 10
+  no ipv6 nd suppress-ra
+!
+
+{% endfor %}
+
+
+router bgp {{ frr_bgp_asn }}
+  bgp router-id {{ frr_bgp_router_id }}
+  bgp bestpath as-path multipath-relax
+  no bgp ebgp-requires-policy
+  no bgp network import-check
+  no bgp default ipv4-unicast
+
+{% for peer_group in frr_bgp_peer_groups %}
+  neighbor {{ peer_group['name'] }} peer-group
+  neighbor {{ peer_group['name'] }} remote-as external
+  neighbor {{ peer_group['name'] }} capability extended-nexthop
+{% endfor %}
+
+{% for interface in frr_interfaces %}
+  neighbor {{ interface['name'] }} interface peer-group {{ interface['bgp_peer_group'] }}
+{% endfor %}
+
+  address-family ipv4 unicast
+{% for network in frr_bgp_ipv4_unicast_networks %}
+    network {{ network }}
+{% endfor %}
+
+{% for peer_group in frr_bgp_peer_groups %}
+{% for route_map in peer_group.get('route_map_v4_ins', []) %}
+    neighbor {{ peer_group['name'] }} route-map {{ route_map }} in
+{% endfor %}
+{% for route_map in peer_group.get('route_map_v4_outs', []) %}
+    neighbor {{ peer_group['name'] }} route-map {{ route_map }} out
+{% endfor %}
+    neighbor {{ peer_group['name'] }} activate
+{% endfor %}
+  exit-address-family
+
+  address-family ipv6 unicast
+{% for network in frr_bgp_ipv6_unicast_networks %}
+    network {{ network }}
+{% endfor %}
+
+{% for peer_group in frr_bgp_peer_groups %}
+{% for route_map in peer_group.get('route_map_v6_ins', []) %}
+    neighbor {{ peer_group['name'] }} route-map {{ route_map }} in
+{% endfor %}
+{% for route_map in peer_group.get('route_map_v6_outs', []) %}
+    neighbor {{ peer_group['name'] }} route-map {{ route_map }} out
+{% endfor %}
+    neighbor {{ peer_group['name'] }} activate
+{% endfor %}
+  exit-address-family
+!

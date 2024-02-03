@@ -16,6 +16,9 @@ template_map:
         - name: br-ex
           kind: external-ha
     ansible:
+      roles:
+        - frr
+        - ovs
       vars:
         frr_router_id: "<%=l3admin.ips.0.ip%>"
         frr_asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
@@ -47,8 +50,6 @@ template_map:
             route_map_v4_outs: [VM-v4]
         frr_bgp_ipv4_unicast_networks:
           - <%=l3admin.ips.0.inet%>
-      roles:
-        - frr
 
 node_map:
   CL1:

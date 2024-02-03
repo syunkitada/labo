@@ -6,8 +6,12 @@
     docker ps | grep " {{ docker_name }}$" ||
     (
       (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
-      docker run -d --rm --net=host --name {{ docker_name }} \
+      docker run -d --net=host --name {{ docker_name }} \
+        -v /mnt/nfs/tls-assets/server.pem:/etc/x509/https/certs/tls.crt:ro \
+        -v /mnt/nfs/tls-assets/server-key.pem:/etc/x509/https/certs/tls.key:ro \
         -e KEYCLOAK_ADMIN={{ keycloak_docker_admin_user }} \
         -e KEYCLOAK_ADMIN_PASSWORD={{ keycloak_docker_admin_password }} \
-        quay.io/keycloak/keycloak:{{ keycloak_docker_version }} start-dev
+        quay.io/keycloak/keycloak:{{ keycloak_docker_version }} start-dev \
+        --https-certificate-file=/etc/x509/https/certs/tls.crt \
+        --https-certificate-key-file=/etc/x509/https/certs/tls.key \
     )
