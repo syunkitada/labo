@@ -13,7 +13,7 @@ function create() {
 	DOCKER_FILE="./images/docker/${IMAGE_NAME}/Dockerfile"
 
 	if [ -e "${DOCKER_FILE}" ]; then
-		sudo docker image build -t "local/${IMAGE_NAME}" ./images/docker --file "${DOCKER_FILE}"
+		sudo docker image build -t "local/${IMAGE_NAME}" --file "${DOCKER_FILE}" .
 
 		# push image to docker-registry
 		sudo docker image tag "local/${IMAGE_NAME}" "localhost:5050/local/${IMAGE_NAME}:latest"

@@ -22,7 +22,7 @@ sudo cp -r tmp /mnt/nfs/tls-assets
 
 # rocky8
 # cp /mnt/nfs/tls-assets/ca.pem /usr/share/pki/ca-trust-source/anchors/
-# sudo update-ca-certificates
+# sudo update-ca-trust
 
 # ubuntu22
 # sudo cp /mnt/nfs/tls-assets/ca.pem /usr/local/share/ca-certificates/self-ca.crt

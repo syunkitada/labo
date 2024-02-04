@@ -1,3 +1,10 @@
+- name: ovs_lib
+  ovs_hv_vxlan:
+    ovs: "{{ ovs_vxlan }}"
+
+- name: end
+  meta: end_play
+
 - name: put frr.conf
   template:
     src: templates/frr.conf.j2
