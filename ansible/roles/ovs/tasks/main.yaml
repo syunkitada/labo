@@ -1,61 +1,60 @@
-- name: ovs_lib
-  ovs_hv_vxlan:
-    ovs: "{{ ovs_vxlan }}"
-
-- name: end
-  meta: end_play
-
-- name: put frr.conf
-  template:
-    src: templates/frr.conf.j2
-    dest: /etc/frr/frr.conf
-
 - name: ovs
   shell: |
     systemctl start openvswitch
 
-- name: ovs_vxlan external
-  shell: |
-    ovs-vsctl --may-exist add-br {{ ovs_vxlan.external_bridge.name }}
-    ip link set up {{ ovs_vxlan.external_bridge.name }}
-    if ! ip addr show dev {{ ovs_vxlan.external_bridge.name }} | grep 'inet {{ ovs_vxlan.external_bridge.local_ip }}/32'; then
-    ip addr add {{ ovs_vxlan.external_bridge.local_ip }}/32 dev br-ex
-    fi
-    if ! ip rule | sed -e 's/lookup/table/g' | grep 'from {{ ovs_vxlan.external_bridge.local_ip }} table 200'; then
-    ip rule add from {{ ovs_vxlan.external_bridge.local_ip }} table 200 prio 25
-    fi
-    ip route replace table 200 0.0.0.0/0 dev br-ex src {{ ovs_vxlan.external_bridge.local_ip }}
-
-- name: ovs_vxlan external
-  loop: "{{ ovs_vxlan.external_bridge.interfaces }}"
-  shell: |
-    ovs-vsctl --may-exist add-port {{ ovs_vxlan.external_bridge.name }} {{ item.name }}
-
-- name: ovs_vxlan external
-  loop: "{{ ovs_vxlan.external_bridge.bgp_interfaces }}"
-  shell: |
-    if ! ip addr show dev {{ item.name }}; then
-    ip link add {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} type veth peer name {{ item.name }}
-    ip link set dev {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} mtu 9000
-    ip link set {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} up
-    ethtool -K {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} tso off tx off
-    ip link set dev {{ item.name }} up
-    ethtool -K {{ item.name }} tso off tx off
-    fi
-    ovs-vsctl --no-wait --may-exist add-port {{ ovs_vxlan.external_bridge.name }} {{ ovs_vxlan.external_bridge.name }}-{{ item.name }}
-
-- name: ovs_vxlan external
-  vars:
-    interface0: "{{ ovs_vxlan['external_bridge']['interfaces'][0]['name'] }}"
-    interface0_peer_mac: "{{ ovs_vxlan['external_bridge']['interfaces'][0]['mac'] }}"
-    interface1: "{{ ovs_vxlan['external_bridge']['interfaces'][1]['name'] }}"
-    interface1_peer_mac: "{{ ovs_vxlan['external_bridge']['interfaces'][1]['mac'] }}"
-  shell: |
-    ovs-ofctl -O OpenFlow15 mod-group --may-create {{ ovs_vxlan.external_bridge.name }} \
-      "group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),bucket=watch_port:{{ interface0 }},actions=mod_dl_dst:{{ interface0_peer_mac }},output:{{ interface0 }},bucket=watch_port:{{ interface1 }},actions=mod_dl_dst:{{ interface1_peer_mac }},output:{{ interface1 }}"
-
-- name: end
-  meta: end_play
+- name: ovs_lib
+  ovs_hv_vxlan:
+    ovs: "{{ ovs_vxlan }}"
+#
+# - name: end
+#   meta: end_play
+#
+# - name: ovs
+#   shell: |
+#     systemctl start openvswitch
+#
+# - name: ovs_vxlan external
+#   shell: |
+#     ovs-vsctl --may-exist add-br {{ ovs_vxlan.external_bridge.name }}
+#     ip link set up {{ ovs_vxlan.external_bridge.name }}
+#     if ! ip addr show dev {{ ovs_vxlan.external_bridge.name }} | grep 'inet {{ ovs_vxlan.external_bridge.local_ip }}/32'; then
+#     ip addr add {{ ovs_vxlan.external_bridge.local_ip }}/32 dev br-ex
+#     fi
+#     if ! ip rule | sed -e 's/lookup/table/g' | grep 'from {{ ovs_vxlan.external_bridge.local_ip }} table 200'; then
+#     ip rule add from {{ ovs_vxlan.external_bridge.local_ip }} table 200 prio 25
+#     fi
+#     ip route replace table 200 0.0.0.0/0 dev br-ex src {{ ovs_vxlan.external_bridge.local_ip }}
+#
+# - name: ovs_vxlan external
+#   loop: "{{ ovs_vxlan.external_bridge.interfaces }}"
+#   shell: |
+#     ovs-vsctl --may-exist add-port {{ ovs_vxlan.external_bridge.name }} {{ item.name }}
+#
+# - name: ovs_vxlan external
+#   loop: "{{ ovs_vxlan.external_bridge.bgp_interfaces }}"
+#   shell: |
+#     if ! ip addr show dev {{ item.name }}; then
+#     ip link add {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} type veth peer name {{ item.name }}
+#     ip link set dev {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} mtu 9000
+#     ip link set {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} up
+#     ethtool -K {{ ovs_vxlan.external_bridge.name }}-{{ item.name }} tso off tx off
+#     ip link set dev {{ item.name }} up
+#     ethtool -K {{ item.name }} tso off tx off
+#     fi
+#     ovs-vsctl --no-wait --may-exist add-port {{ ovs_vxlan.external_bridge.name }} {{ ovs_vxlan.external_bridge.name }}-{{ item.name }}
+#
+# - name: ovs_vxlan external
+#   vars:
+#     interface0: "{{ ovs_vxlan['external_bridge']['interfaces'][0]['name'] }}"
+#     interface0_peer_mac: "{{ ovs_vxlan['external_bridge']['interfaces'][0]['mac'] }}"
+#     interface1: "{{ ovs_vxlan['external_bridge']['interfaces'][1]['name'] }}"
+#     interface1_peer_mac: "{{ ovs_vxlan['external_bridge']['interfaces'][1]['mac'] }}"
+#   shell: |
+#     ovs-ofctl -O OpenFlow15 mod-group --may-create {{ ovs_vxlan.external_bridge.name }} \
+#       "group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),bucket=watch_port:{{ interface0 }},actions=mod_dl_dst:{{ interface0_peer_mac }},output:{{ interface0 }},bucket=watch_port:{{ interface1 }},actions=mod_dl_dst:{{ interface1_peer_mac }},output:{{ interface1 }}"
+#
+# - name: end
+#   meta: end_play
 # - name: ovs
 #   shell: |
 #     # br-ex external-ha

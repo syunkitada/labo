@@ -165,8 +165,8 @@ def complete_spec(spec):
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
 
-        for key, value in rspec.get("var_map", {}).items():
-            rspec["var_map"][key] = _complete_value(value, spec, rspec)
+        for key, value in rspec.get("vars", {}).items():
+            rspec["vars"][key] = _complete_value(value, spec, rspec)
 
     def _complete_node_at_last(_, rspec):
         for j, cmd in enumerate(rspec.get("cmds", [])):
@@ -355,6 +355,8 @@ def _get_src(src, spec={}, rspec={}):
 
     tmp_src = None
     if isinstance(rspec, dict):
+        if splited_src[0] not in rspec:
+            print(f"{splited_src[0]} is not found", rspec.keys())
         tmp_src = rspec[splited_src[0]]
     elif isinstance(rspec, list):
         tmp_src = rspec[int(splited_src[0])]

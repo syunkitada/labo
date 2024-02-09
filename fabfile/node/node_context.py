@@ -1,6 +1,7 @@
 from lib.runtime import runtime_context
 import os
 import re
+import subprocess
 import yaml as pyyaml
 from lib import colors
 
@@ -19,15 +20,8 @@ class NodeContext:
         self.full_cmds = []
         self.childs = []
 
-    def _cmd(self, exec_filepath, log_filepath=None, is_local=False):
-        cmd = ""
-        if log_filepath is None:
-                cmd = f"bash -ex {exec_filepath}"
-        else:
-            if self.debug:
-                cmd = f"bash -ex {exec_filepath} 2>&1 | tee {log_filepath}"
-            else:
-                cmd = f"bash -ex {exec_filepath} &> {log_filepath}"
+    def _cmd(self, exec_filepath, is_local=False):
+        cmd = f"bash -ex {exec_filepath}"
 
         if is_local:
             return f"PATH={os.environ['PATH']} {cmd}"
@@ -80,7 +74,11 @@ class NodeContext:
                 f.write(cmds_str)
 
             if not self.dryrun:
-                self.c.sudo(self._cmd(exec_filepath, log_filepath, is_local))
+                result = self.c.sudo(self._cmd(exec_filepath, is_local))
+                with open(log_filepath, "w") as f:
+                    f.write(result.stdout)
+                if self.debug:
+                    print(result.stdout)
             else:
                 print(f"skipped exec {exec_filepath}, because of dryrun mode")
 
@@ -88,7 +86,7 @@ class NodeContext:
             full_cmds_str = "\n".join(full_cmds) + "\n"
             f.write(full_cmds_str)
 
-        cmd = self._cmd(full_filepath, None, is_local)
+        cmd = self._cmd(full_filepath, is_local)
         self.full_cmds += [
             f"# {self.rspec['name']}: {comment_name_prefix} {'-'*(80-len(comment_name_prefix))}",
             cmd,
@@ -113,6 +111,7 @@ class NodeContext:
             with open(tmp_file_path, "w") as f:
                 f.write(txt)
             cmds = [
+                f"ls {self.rspec['_script_dir']}",
                 f"mkdir -p {os.path.dirname(file_path)}",
                 f"cp {tmp_file_path} {file_path}",
             ]
