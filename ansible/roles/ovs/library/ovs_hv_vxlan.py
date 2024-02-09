@@ -92,6 +92,16 @@ def run_module():
             must_run(*args, **kwargs, retry=retry, interval=interval)
         return result
 
+    def replace_flows(bridge_name, flows):
+        if len(flows) > 0:
+            flows += [
+                "priority=0,actions=drop",
+            ]
+            flows_filepath = f"/tmp/{bridge_name}.flows"
+            with open(flows_filepath, "w") as f:
+                f.write("\n".join(flows))
+            must_run(["ovs-ofctl", "-O", "OpenFlow15", "replace-flows", bridge_name, flows_filepath])
+
     module_args = dict(
         ovs=dict(type='dict', required=True),
     )
@@ -156,61 +166,102 @@ def run_module():
 
     _append_flows_for_dummy_arp(br_flows, "LOCAL")
 
+    for bridge in ovs.get("vxlan_bridges", []):
+        ex_to_br = f"{ovs['external_bridge']['name']}_{bridge['name']}"
+        br_to_ex= f"{bridge['name']}_{ovs['external_bridge']['name']}"
+        must_run([
+            "ovs-vsctl", "--may-exist", "add-port", ovs['external_bridge']['name'], ex_to_br,
+            "--", "set", "interface", ex_to_br, "type=patch", f"options:peer={br_to_ex}"
+        ])
+        for port in bridge.get("ports", []):
+            for ip in port.get("ips", []):
+                if "eip" in ip:
+                    br_flows += [
+                        f"priority=700,ip,nw_dst={ip['eip']} actions=output:{ex_to_br}",
+                        f"priority=700,ip,nw_src={ip['eip']} actions=group:1",
+                    ]
+
     cmd_result = must_run(["ip", "link", "show", "br-ex"])
     bridge_mac = cmd_result.stdout.split("link/ether ")[1].split(" ")[0]
     br_flows += [
         f"priority=750,ip,nw_dst={ovs['external_bridge']['local_ip']} actions=mod_dl_dst:{bridge_mac},LOCAL",
         f"priority=750,ip,in_port=LOCAL,nw_src={ovs['external_bridge']['local_ip']} actions=group:1",
     ]
+    replace_flows(ovs['external_bridge']['name'], br_flows)
 
-    if len(br_flows) > 0:
-        br_flows += [
-            "priority=0,actions=drop",
-        ]
-        flows_filepath = f"/tmp/{ovs['external_bridge']['name']}.flows"
-        with open(flows_filepath, "w") as f:
-            f.write("\n".join(br_flows))
-        must_run(["ovs-ofctl", "-O", "OpenFlow15", "replace-flows", ovs['external_bridge']['name'], flows_filepath])
-
-    # external-bridge
+    # end external-bridge
 
     for bridge in ovs.get("vxlan_bridges", []):
-        must_run(["ovs-vsctl", "--may-exist", "add-br", bridge["name"]])
+        vxlan_br_name = f"{bridge['name']}"
+        vxlan_br_flows = []
+        must_run(["ovs-vsctl", "--may-exist", "add-br", vxlan_br_name])
 
-        br_flows = []
+        int_br_name = f"{bridge['name']}-int"
+        must_run(["ovs-vsctl", "--may-exist", "add-br", int_br_name])
+        int_br_flows = []
+
+        ex_to_vxlan_port = f"{ovs['external_bridge']['name']}_{vxlan_br_name}"
+        vxlan_to_ex_port = f"{vxlan_br_name}_{ovs['external_bridge']['name']}"
+        must_run([
+            "ovs-vsctl", "--may-exist", "add-port", vxlan_br_name, vxlan_to_ex_port,
+            "--", "set", "interface", vxlan_to_ex_port, "type=patch", f"options:peer={ex_to_vxlan_port}"
+        ])
+
+        vxlan_to_int_port = f"{vxlan_br_name}_{int_br_name}"
+        int_to_vxlan_port = f"{int_br_name}_{vxlan_br_name}"
+        must_run([
+            "ovs-vsctl", "--may-exist", "add-port", vxlan_br_name, vxlan_to_int_port,
+            "--", "set", "interface", vxlan_to_int_port, "type=patch", f"options:peer={int_to_vxlan_port}"
+        ])
+        must_run([
+            "ovs-vsctl", "--may-exist", "add-port", int_br_name, int_to_vxlan_port,
+            "--", "set", "interface", int_to_vxlan_port, "type=patch", f"options:peer={vxlan_to_int_port}"
+        ])
+
         vxlan_eth = f"vxlan{bridge['vxlan_id']}"
         vxlan_options = f" options:local_ip={ovs['external_bridge']['local_ip']}"
         must_run([
-            "ovs-vsctl", "--may-exist", "add-port", bridge['name'], vxlan_eth, "--",
+            "ovs-vsctl", "--may-exist", "add-port", vxlan_br_name, vxlan_eth, "--",
             "set", "interface", vxlan_eth, "type=vxlan", "options:remote_ip=flow", f"options:key={bridge['vxlan_id']}{vxlan_options}",
         ])
 
         for port in bridge['ports']:
-            must_run(["ovs-vsctl", "--no-wait", "--may-exist", "add-port", bridge['name'], port['name']])
-            port_peer_mac = f"0x{port['peer_mac'].replace(':', '')}"
             for ip in port.get("ips", []):
-                br_flows += [
-                    # ingress
-                    # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
-                    f"priority=800,ip,nw_dst={ip}"
-                    f" actions=load:{port_peer_mac}->NXM_OF_ETH_DST[],output:{port['name']}",
+                vxlan_br_flows += [
+                    f"priority=800,ip,nw_dst={ip['ip']} actions=output:{vxlan_to_int_port}",
                 ]
-
-                _append_flows_for_dummy_arp(br_flows, port["name"])
+                if "eip" in ip:
+                    vxlan_br_flows += [
+                        # TODO nat
+                        f"priority=800,ip,nw_dst={ip['eip']} actions=output:{vxlan_to_int_port}",
+                    ]
 
         for route in bridge.get('routes', []):
-            br_flows += [
+            vxlan_br_flows += [
                 f"priority=700,ip,nw_dst={route['ip']} actions=set_field:{route['dst']}->tun_dst,{vxlan_eth}",
             ]
+        vxlan_br_flows += [
+            f"priority=500,ip actions=output:{vxlan_to_ex_port}",
+        ]
 
-        if len(br_flows) > 0:
-            br_flows += [
-                "priority=0,actions=drop",
-            ]
-            flows_filepath = f"/tmp/{bridge['name']}.flows"
-            with open(flows_filepath, "w") as f:
-                f.write("\n".join(br_flows))
-            must_run(["ovs-ofctl", "-O", "OpenFlow15", "replace-flows", bridge['name'], flows_filepath])
+        replace_flows(vxlan_br_name, vxlan_br_flows)
+
+        # int bridge
+        for port in bridge['ports']:
+            must_run(["ovs-vsctl", "--no-wait", "--may-exist", "add-port", int_br_name, port['name']])
+            port_peer_mac = f"0x{port['peer_mac'].replace(':', '')}"
+            for ip in port.get("ips", []):
+                int_br_flows += [
+                    # ingress
+                    # 宛先のmacをvmのmacに書き換える(VMにはL2通信してるように思わせる)
+                    f"priority=800,ip,nw_dst={ip['ip']}"
+                    f" actions=load:{port_peer_mac}->NXM_OF_ETH_DST[],output:{port['name']}",
+                    f"priority=800,ip,nw_src={ip['ip']} actions=output:{int_to_vxlan_port}",
+                ]
+
+                _append_flows_for_dummy_arp(int_br_flows, port["name"])
+
+        replace_flows(int_br_name, int_br_flows)
 
 
     result['message'] = 'success'

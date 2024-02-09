@@ -3,6 +3,9 @@ imports:
   - infras/ovs/vxlan/vxlan3.1.yaml
 
 ipam:
+  eip_network1:
+    subnet: 10.10.100.0/24
+    kind: l3
   t1vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
@@ -24,8 +27,14 @@ vpc_map:
 
 template_map:
   hv:
+    vars:
+      vm1_eip: <%=assign_ip4(eip_network1)%>
     ansible:
       vars:
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+          - <%=vars.ovs_admin_ip%>/32
+          - <%=vars.vm1_eip%>/32
         frr_route_map:
           VM-v4:
             policy: permit
@@ -53,7 +62,8 @@ node_map:
                 - name: <%=child_links.0.link_name%>
                   peer_mac: <%=child_links.0.peer_mac%>
                   ips:
-                    - <%=child_links.0.peer_ips.0.ip%>
+                    - ip: <%=child_links.0.peer_ips.0.ip%>
+                      eip: <%=vars.vm1_eip%>/32
               routes:
                 - ip: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
                   dst: <%=_node_map.HV2.vars.ovs_admin_ip%>
@@ -64,7 +74,7 @@ node_map:
                 - name: <%=child_links.1.link_name%>
                   peer_mac: <%=child_links.1.peer_mac%>
                   ips:
-                    - <%=child_links.1.peer_ips.0.ip%>
+                    - ip: <%=child_links.1.peer_ips.0.ip%>
               routes:
                 - ip: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
                   dst: <%=_node_map.HV2.vars.ovs_admin_ip%>
@@ -108,7 +118,9 @@ node_map:
                 - name: <%=child_links.0.link_name%>
                   peer_mac: <%=child_links.0.peer_mac%>
                   ips:
-                    - <%=child_links.0.peer_ips.0.ip%>
+                    - ip: <%=child_links.0.peer_ips.0.ip%>
+                  eips:
+                    -
               routes:
                 - ip: <%=_node_map.t1vm1._links.0.peer_ips.0.ip%>
                   dst: <%=_node_map.HV1.vars.ovs_admin_ip%>
@@ -119,7 +131,7 @@ node_map:
                 - name: <%=child_links.1.link_name%>
                   peer_mac: <%=child_links.1.peer_mac%>
                   ips:
-                    - <%=child_links.1.peer_ips.0.ip%>
+                    - ip: <%=child_links.1.peer_ips.0.ip%>
               routes:
                 - ip: <%=_node_map.t2vm1._links.0.peer_ips.0.ip%>
                   dst: <%=_node_map.HV1.vars.ovs_admin_ip%>
