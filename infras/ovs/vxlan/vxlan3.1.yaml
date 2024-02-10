@@ -2,6 +2,9 @@ imports:
   - infras/ovs/vxlan/vxlan3.yaml
 
 ipam:
+  eip_network1:
+    subnet: 10.10.100.0/24
+    kind: l3
   l3admin_network1:
     subnet: 10.10.10.0/24
     kind: l3

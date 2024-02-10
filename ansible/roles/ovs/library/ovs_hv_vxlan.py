@@ -232,17 +232,16 @@ def run_module():
                 ]
                 if "eip" in ip:
                     vxlan_br_flows += [
-                        # TODO nat
-                        f"priority=800,ip,nw_dst={ip['eip']} actions=output:{vxlan_to_int_port}",
+                        # dnat
+                        f"priority=800,ip,nw_dst={ip['eip']} actions=set_field:{ip['ip']}->nw_dst,output:{vxlan_to_int_port}",
+                        # snat
+                        f"priority=200,ip,nw_src={ip['ip']} actions=set_field:{ip['eip']}->nw_src,output:{vxlan_to_ex_port}",
                     ]
 
         for route in bridge.get('routes', []):
             vxlan_br_flows += [
                 f"priority=700,ip,nw_dst={route['ip']} actions=set_field:{route['dst']}->tun_dst,{vxlan_eth}",
             ]
-        vxlan_br_flows += [
-            f"priority=500,ip actions=output:{vxlan_to_ex_port}",
-        ]
 
         replace_flows(vxlan_br_name, vxlan_br_flows)
 

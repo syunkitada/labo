@@ -3,9 +3,6 @@ imports:
   - infras/ovs/vxlan/vxlan3.1.yaml
 
 ipam:
-  eip_network1:
-    subnet: 10.10.100.0/24
-    kind: l3
   t1vm_network1:
     subnet: 10.100.0.0/24
     kind: l2
@@ -31,17 +28,14 @@ template_map:
       vm1_eip: <%=assign_ip4(eip_network1)%>
     ansible:
       vars:
-        frr_bgp_ipv4_unicast_networks:
-          - <%=l3admin.ips.0.inet%>
-          - <%=vars.ovs_admin_ip%>/32
-          - <%=vars.vm1_eip%>/32
         frr_route_map:
           VM-v4:
             policy: permit
             order: 5
             version: 4
             prefix_list:
-              - seq 6 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+              - seq 5 permit <%=ipam.ovsadmin_network1.subnet%> le 32
+              - seq 6 permit <%=ipam.eip_network1.subnet%> le 32
 
   vm:
     mtu: 1500
@@ -50,9 +44,19 @@ template_map:
         via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
 
 node_map:
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          - name: t1vm1eip
+            dst: <%=_node_map.HV1.vars.vm1_eip%>
   HV1:
     ansible:
       vars:
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+          - <%=vars.ovs_admin_ip%>/32
+          - <%=vars.vm1_eip%>/32
         ovs_vxlan:
           vxlan_bridges:
             - name: br-t1
@@ -109,6 +113,9 @@ node_map:
   HV2:
     ansible:
       vars:
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+          - <%=vars.ovs_admin_ip%>/32
         ovs_vxlan:
           vxlan_bridges:
             - name: br-t1
