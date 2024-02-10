@@ -57,7 +57,7 @@ node_map:
           - <%=l3admin.ips.0.inet%>
           - <%=vars.ovs_admin_ip%>/32
           - <%=vars.vm1_eip%>/32
-        ovs_vxlan:
+        ovs_hv_vxlan:
           vxlan_bridges:
             - name: br-t1
               kind: vxlan
@@ -116,7 +116,7 @@ node_map:
         frr_bgp_ipv4_unicast_networks:
           - <%=l3admin.ips.0.inet%>
           - <%=vars.ovs_admin_ip%>/32
-        ovs_vxlan:
+        ovs_hv_vxlan:
           vxlan_bridges:
             - name: br-t1
               kind: vxlan
@@ -126,8 +126,6 @@ node_map:
                   peer_mac: <%=child_links.0.peer_mac%>
                   ips:
                     - ip: <%=child_links.0.peer_ips.0.ip%>
-                  eips:
-                    -
               routes:
                 - ip: <%=_node_map.t1vm1._links.0.peer_ips.0.ip%>
                   dst: <%=_node_map.HV1.vars.ovs_admin_ip%>

@@ -9,28 +9,18 @@ ipam:
 
 template_map:
   hv:
-    ovs:
-      bridges:
-        - name: br-ex
-          kind: external-ha
-          links:
-            - peer: br-int
-              flows:
-                - kind: ingress
-                - kind: egress
-        - name: br-int
-          kind: internal-vm
-    frr:
-      route_map:
-        VM-v4:
-          policy: permit
-          order: 5
-          version: 4
-          prefix_list:
-            - seq 5 permit <%=ipam.vm_network1.subnet%> le 32
-      ipv4_networks:
-        - <%=l3admin.ips.0.inet%>
-        - <%=child_links.0.peer_ips.0.ip%>/32
+    ansible:
+      roles:
+        - ovs
+        - frr
+      vars:
+        frr_route_map:
+          VM-v4:
+            policy: permit
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 permit <%=ipam.vm_network1.subnet%> le 32
   vm:
     mtu: 1500
     routes:
@@ -45,6 +35,19 @@ node_map:
           - name: vm1
             dst: <%=_node_map.vm1._links.0.peer_ips.0.ip%>
   HV1:
+    ansible:
+      vars:
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+          - <%=child_links.0.peer_ips.0.ip%>/32
+        ovs_hv_clos:
+          vm_bridge:
+            name: br-int
+            ports:
+              - name: <%=child_links.0.link_name%>
+                peer_mac: <%=child_links.0.peer_mac%>
+                ips:
+                  - ip: <%=child_links.0.peer_ips.0.ip%>
     child_links:
       - peer: vm1
         peer_ips:

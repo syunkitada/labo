@@ -55,7 +55,7 @@ template_map:
         frr_bgp_ipv4_unicast_networks:
           - <%=l3admin.ips.0.inet%>
           - <%=vars.ovs_admin_ip%>/32
-        ovs_vxlan:
+        ovs_hv_vxlan:
           external_bridge:
             name: br-ex
             local_ip: <%=vars.ovs_admin_ip%>

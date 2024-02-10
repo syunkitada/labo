@@ -18,7 +18,7 @@ ipam:
 template_map:
   node:
     kind: container
-    image: docker-registry.example.com:5000/local/rocky8-nwnode:latest
+    image: docker-registry.example.com:5050/local/rocky8-nwnode:latest
     mtu: 9000
     sysctl_map:
       net.ipv6.conf.default.disable_ipv6: 0
@@ -34,20 +34,26 @@ template_map:
   spine:
     lo_ips:
       - inet: "<%=assign_inet4(spine_network)%>"
-    frr:
-      id: "<%=lo_ips.0.ip%>"
-      asn: "<%=ipv4_to_asn(lo_ips.0.ip)%>"
-      bgp_peer_groups:
-        - name: ADMIN
+    ansible:
+      roles:
+        - frr
+      vars:
+        frr_bgp_asn: "<%=ipv4_to_asn(lo_ips.0.ip)%>"
+        frr_bgp_router_id: "<%=lo_ips.0.ip%>"
+        frr_bgp_peer_groups:
+          - name: ADMIN
   leaf:
     lo_ips:
       - inet: "<%=assign_inet4(leaf_network)%>"
-    frr:
-      id: "<%=lo_ips.0.ip%>"
-      asn: "<%=ipv4_to_asn(lo_ips.0.ip)%>"
-      bgp_peer_groups:
-        - name: ADMIN
-        - name: VM
+    ansible:
+      roles:
+        - frr
+      vars:
+        frr_bgp_asn: "<%=ipv4_to_asn(lo_ips.0.ip)%>"
+        frr_bgp_router_id: "<%=lo_ips.0.ip%>"
+        frr_bgp_peer_groups:
+          - name: ADMIN
+          - name: VM
   hv:
     routes:
       - dst: default
@@ -87,12 +93,13 @@ nodes:
     templates:
       - node
       - spine
-    frr:
-      ipv4_networks:
-        - "<%=_node_map.CL1.links.0.ips.0.network%>"
-        - <%=lo_ips.0.inet%>
-      ipv6_networks:
-        - "<%=_node_map.CL1.links.0.ips.1.network%>"
+    ansible:
+      vars:
+        frr_bgp_ipv4_unicast_networks:
+          - "<%=_node_map.CL1.links.0.ips.0.network%>"
+          - <%=lo_ips.0.inet%>
+        frr_bgp_ipv6_unicast_networks:
+          - "<%=_node_map.CL1.links.0.ips.1.network%>"
     links:
       - peer: L11
         bgp_peer_group: ADMIN
@@ -106,10 +113,11 @@ nodes:
       - name: l2-br
         ips:
           - inet: <%=gateway_inet4(leaf1_l2admin_network)%>
-    frr:
-      ipv4_networks:
-        - <%=links.0.peer_ips.0.network%>
-        - <%=lo_ips.0.inet%>
+    ansible:
+      vars:
+        frr_bgp_ipv4_unicast_networks:
+          - <%=links.0.peer_ips.0.network%>
+          - <%=lo_ips.0.inet%>
     links:
       - peer: HV1
         bridge: l2-br
@@ -127,9 +135,10 @@ nodes:
     templates:
       - node
       - leaf
-    frr:
-      ipv4_networks:
-        - <%=lo_ips.0.inet%>
+    ansible:
+      vars:
+        frr_bgp_ipv4_unicast_networks:
+          - <%=lo_ips.0.inet%>
     links:
       - peer: HV1
         vlan_map:
