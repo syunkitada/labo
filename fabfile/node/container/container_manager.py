@@ -2,9 +2,6 @@ import os
 
 import yaml
 
-from . import container_frr, container_ovs
-
-
 def make(nctx):
     if nctx.cmd == "dump":
         print(yaml.safe_dump(nctx.rspec))
@@ -147,12 +144,6 @@ def _make(nctx):
         dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", skipped)]
 
     nctx.exec(dcmds, title="setup-networks")
-
-    if "ovs" in rspec:
-        container_ovs.make(nctx)
-
-    if "frr" in rspec:
-        container_frr.make(nctx)
 
     l3admin = rspec.get("l3admin")
     if l3admin is not None:
