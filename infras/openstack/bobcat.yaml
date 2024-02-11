@@ -1,0 +1,22 @@
+nodes:
+  - name: allinone
+    kind: container
+    image: local/rocky9-base:latest
+    network: bridge
+    ports:
+      - 80:80
+      - 443:443
+      - 5000:5000
+    ansible:
+      roles:
+        - mysql
+        - memcached
+        - rabbitmq
+  - name: node1
+    kind: container
+    image: local/rocky8-base:latest
+    network: bridge
+  - name: node2
+    kind: container
+    image: local/rocky8-base:latest
+    network: bridge
