@@ -2,7 +2,7 @@
   become: true
   vars:
     name: docker-registry
-  ansible.builtin.shell: |
+  shell: |
     docker ps | grep " {{ name }}$" ||
     (
       (sudo docker ps --all | grep " {{ name }}$" && sudo docker rm "{{ name }}" || echo "{{ name }} not found") &&

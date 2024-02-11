@@ -1,0 +1,11 @@
+- include_role:
+    name: openstack/bobcat/neutron
+    tasks_from: install.yaml
+
+- name: Install require packages
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts["distribution_major_version"] == "9"
+  yum:
+    disable_gpg_check: yes
+    name:
+      - https://mirror.stream.centos.org/SIGs/9-stream/nfv/x86_64/openvswitch-2/Packages/o/openvswitch3.1-3.1.0-65.el9s.x86_64.rpm
+      - https://mirror.stream.centos.org/SIGs/9-stream/nfv/x86_64/openvswitch-2/Packages/o/openvswitch-selinux-extra-policy-1.0-31.el9s.noarch.rpm

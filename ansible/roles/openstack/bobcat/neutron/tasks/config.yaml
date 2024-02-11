@@ -1,0 +1,11 @@
+- name: Put neutron.conf
+  template:
+    src: neutron.conf.j2
+    dest: /etc/neutron/neutron.conf
+  register: neutron_conf
+
+- name: Put ml2_conf.ini
+  template:
+    src: ml2_conf.ini.j2
+    dest: /etc/neutron/plugins/ml2/ml2_conf.ini
+  register: neutron_ml2_conf

@@ -2,7 +2,7 @@
   become: true
   vars:
     docker_name: keycloak
-  ansible.builtin.shell: |
+  shell: |
     docker ps | grep " {{ docker_name }}$" ||
     (
       (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&

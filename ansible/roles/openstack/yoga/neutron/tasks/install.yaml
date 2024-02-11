@@ -1,5 +1,5 @@
 - name: install venv
-  ansible.builtin.shell: |
+  shell: |
     set -e
     python3 -m venv {{ neutron_venv }} --system-site-packages
     {{ neutron_venv }}/bin/pip install pip --upgrade
@@ -9,7 +9,7 @@
     mkdir -p /var/lib/neutron
 
 - name: put requirements.txt
-  ansible.builtin.copy:
+  copy:
     src: files/requirements.txt
     dest: "{{ neutron_venv }}/requirements.txt"
 

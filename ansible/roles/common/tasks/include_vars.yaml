@@ -1,16 +1,16 @@
 - name: include vars for external playbooks
   when: external_playbooks is defined
   loop: "{{ external_playbooks }}"
-  ansible.builtin.include_vars:
+  include_vars:
     file: "{{ playbook_dir }}/../{{ item }}/vars/default.yaml"
 
 - name: include default vars
-  ansible.builtin.include_vars:
+  include_vars:
     file: "{{ playbook_dir }}/vars/default.yaml"
 - name: include node vars
   when:
     - lookup('file', '/etc/ansible/vars.yaml', errors='warn')
-  ansible.builtin.include_vars:
+  include_vars:
     file: /etc/ansible/vars.yaml
 
 - name: stat docker

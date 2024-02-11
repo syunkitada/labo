@@ -1,7 +1,6 @@
 from lib.runtime import runtime_context
 import os
 import re
-import subprocess
 import yaml as pyyaml
 from lib import colors
 
@@ -216,7 +215,7 @@ class NodeContext:
         cmds = [
             "export PATH=$PATH:/usr/local/bin",
             "export LANG=C.UTF-8",
-            "export LC_ALL=en_US.UTF-8",
+            "export LC_ALL=C.UTF-8",
             "test -L /etc/ansible/roles || ln -s /mnt/nfs/labo/ansible/roles /etc/ansible/roles",
             f"ansible-playbook /etc/ansible/playbook.yaml",
         ]

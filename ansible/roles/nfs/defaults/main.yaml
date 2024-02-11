@@ -1,7 +1,7 @@
 nfs_exports:
   - path: /mnt/exports
     options:
-      - 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+      - 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,no_root_squash,insecure)
       - 10.0.0.0/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
       - 172.16.0.0/12(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
       - 192.168.0.0/16(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)

@@ -1,0 +1,3 @@
+horizon_venv: /opt/horizon
+horizon_git_repo: https://github.com/openstack/horizon.git
+horizon_git_branch: stable/2023.2

@@ -1,11 +1,11 @@
 - name: put glance-api.conf
-  ansible.builtin.template:
+  template:
     src: glance-api.conf.j2
     dest: "/etc/glance/glance-api.conf"
   register: glance_api_conf
 
 - name: db sync
-  ansible.builtin.shell: |
+  shell: |
     set -e
     mysql -e 'CREATE DATABASE IF NOT EXISTS glance'
     {{ glance_venv }}/bin/glance-manage db_sync

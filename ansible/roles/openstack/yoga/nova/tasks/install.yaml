@@ -1,5 +1,5 @@
 - name: install venv
-  ansible.builtin.shell: |
+  shell: |
     set -e
     python3 -m venv {{ nova_venv }} --system-site-packages
     {{ nova_venv }}/bin/pip install pip --upgrade
@@ -8,7 +8,7 @@
     mkdir -p /var/lib/nova/instances
 
 - name: put requirements.txt
-  ansible.builtin.copy:
+  copy:
     src: files/requirements.txt
     dest: "{{ nova_venv }}/requirements.txt"
 

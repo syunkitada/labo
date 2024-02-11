@@ -3,27 +3,27 @@
 
 - name: put /etc/docker/daemon.json
   become: true
-  ansible.builtin.template:
+  template:
     src: daemon.json.j2
     dest: /etc/docker/daemon.json
   register: docker_daemon_json
 
 - name: start docker
   become: true
-  ansible.builtin.service:
+  service:
     name: docker
     state: started
 
 - name: restart docker when config changed
   become: true
   when: docker_daemon_json.changed
-  ansible.builtin.service:
+  service:
     name: docker
     state: restarted
 
 - name: mkdir for netns
   become: true
-  ansible.builtin.shell: |
+  shell: |
     mkdir -p /var/run/netns
 
 - name: create docker networks

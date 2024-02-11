@@ -1,4 +1,4 @@
-- name: install docker for rh
+- name: Install docker for rh
   when: ansible_facts['os_family'] == "RedHat"
   become: true
   shell: |
@@ -8,7 +8,7 @@
                    docker-ce-cli-1:24.0.8-1.el8 \
                    containerd.io-1.6.26-3.1.el8
 
-- name: install docker for ubuntu
+- name: Install docker for ubuntu
   when: ansible_facts['os_family'] == "Debian"
   become: true
   shell: |

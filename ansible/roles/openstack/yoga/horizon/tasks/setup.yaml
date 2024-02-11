@@ -1,11 +1,11 @@
 - name: put local_settings.py
-  ansible.builtin.template:
+  template:
     src: local_settings.py.j2
     dest: "{{ horizon_venv }}/share/horizon/openstack_dashboard/local/local_settings.py"
   register: local_settings_py
 
 - name: start horizon
-  ansible.builtin.shell: |
+  shell: |
     systemctl reset-failed horizon || echo 'ignored'
     systemctl status horizon || systemd-run \
       -p WorkingDirectory={{ horizon_venv }}/share/horizon \
@@ -14,5 +14,5 @@
 
 - name: restart horizon
   when: local_settings_py.changed
-  ansible.builtin.shell: |
+  shell: |
     systemctl restart horizon

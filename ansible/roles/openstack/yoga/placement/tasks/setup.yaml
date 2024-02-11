@@ -1,11 +1,11 @@
 - name: put placement.conf
-  ansible.builtin.template:
+  template:
     src: placement.conf.j2
     dest: "/etc/placement/placement.conf"
   register: placement_api_conf
 
 - name: db sync
-  ansible.builtin.shell: |
+  shell: |
     set -e
     mysql -e 'CREATE DATABASE IF NOT EXISTS placement'
     {{ placement_venv }}/bin/placement-manage db sync

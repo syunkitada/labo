@@ -4,19 +4,19 @@
       - gettext
 
 - name: install venv
-  ansible.builtin.shell: |
+  shell: |
     python3 -m venv {{ horizon_venv }} --system-site-packages
     {{ horizon_venv }}/bin/pip install pip --upgrade
     mkdir -p /var/log/horizon
     mkdir -p /etc/openstack-dashboard/
 
 - name: put requirements.txt
-  ansible.builtin.copy:
+  copy:
     src: files/requirements.txt
     dest: "{{ horizon_venv }}/requirements.txt"
 
 - name: install horizon
-  ansible.builtin.shell: |
+  shell: |
     {{ horizon_venv }}/bin/pip install -r {{ horizon_venv }}/requirements.txt
 
     cd {{ horizon_venv }}/share

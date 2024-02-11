@@ -1,0 +1,42 @@
+- name: Install venv
+  shell: |
+    set -e
+
+    python3 -m venv {{ nova_venv }} --system-site-packages
+    {{ nova_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/nova
+    mkdir -p /etc/nova
+    mkdir -p /var/lib/nova/instances
+
+- include_role:
+    name: openstack/bobcat/common
+    tasks_from: upper_constraints.yaml
+  vars:
+    dir: "{{ nova_venv }}"
+
+- name: Put requirements.txt
+  copy:
+    src: files/requirements.txt
+    dest: "{{ nova_venv }}/requirements.txt"
+
+- include_role:
+    name: openstack/bobcat/common
+    tasks_from: upper_constraints.yaml
+  vars:
+    dir: "{{ nova_venv }}"
+
+- name: Install nova
+  shell: |
+    set -e
+
+    mkdir -p {{ nova_venv }}/src
+    cd {{ nova_venv }}/src
+    test -e nova || git clone {{ nova_git_repo }} -b {{ nova_git_branch }}
+
+    cd nova
+    {{ nova_venv }}/bin/pip install . \
+      -r requirements.txt \
+      -r {{ nova_venv }}/requirements.txt \
+      -c {{ nova_venv }}/upper-constraints.txt
+
+    cp etc/nova/api-paste.ini /etc/nova/

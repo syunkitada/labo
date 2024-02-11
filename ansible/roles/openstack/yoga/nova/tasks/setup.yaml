@@ -1,11 +1,11 @@
 - name: put nova.conf
-  ansible.builtin.template:
+  template:
     src: nova.conf.j2
     dest: "/etc/nova/nova.conf"
   register: nova_conf
 
 - name: db sync
-  ansible.builtin.shell: |
+  shell: |
     set -e
     mysql -e 'CREATE DATABASE IF NOT EXISTS nova'
     mysql -e 'CREATE DATABASE IF NOT EXISTS nova_api'

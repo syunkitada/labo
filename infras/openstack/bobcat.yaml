@@ -12,11 +12,10 @@ nodes:
         - mysql
         - memcached
         - rabbitmq
-  - name: node1
-    kind: container
-    image: local/rocky8-base:latest
-    network: bridge
-  - name: node2
-    kind: container
-    image: local/rocky8-base:latest
-    network: bridge
+        - openstack/bobcat/ostools
+        - openstack/bobcat/keystone
+        - openstack/bobcat/horizon
+        - openstack/bobcat/glance
+        - openstack/bobcat/placement
+        - openstack/bobcat/nova
+        - openstack/bobcat/neutron

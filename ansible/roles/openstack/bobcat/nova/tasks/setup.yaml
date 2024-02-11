@@ -1,0 +1,63 @@
+- include_tasks: config.yaml
+
+- name: Sync DB
+  shell: |
+    set -e
+
+    mysql -e 'CREATE DATABASE IF NOT EXISTS nova'
+    mysql -e 'CREATE DATABASE IF NOT EXISTS nova_api'
+    mysql -e 'CREATE DATABASE IF NOT EXISTS nova_cell0'
+
+    {{ nova_venv }}/bin/nova-manage api_db sync
+    {{ nova_venv }}/bin/nova-manage cell_v2 map_cell0
+    {{ nova_venv }}/bin/nova-manage cell_v2 list_cells | grep ' cell1 ' || {{ nova_venv }}/bin/nova-manage cell_v2 create_cell --name=cell1 --verbose
+    {{ nova_venv }}/bin/nova-manage db sync
+
+- name: Start nova
+  shell: |
+    set -e
+
+    systemctl reset-failed nova-api || echo 'ignored'
+    systemctl status nova-api || systemd-run \
+      --unit nova-api -- \
+      {{ nova_venv }}/bin/nova-api --config-file /etc/nova/nova.conf --log-file /var/log/nova/nova-api.log
+
+    systemctl reset-failed nova-scheduler || echo 'ignored'
+    systemctl status nova-scheduler || systemd-run \
+      --unit nova-scheduler -- \
+      {{ nova_venv }}/bin/nova-scheduler --config-file /etc/nova/nova.conf --log-file /var/log/nova/nova-scheduler.log
+
+    systemctl reset-failed nova-conductor || echo 'ignored'
+    systemctl status nova-conductor || systemd-run \
+      --unit nova-conductor -- \
+      {{ nova_venv }}/bin/nova-conductor --config-file /etc/nova/nova.conf --log-file /var/log/nova/nova-conductor.log
+
+    systemctl reset-failed nova-novncproxy || echo 'ignored'
+    systemctl status nova-novncproxy || systemd-run \
+      --unit nova-novncproxy -- \
+      {{ nova_venv }}/bin/nova-novncproxy --config-file /etc/nova/nova.conf --log-file /var/log/nova/nova-novncproxy.log
+
+- name: Restart nova
+  when: nova_conf.changed
+  shell: |
+    set -e
+
+    systemctl restart nova-api
+    systemctl restart nova-scheduler
+    systemctl restart nova-conductor
+    systemctl restart nova-novncproxy
+
+- name: Register nova service
+  shell: |
+    set -e
+
+    source /etc/adminrc
+    service_list=$(openstack service list)
+    if [[ ! $service_list =~ " nova " ]]; then
+      openstack service create --name nova --description "OpenStack Compute" compute
+      openstack endpoint create --region "{{ nova_keystone_region }}" compute public "http://{{ nova_keystone_host }}:8774/v2.1"
+      openstack endpoint create --region "{{ nova_keystone_region }}" compute internal "http://{{ nova_keystone_host }}:8774/v2.1"
+      openstack endpoint create --region "{{ nova_keystone_region }}" compute admin "http://{{ nova_keystone_host }}:8774/v2.1"
+    fi
+
+    timeout 5 bash -c 'until openstack flavor list; do sleep 1; done'

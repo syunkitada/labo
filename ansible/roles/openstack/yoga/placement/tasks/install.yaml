@@ -1,5 +1,5 @@
 - name: install venv
-  ansible.builtin.shell: |
+  shell: |
     set -e
     python3 -m venv {{ placement_venv }} --system-site-packages
     {{ placement_venv }}/bin/pip install pip --upgrade
@@ -7,7 +7,7 @@
     mkdir -p /etc/placement
 
 - name: put requirements.txt
-  ansible.builtin.copy:
+  copy:
     src: files/requirements.txt
     dest: "{{ placement_venv }}/requirements.txt"
 
