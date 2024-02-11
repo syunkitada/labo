@@ -9,7 +9,8 @@
 # /srv/nfs4/homes  gss/krb5i(rw,sync,no_subtree_check)
 #
 
-/var/nfs/exports 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
-/var/nfs/exports 10.0.0.0/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
-/var/nfs/exports 172.16.0.0/12(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
-/var/nfs/exports 192.168.0.0/16(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+{% for export in nfs_exports %}
+{% for option in export['options'] %}
+{{ export.path }} {{ option }}
+{% endfor %}
+{% endfor %}
