@@ -20,6 +20,11 @@
     dest: /etc/neutron/plugins/ml2/dhcp_agent.ini
   register: dhcp_agent_ini
 
+- name: Start openvswitch
+  service:
+    name: openvswitch
+    state: restarted
+
 - name: Start neutron agents
   shell: |
     set -e
@@ -27,7 +32,7 @@
     export PATH=/opt/neutron/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     systemctl reset-failed neutron-openvswitch-agent || echo 'ignored'
     systemctl status neutron-openvswitch-agent || systemd-run \
-      --unit neutron-server -- \
+      --unit neutron-openvswitch-agent -- \
       {{ neutron_venv }}/bin/neutron-openvswitch-agent --log-file /var/log/neutron/neutron-openvswitch-agent.log \
       --config-file /etc/neutron/neutron.conf \
       --config-file /etc/neutron/plugins/ml2/ml2_conf.ini \
