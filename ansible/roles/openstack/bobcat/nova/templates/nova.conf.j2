@@ -6,9 +6,6 @@ transport_url = rabbit://{{ nova_rabbitmq_user }}:{{ nova_rabbitmq_password }}@{
 
 my_ip = {{ nova_my_ip }}
 
-compute_driver = fake.FakeDriver
-# compute_driver = libvirt.LibvirtDriver
-
 [scheduler]
 workers = 1
 
@@ -40,8 +37,8 @@ enabled = true
 server_listen = $my_ip
 server_proxyclient_address = $my_ip
 
-[glance]
-api_servers = http://{{ nova_glance_host }}:9292
+# [glance]
+# api_servers = http://{{ nova_glance_host }}:9292
 
 [oslo_concurrency]
 lock_path = /var/lib/nova/tmp

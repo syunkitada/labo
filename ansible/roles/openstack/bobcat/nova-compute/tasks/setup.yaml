@@ -20,7 +20,10 @@
     systemctl reset-failed nova-compute || echo 'ignored'
     systemctl status nova-compute || systemd-run \
       --unit nova-compute -- \
-      {{ nova_venv }}/bin/nova-compute --config-file /etc/nova/nova.conf --log-file /var/log/nova/nova-compute.log
+      {{ nova_venv }}/bin/nova-compute \
+      --config-file /etc/nova/nova.conf \
+      --config-file /etc/nova/nova-compute.conf \
+      --log-file /var/log/nova/nova-compute.log
 
 - name: Restart nova-compute
   when: nova_conf.changed or nova_compute_conf.changed

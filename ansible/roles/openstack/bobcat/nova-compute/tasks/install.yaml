@@ -7,3 +7,4 @@
     name:
       - qemu-kvm
       - libvirt
+      - python3-libvirt
