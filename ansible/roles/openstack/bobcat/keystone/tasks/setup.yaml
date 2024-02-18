@@ -52,7 +52,7 @@
 
 - name: Restart keystone httpd
   when: keystone_runtime == "httpd"
-  when: keystone_conf.changed or wsgi_keystone_conf.changed
+    and (keystone_conf.changed or wsgi_keystone_conf.changed)
   shell: |
     systemctl restart httpd
 

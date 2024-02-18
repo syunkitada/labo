@@ -2,6 +2,12 @@
     name: openstack/bobcat/nova
     tasks_from: config.yaml
 
+- name: Put libvirtd.conf
+  template:
+    src: libvirtd.conf.j2
+    dest: "/etc/libvirt/libvirtd.conf"
+  register: libvirtd_conf
+
 - name: Put nova-compute.conf
   template:
     src: nova-compute.conf.j2
@@ -14,16 +20,9 @@
     state: started
 
 - name: Start nova-compute
-  shell: |
-    set -e
-
-    systemctl reset-failed nova-compute || echo 'ignored'
-    systemctl status nova-compute || systemd-run \
-      --unit nova-compute -- \
-      {{ nova_venv }}/bin/nova-compute \
-      --config-file /etc/nova/nova.conf \
-      --config-file /etc/nova/nova-compute.conf \
-      --log-file /var/log/nova/nova-compute.log
+  service:
+    name: nova-compute
+    state: started
 
 - name: Restart nova-compute
   when: nova_conf.changed or nova_compute_conf.changed

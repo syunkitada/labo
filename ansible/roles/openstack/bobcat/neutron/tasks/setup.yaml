@@ -8,24 +8,17 @@
     {{ neutron_venv }}/bin/neutron-db-manage --config-file /etc/neutron/neutron.conf \
       --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head
 
-- name: Start neutron
-  shell: |
-    set -e
+- name: Start neutron-server
+  service:
+    name: neutron-server
+    state: started
 
-    export PATH=/opt/neutron/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    systemctl reset-failed neutron-server || echo 'ignored'
-    systemctl status neutron-server || systemd-run \
-      --unit neutron-server -- \
-      {{ neutron_venv }}/bin/neutron-server --log-file /var/log/neutron/neutron-server.log \
-      --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini
-
-- name: Restart neutron
+- name: Restart neutron-server
   when: neutron_conf.changed
     or neutron_ml2_conf.changed
-  shell: |
-    set -e
-
-    systemctl restart neutron-server
+  service:
+    name: neutron-server
+    state: restarted
 
 - name: Register neutron service
   shell: |

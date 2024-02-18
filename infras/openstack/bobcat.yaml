@@ -19,3 +19,6 @@ nodes:
         - openstack/bobcat/placement
         - openstack/bobcat/nova
         - openstack/bobcat/neutron
+        - openstack/bobcat/nova-compute
+        - openstack/bobcat/neutron-openvswitch-agent
+        - openstack/bobcat/osdata

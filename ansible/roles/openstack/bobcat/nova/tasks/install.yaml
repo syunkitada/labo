@@ -1,12 +1,27 @@
+- name: Pre install
+  shell: |
+    set -e
+    getent group nova >/dev/null || groupadd -r nova --gid 162
+    if ! getent passwd nova >/dev/null; then
+      useradd -u 162 -r -g nova -G nova,nobody -d /opt/nova -s /sbin/nologin -c "OpenStack Nova Daemons" nova
+    fi
+
+    getent group qemu >/dev/null || groupadd -r qemu --gid 107
+    usermod -a -G qemu nova
+
 - name: Install venv
   shell: |
     set -e
 
     python3 -m venv {{ nova_venv }} --system-site-packages
     {{ nova_venv }}/bin/pip install pip --upgrade
+
     mkdir -p /var/log/nova
+    chown -R nova:nova /var/log/nova
     mkdir -p /etc/nova
+    chown -R nova:nova /etc/nova
     mkdir -p /var/lib/nova/instances
+    chown -R nova:nova /var/lib/nova/instances
 
 - include_role:
     name: openstack/bobcat/common
@@ -40,3 +55,26 @@
       -c {{ nova_venv }}/upper-constraints.txt
 
     cp etc/nova/api-paste.ini /etc/nova/
+    test -L /usr/bin/nova-rootwrap || ln -s /opt/nova/bin/nova-rootwrap /usr/bin/
+
+- name: Put rootwrap.conf
+  copy:
+    src: files/rootwrap.conf
+    dest: /etc/nova/rootwrap.conf
+
+- name: Put systemd service files
+  loop:
+    - nova-api
+    - nova-conductor
+    - nova-scheduler
+    - nova-novncproxy
+    - nova-compute
+  copy:
+    src: files/system/{{ item }}.service
+    dest: /usr/lib/systemd/system/{{ item }}.service
+
+- name: Post install
+  shell: |
+    set -e
+
+    systemctl daemon-reload

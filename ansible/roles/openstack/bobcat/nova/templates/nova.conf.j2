@@ -6,6 +6,8 @@ transport_url = rabbit://{{ nova_rabbitmq_user }}:{{ nova_rabbitmq_password }}@{
 
 my_ip = {{ nova_my_ip }}
 
+instances_path = /var/lib/nova/instances
+
 [scheduler]
 workers = 1
 

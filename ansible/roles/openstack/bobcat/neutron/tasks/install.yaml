@@ -35,4 +35,19 @@
       -c {{ neutron_venv }}/upper-constraints.txt
 
     cp etc/api-paste.ini /etc/neutron/
-    cp etc/rootwrap.conf /etc/neutron/
+
+- name: Put rootwrap.conf
+  copy:
+    src: files/rootwrap.conf
+    dest: /etc/neutron/rootwrap.conf
+
+- name: Put systemd service files
+  loop:
+    - neutron-server
+    - neutron-openvswitch-agent
+  copy:
+    src: files/system/{{ item }}.service
+    dest: /usr/lib/systemd/system/{{ item }}.service
+
+- name: Post install
+  shell: systemctl daemon-reload
