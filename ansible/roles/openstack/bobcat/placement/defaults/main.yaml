@@ -1,6 +1,7 @@
 placement_venv: /opt/placement
 placement_git_repo: https://github.com/openstack/placement.git
 placement_git_branch: stable/2023.2
+placement_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
 
 placement_mysql_host: localhost
 placement_mysql_user: admin

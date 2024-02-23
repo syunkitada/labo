@@ -4,16 +4,11 @@
 
     python3 -m venv {{ neutron_venv }} --system-site-packages
     {{ neutron_venv }}/bin/pip install pip --upgrade
+
     mkdir -p /var/log/neutron
     mkdir -p /etc/neutron
     mkdir -p /etc/neutron/plugins/ml2
     mkdir -p /var/lib/neutron
-
-- include_role:
-    name: openstack/bobcat/common
-    tasks_from: upper_constraints.yaml
-  vars:
-    dir: "{{ neutron_venv }}"
 
 - name: Put pip requirements.txt
   copy:
@@ -32,7 +27,7 @@
     {{ neutron_venv }}/bin/pip install . \
       -r requirements.txt \
       -r {{ neutron_venv }}/requirements.txt \
-      -c {{ neutron_venv }}/upper-constraints.txt
+      -c {{ neutron_upper_constraints }}
 
     cp etc/api-paste.ini /etc/neutron/
 
@@ -48,6 +43,3 @@
   copy:
     src: files/system/{{ item }}.service
     dest: /usr/lib/systemd/system/{{ item }}.service
-
-- name: Post install
-  shell: systemctl daemon-reload

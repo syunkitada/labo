@@ -12,12 +12,6 @@
     mkdir -p /var/log/horizon
     mkdir -p /etc/openstack-dashboard/
 
-- include_role:
-    name: openstack/bobcat/common
-    tasks_from: upper_constraints.yaml
-  vars:
-    dir: "{{ horizon_venv }}"
-
 - name: Put requirements.txt
   copy:
     src: files/requirements.txt
@@ -32,10 +26,11 @@
     test -e horizon || git clone {{ horizon_git_repo }} -b {{ horizon_git_branch }}
 
     cd horizon
-    {{ horizon_venv }}/bin/pip install . \
+    {{ horizon_venv }}/bin/pip install \
       -r requirements.txt \
       -r {{ horizon_venv }}/requirements.txt \
-      -c {{ horizon_venv }}/upper-constraints.txt
+      -c {{ horizon_upper_constraints }}
+    {{ horizon_venv }}/bin/python setup.py install
 
     {{ horizon_venv }}/bin/python manage.py compilemessages
     {{ horizon_venv }}/bin/python manage.py collectstatic --noinput

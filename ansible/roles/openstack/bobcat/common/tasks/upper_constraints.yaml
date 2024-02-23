@@ -1,4 +1,0 @@
-- name: Put upper-constraints.txt
-  copy:
-    src: files/upper-constraints.txt
-    dest: "{{ dir }}/upper-constraints.txt"

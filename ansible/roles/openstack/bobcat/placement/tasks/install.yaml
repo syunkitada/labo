@@ -7,12 +7,6 @@
     mkdir -p /var/log/placement
     mkdir -p /etc/placement
 
-- include_role:
-    name: openstack/bobcat/common
-    tasks_from: upper_constraints.yaml
-  vars:
-    dir: "{{ placement_venv }}"
-
 - name: Put pip requirements.txt
   copy:
     src: files/requirements.txt
@@ -30,4 +24,4 @@
     {{ placement_venv }}/bin/pip install . \
       -r requirements.txt \
       -r {{ placement_venv }}/requirements.txt \
-      -c {{ placement_venv }}/upper-constraints.txt
+      -c {{ placement_upper_constraints }}

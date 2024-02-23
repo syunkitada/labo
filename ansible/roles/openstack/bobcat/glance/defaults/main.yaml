@@ -1,6 +1,7 @@
 glance_venv: /opt/glance
 glance_git_repo: https://github.com/openstack/glance.git
 glance_git_branch: stable/2023.2
+glance_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
 
 glance_mysql_host: localhost
 glance_mysql_user: admin

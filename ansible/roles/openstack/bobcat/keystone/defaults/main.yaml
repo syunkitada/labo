@@ -1,6 +1,9 @@
 keystone_venv: /opt/keystone
 keystone_git_repo: https://github.com/openstack/keystone.git
 keystone_git_branch: stable/2023.2
+keystone_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
+
+keystone_env: docker
 
 keystone_mysql_host: localhost
 keystone_mysql_user: admin

@@ -3,3 +3,4 @@ pytest
 pyyaml
 tabulate
 ansible
+requests

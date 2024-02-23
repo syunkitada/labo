@@ -8,12 +8,6 @@
     mkdir -p /etc/glance
     mkdir -p /var/lib/glance/images/
 
-- include_role:
-    name: openstack/bobcat/common
-    tasks_from: upper_constraints.yaml
-  vars:
-    dir: "{{ glance_venv }}"
-
 - name: Put requirements.txt
   copy:
     src: files/requirements.txt
@@ -31,6 +25,6 @@
     {{ glance_venv }}/bin/pip install . \
       -r requirements.txt \
       -r {{ glance_venv }}/requirements.txt \
-      -c {{ glance_venv }}/upper-constraints.txt
+      -c {{ glance_upper_constraints }}
 
     cp etc/glance-api-paste.ini /etc/glance/

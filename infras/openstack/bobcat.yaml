@@ -7,18 +7,18 @@ nodes:
       - 80:80
       - 443:443
       - 5000:5000
-    ansible:
-      roles:
-        - mysql
-        - memcached
-        - rabbitmq
-        - openstack/bobcat/ostools
-        - openstack/bobcat/keystone
-        - openstack/bobcat/horizon
-        - openstack/bobcat/glance
-        - openstack/bobcat/placement
-        - openstack/bobcat/nova
-        - openstack/bobcat/neutron
-        - openstack/bobcat/nova-compute
-        - openstack/bobcat/neutron-openvswitch-agent
-        - openstack/bobcat/osdata
+    # ansible:
+    #   roles:
+    #     - mysql
+    #     - memcached
+    #     - rabbitmq
+    #     - openstack/bobcat/ostools
+    #     - openstack/bobcat/keystone
+    #     - openstack/bobcat/horizon
+    #     - openstack/bobcat/glance
+    #     - openstack/bobcat/placement
+    #     - openstack/bobcat/nova
+    #     - openstack/bobcat/neutron
+    #     - openstack/bobcat/nova-compute
+    #     - openstack/bobcat/neutron-openvswitch-agent
+    #     - openstack/bobcat/osdata

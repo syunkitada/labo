@@ -1,5 +1,5 @@
-- name: Install docker for rh
-  when: ansible_facts['os_family'] == "RedHat"
+- name: Install docker for rh8
+  when: ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] == "8"
   become: true
   shell: |
     yum install -y yum-utils
@@ -8,8 +8,18 @@
                    docker-ce-cli-1:24.0.8-1.el8 \
                    containerd.io-1.6.26-3.1.el8
 
+- name: Install docker for rh9
+  when: ansible_facts["os_family"] == "RedHat" and ansible_facts["distribution_major_version"] == "9"
+  become: true
+  shell: |
+    yum install -y yum-utils
+    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    yum install -y docker-ce \
+                   docker-ce-cli \
+                   containerd.io
+
 - name: Install docker for ubuntu
-  when: ansible_facts['os_family'] == "Debian"
+  when: ansible_facts["os_family"] == "Debian"
   become: true
   shell: |
     set -xe

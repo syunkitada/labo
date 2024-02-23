@@ -21,12 +21,6 @@
     mkdir -p /var/log/keystone
     chown -R nobody:nobody /var/log/keystone/
 
-- include_role:
-    name: openstack/bobcat/common
-    tasks_from: upper_constraints.yaml
-  vars:
-    dir: "{{ keystone_venv }}"
-
 - name: Put requirements.txt
   copy:
     src: files/requirements.txt
@@ -44,4 +38,4 @@
     {{ keystone_venv }}/bin/pip install . \
       -r requirements.txt \
       -r {{ keystone_venv }}/requirements.txt \
-      -c {{ keystone_venv }}/upper-constraints.txt
+      -c {{ keystone_upper_constraints }}

@@ -1,6 +1,7 @@
 nova_venv: /opt/nova
 nova_git_repo: https://github.com/openstack/nova.git
 nova_git_branch: stable/2023.2
+nova_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
 
 nova_mysql_host: localhost
 nova_mysql_user: admin
