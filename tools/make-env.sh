@@ -21,6 +21,7 @@ test -L /etc/ansible/roles || sudo ln -s "${LABO_DIR}/ansible/roles" /etc/ansibl
 sudo mkdir -p /root/.ssh
 sudo test -e /root/.ssh/labo.pem || sudo ssh-keygen -t ed25519 -N '' -f /root/.ssh/labo.pem
 sudo cp etc/ssh/config /root/.ssh/config
+sudo cp /root/.ssh/labo.pem.pub /root/.ssh/authorized_keys
 
 # sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients libguestfs-tools
 
