@@ -1,0 +1,24 @@
+- name: install ansible
+  hosts: all
+  tasks:
+    - name: debug
+      ansible.builtin.debug:
+        msg: "{{ ansible_facts }}"
+
+    - name: install python3 rh7
+      become: true
+      ansible.builtin.yum:
+        name: python3
+      when: ansible_facts['os_family'] == "RedHat" and ansible_facts["distribution_major_version"] == "7"
+
+    - name: install python3 rh8
+      become: true
+      ansible.builtin.yum:
+        name: python3
+      when: ansible_facts['os_family'] == "RedHat" and ansible_facts["distribution_major_version"] == "8"
+
+    - name: install ansible
+      become: true
+      ansible.builtin.shell: |
+        pip3 install --upgrade pip
+        pip3 install ansible

@@ -1,0 +1,9 @@
+source .venv/bin/activate
+
+# function labo-ansible-playbook() {
+#     sudo -E PATH="$PATH" bash -e -c "ansible-playbook ansible/roles/$1/playbook.yaml"
+# }
+# 
+# function labo-fab() {
+#     sudo -E PATH="$PATH" bash -e -c "fab $*"
+# }

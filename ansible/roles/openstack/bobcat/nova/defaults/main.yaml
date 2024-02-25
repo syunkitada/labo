@@ -1,0 +1,22 @@
+nova_venv: /opt/nova
+nova_git_repo: https://github.com/openstack/nova.git
+nova_git_branch: stable/2023.2
+nova_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
+
+nova_mysql_host: localhost
+nova_mysql_user: admin
+nova_mysql_password: adminpass
+
+nova_rabbitmq_host: localhost
+nova_rabbitmq_port: 5672
+nova_rabbitmq_user: admin
+nova_rabbitmq_password: adminpass
+
+nova_glance_host: localhost
+
+nova_keystone_host: localhost
+nova_keystone_region: region
+nova_keystone_service_user: system
+nova_keystone_service_password: systempass
+
+nova_my_ip: 127.0.0.1

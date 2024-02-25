@@ -1,0 +1,16 @@
+{
+  "CN": "Labo",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Labo",
+      "OU": "CA",
+      "ST": "Oregon"
+    }
+  ]
+}

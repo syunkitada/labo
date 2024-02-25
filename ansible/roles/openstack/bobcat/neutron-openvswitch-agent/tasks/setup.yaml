@@ -1,0 +1,39 @@
+- include_role:
+    name: openstack/bobcat/neutron
+    tasks_from: config.yaml
+
+- name: Put openvswitch_agent.ini
+  template:
+    src: openvswitch_agent.ini.j2
+    dest: /etc/neutron/plugins/ml2/openvswitch_agent.ini
+  register: openvswitch_agent_ini
+
+- name: Put metadata_agent.ini
+  template:
+    src: metadata_agent.ini.j2
+    dest: /etc/neutron/plugins/ml2/metadata_agent.ini
+  register: metadata_agent_ini
+
+- name: Put dhcp_agent_ini
+  template:
+    src: dhcp_agent.ini.j2
+    dest: /etc/neutron/plugins/ml2/dhcp_agent.ini
+  register: dhcp_agent_ini
+
+- name: Start openvswitch
+  service:
+    name: openvswitch
+    state: restarted
+
+- name: Start neutron-openvswitch-agent
+  service:
+    name: neutron-openvswitch-agent
+    state: started
+
+- name: Restart neutron-openvswitch-agent
+  when: neutron_conf.changed
+    or neutron_ml2_conf.changed
+    or openvswitch_agent_ini.changed
+  service:
+    name: neutron-openvswitch-agent
+    state: restarted

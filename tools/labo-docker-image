@@ -1,0 +1,49 @@
+#!/bin/bash -e
+
+cd "$(dirname $0)/../"
+
+function create() {
+	if [ $# != 1 ]; then
+		echo "require 1 arg"
+		help
+		exit 1
+	fi
+
+	IMAGE_NAME=${1:?}
+	DOCKER_FILE="./images/docker/${IMAGE_NAME}/Dockerfile"
+
+	if [ -e "${DOCKER_FILE}" ]; then
+		sudo docker image build -t "local/${IMAGE_NAME}" --file "${DOCKER_FILE}" .
+
+		# push image to docker-registry
+		sudo docker image tag "local/${IMAGE_NAME}" "localhost:5050/local/${IMAGE_NAME}:latest"
+		sudo docker push "localhost:5050/local/${IMAGE_NAME}:latest"
+	else
+		echo "
+IMAGE_NAME=${IMAGE_NAME}
+Dockerfile is not found: ${DOCKER_FILE}
+
+Available images are following."
+		list
+		exit 1
+	fi
+}
+
+function list() {
+	for image in $(ls ./images/docker); do
+		echo "${image}"
+	done
+}
+
+function help() {
+	echo "
+create [image_name]
+list
+"
+}
+
+if [ $# != 0 ]; then
+	"${@}"
+else
+	help
+fi

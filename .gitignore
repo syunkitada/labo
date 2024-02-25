@@ -1,9 +1,12 @@
-tmp
-tmp.md
+tmp*
 *.tmp
+-copilot.log
 
 # python
 venv
 .venv
 .pytest_cache
 *.pyc
+
+# ansible
+galaxy_cache

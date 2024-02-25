@@ -1,0 +1,38 @@
+- name: put glance-api.conf
+  template:
+    src: glance-api.conf.j2
+    dest: "/etc/glance/glance-api.conf"
+  register: glance_api_conf
+
+- name: db sync
+  shell: |
+    set -e
+    mysql -e 'CREATE DATABASE IF NOT EXISTS glance'
+    {{ glance_venv }}/bin/glance-manage db_sync
+
+- name: start glance
+  shell: |
+    set -e
+    systemctl reset-failed glance-api || echo 'ignored'
+    systemctl status glance-api || systemd-run \
+      --unit glance-api -- \
+      {{ glance_venv }}/bin/glance-api --config-file /etc/glance/glance-api.conf
+
+- name: restart glance
+  when: glance_api_conf.changed
+  shell: |
+    set -e
+    systemctl restart glance-api
+
+- name: register glance service
+  shell: |
+    set -e
+
+    source /etc/adminrc
+    service_list=$(openstack service list)
+    if [[ ! $service_list =~ " glance " ]]; then
+      openstack service create --name glance --description "OpenStack Image" image
+      openstack endpoint create --region "{{ glance_keystone_region }}" image public "http://{{ glance_keystone_host }}:9292"
+      openstack endpoint create --region "{{ glance_keystone_region }}" image internal "http://{{ glance_keystone_host }}:9292"
+      openstack endpoint create --region "{{ glance_keystone_region }}" image admin "http://{{ glance_keystone_host }}:9292"
+    fi

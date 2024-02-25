@@ -1,0 +1,17 @@
+neutron_venv: /opt/neutron
+
+neutron_mysql_host: localhost
+neutron_mysql_user: admin
+neutron_mysql_password: adminpass
+
+neutron_rabbitmq_host: localhost
+neutron_rabbitmq_port: 5672
+neutron_rabbitmq_user: admin
+neutron_rabbitmq_password: adminpass
+
+neutron_keystone_host: localhost
+neutron_keystone_region: region
+neutron_keystone_service_user: system
+neutron_keystone_service_password: systempass
+
+neutron_nova_metadata_host: localhost

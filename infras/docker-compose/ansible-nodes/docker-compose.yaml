@@ -1,0 +1,38 @@
+version: "3"
+services:
+  ansible:
+    hostname: ansible
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+      - "./ansible:/etc/ansible"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  node01:
+    hostname: node01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  node02:
+    hostname: node02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  node03:
+    hostname: node03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice

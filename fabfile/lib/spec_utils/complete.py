@@ -29,26 +29,7 @@ def complete_spec(spec):
 
     env_map = {}
 
-    infra_map = {}
-    for rspec in spec.get("infras", []):
-        if rspec["name"] == "mysql":
-            env_map["MYSQL_ROOT_PASSWORD"] = rspec.get("root_password", "rootpass")
-            env_map["MYSQL_ADMIN_USER"] = rspec.get("admin_user", "admin")
-            env_map["MYSQL_ADMIN_PASSWORD"] = rspec.get("admin_password", "adminpass")
-        elif rspec["name"] == "pdns":
-            env_map["PDNS_LOCAL_ADDRESS"] = rspec.get("local_address", "127.0.0.1")
-            env_map["PDNS_DOMAIN"] = spec["conf"]["domain"]
-            for record in rspec.get("records", []):
-                record["fqdn"] = record["name"] + "." + spec["conf"]["domain"]
-
-        infra_map[rspec["name"]] = rspec
-    spec["_infra_map"] = infra_map
     spec["_env_map"] = env_map
-
-    vm_image_map = spec.get("vm_image_map", {})
-    for name, rspec in vm_image_map.items():
-        rspec["name"] = name
-        rspec["_path"] = os.path.join(spec["conf"]["vm_images_dir"], name)
 
     vpcgw_map = spec.get("vpcgw_map", {})
     for rspec in vpcgw_map.values():
@@ -58,8 +39,6 @@ def complete_spec(spec):
     _node_map = {}
     spec["_node_map"] = _node_map
     peer_links_map = {}
-    for rspec in spec.get("nodes", []):
-        peer_links_map[rspec["name"]] = []
 
     def apply_template(rspec):
         if "templates" not in rspec:
@@ -74,9 +53,9 @@ def complete_spec(spec):
         update_dict(tmp_spec, rspec)
         rspec.update(tmp_spec)
 
-    def _complete_node(i, rspec):
+    def _init_node(rspec):
+        peer_links_map[rspec["name"]] = []
         _node_map[rspec["name"]] = rspec
-
         apply_template(rspec)
         update_dict(rspec, node_map.get(rspec["name"], {}))
         for link in rspec.get("links", []):
@@ -84,6 +63,14 @@ def complete_spec(spec):
         if "frr" in rspec:
             apply_template(rspec["frr"])
 
+        for child in rspec.get("childs", []):
+            _init_node(child)
+
+    for rspec in spec.get("nodes", []):
+        _init_node(rspec)
+
+
+    def _complete_node(i, rspec):
         _complete_links(i, spec, rspec, rspec.get("links", []))
 
         for link in rspec.get("links", []):
@@ -100,19 +87,9 @@ def complete_spec(spec):
             _complete_ips(rspec["l3admin"].get("ips", []), spec, rspec)
 
         if rspec["kind"] == "vm":
-            vm_dir = os.path.join(spec["conf"]["vms_dir"], rspec["name"])
-            rspec["_hostname"] = rspec["name"] + "." + spec["conf"]["domain"]
-            rspec["_image"] = vm_image_map[rspec["image"]]
-            rspec["_vm_dir"] = vm_dir
-            rspec["_image_path"] = os.path.join(vm_dir, "img")
-            rspec["_monitor_socket_path"] = os.path.join(vm_dir, "monitor.sock")
-            rspec["_serial_socket_path"] = os.path.join(vm_dir, "serial.sock")
-            rspec["_serial_log_path"] = os.path.join(vm_dir, "serial.log")
-            rspec["_config_image_path"] = os.path.join(vm_dir, "config.img")
-            rspec["_metadata_path"] = os.path.join(vm_dir, "meta-data")
-            rspec["_userdata_path"] = os.path.join(vm_dir, "user-data")
+            rspec["_hostname"] = rspec["name"].replace('_', '-') + "." + spec["conf"]["domain"]
 
-        if rspec["kind"] == "container":
+        elif rspec["kind"] == "container":
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
             _complete_ips(rspec.get("lo_ips", []), spec, rspec)
             for bridge in rspec.get("bridges", []):
@@ -149,14 +126,14 @@ def complete_spec(spec):
                         ovs_peer_links_map[link["peer"]].append(link)
                     bridge["_links"] = ovs_peer_links_map.get(br_name, [])
 
-            _complete_links(i, spec, rspec, rspec.get("vm_links", []))
-            for vm in rspec.get("vms", []):
-                peer_links_map[vm["name"]] = []
-            for link in rspec.get("vm_links", []):
+            _complete_links(i, spec, rspec, rspec.get("child_links", []))
+            for child in rspec.get("childs", []):
+                peer_links_map[child["name"]] = []
+            for link in rspec.get("child_links", []):
                 peer_links_map[link["peer"]].append(link)
-            for vmi, vm in enumerate(rspec.get("vms", [])):
-                vm["hv"] = rspec
-                _complete_node(vmi, vm)
+            for childi, child in enumerate(rspec.get("childs", [])):
+                child["parent"] = rspec
+                _complete_node(childi, child)
 
             frr = rspec.get("frr")
             if frr is not None:
@@ -177,9 +154,6 @@ def complete_spec(spec):
             if "vpcgw" in rspec:
                 rspec["_vpcgw"] = vpcgw_map[rspec["vpcgw"]]
 
-        # end if rspec["kind"] == "container":
-        else:
-            rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
 
         for route in rspec.get("routes", []):
             route["dst"] = _complete_value(route["dst"], spec, rspec)
@@ -191,8 +165,8 @@ def complete_spec(spec):
         rspec["_script_index"] = 0
         rspec["_script_dir"] = os.path.join(spec["common"]["nfs_path"], "labo_nodes", rspec["_hostname"])
 
-        for key, value in rspec.get("var_map", {}).items():
-            rspec["var_map"][key] = _complete_value(value, spec, rspec)
+        for key, value in rspec.get("vars", {}).items():
+            rspec["vars"][key] = _complete_value(value, spec, rspec)
 
     def _complete_node_at_last(_, rspec):
         for j, cmd in enumerate(rspec.get("cmds", [])):
@@ -203,8 +177,65 @@ def complete_spec(spec):
                 for target in test["targets"]:
                     target["dst"] = _complete_value(target["dst"], spec, rspec)
 
-        for vmi, vm in enumerate(rspec.get("vms", [])):
-            _complete_node_at_last(vmi, vm)
+        for childi, child in enumerate(rspec.get("childs", [])):
+            _complete_node_at_last(childi, child)
+
+        if "ansible" in rspec:
+            if 'frr' in rspec['ansible']['roles']:
+                frr_interfaces = []
+                for link in rspec.get("links", []):
+                    if "bgp_peer_group" in link:
+                        frr_interfaces += [{
+                            "name": link['link_name'],
+                            "bgp_peer_group": link['bgp_peer_group'],
+                        }]
+                    for vlan_id, vlan in link.get("vlan_map", {}).items():
+                        if "bgp_peer_group" in vlan:
+                            frr_interfaces += [{
+                                "name": f"{link['link_name']}.{vlan_id}",
+                                "bgp_peer_group": vlan['bgp_peer_group'],
+                            }]
+                for link in rspec.get("_links", []):
+                    if "bgp_peer_group" in link:
+                        frr_interfaces += [{
+                            "name": link['peer_name'],
+                            "bgp_peer_group": link['bgp_peer_group'],
+                        }]
+                    for vlan_id, vlan in link.get("vlan_map", {}).items():
+                        if "bgp_peer_group" in vlan:
+                            if "peer_ovs" in vlan:
+                                frr_interfaces += [{
+                                    "name": vlan['peer_ovs']['peer_name'],
+                                    "bgp_peer_group": vlan['bgp_peer_group'],
+                                }]
+                            else:
+                                frr_interfaces += [{
+                                    "name": f"{link['peer_name']}.{vlan_id}",
+                                    "bgp_peer_group": vlan['bgp_peer_group'],
+                                }]
+
+                rspec['ansible']['vars']['frr_interfaces'] = frr_interfaces
+
+            if "vars" in rspec['ansible']:
+                def _complete_dict(data):
+                    if isinstance(data, list):
+                        for i, value in enumerate(data):
+                            if isinstance(value, str):
+                                data[i] = _complete_value(value, spec, rspec)
+                            if isinstance(value, dict):
+                                _complete_dict(value)
+                            if isinstance(value, list):
+                                _complete_dict(value)
+                    if isinstance(data, dict):
+                        for key, value in data.items():
+                            if isinstance(value, str):
+                                data[key] = _complete_value(value, spec, rspec)
+                            if isinstance(value, dict):
+                                _complete_dict(value)
+                            if isinstance(value, list):
+                                _complete_dict(value)
+
+                _complete_dict(rspec['ansible']['vars'])
 
         if "ovs" in rspec:
             ovs = rspec["ovs"]
@@ -219,9 +250,9 @@ def complete_spec(spec):
                     ex_vteps = []
                     for node in _node_map.values():
                         if "vpc_id" in node and node["name"] not in own_vm_map and node["vpc_id"] == br_vpc_id:
-                            tun_dst = node["hv"]["_links"][0]["peer_ips"][0]["ip"]
-                            if "admin_ips" in node["hv"]["ovs"]:
-                                tun_dst = node["hv"]["ovs"]["admin_ips"][0]["ip"]
+                            tun_dst = node["parent"]["_links"][0]["peer_ips"][0]["ip"]
+                            if "admin_ips" in node["parent"]["ovs"]:
+                                tun_dst = node["parent"]["ovs"]["admin_ips"][0]["ip"]
                             ex_vteps.append(
                                 {
                                     "dst": node,
@@ -233,24 +264,24 @@ def complete_spec(spec):
                     tun_dst = rspec["_links"][0]["peer_ips"][0]["ip"]
                     if "admin_ips" in rspec["ovs"]:
                         tun_dst = rspec["ovs"]["admin_ips"][0]["ip"]
-                    if "vpcgw" not in bridge:
-                        bridge["vpcgw"] = rspec["vpcgw"]
-                    vpcgw = vpcgw_map[bridge["vpcgw"]]
-                    bridge["_vpcgw"] = vpcgw
-                    vpc_links_map = vpcgw["_vpc_links_map"]
-                    for vm_link in rspec.get("vm_links", []):
-                        if vm_link["vpc_id"] != bridge["vpc_id"]:
-                            continue
-                        if vm_link["vpc_id"] not in vpc_links_map:
-                            vpc_links_map[vm_link["vpc_id"]] = []
-                        for ip in vm_link["peer_ips"]:
-                            vpc_links_map[vm_link["vpc_id"]].append(
-                                {
-                                    "ip": ip["ip"],
-                                    "eip": ip["eip"],
-                                    "tun_dst": tun_dst,
-                                }
-                            )
+                    # if "vpcgw" not in bridge:
+                    #     bridge["vpcgw"] = rspec["vpcgw"]
+                    # vpcgw = vpcgw_map[bridge["vpcgw"]]
+                    # bridge["_vpcgw"] = vpcgw
+                    # vpc_links_map = vpcgw["_vpc_links_map"]
+                    # for child_link in rspec.get("child_links", []):
+                    #     if child_link["vpc_id"] != bridge["vpc_id"]:
+                    #         continue
+                    #     if child_link["vpc_id"] not in vpc_links_map:
+                    #         vpc_links_map[child_link["vpc_id"]] = []
+                    #     for ip in child_link["peer_ips"]:
+                    #         vpc_links_map[child_link["vpc_id"]].append(
+                    #             {
+                    #                 "ip": ip["ip"],
+                    #                 "eip": ip["eip"],
+                    #                 "tun_dst": tun_dst,
+                    #             }
+                    #         )
 
     for i, rspec in enumerate(spec.get("nodes", [])):
         _complete_node(i, rspec)
@@ -324,6 +355,8 @@ def _get_src(src, spec={}, rspec={}):
 
     tmp_src = None
     if isinstance(rspec, dict):
+        if splited_src[0] not in rspec:
+            print(f"{splited_src[0]} is not found", rspec.keys())
         tmp_src = rspec[splited_src[0]]
     elif isinstance(rspec, list):
         tmp_src = rspec[int(splited_src[0])]
@@ -340,6 +373,10 @@ def _complete_links(i, spec, rspec, links):
         _complete_ips(link.get("peer_ips", []), spec, rspec)
         if "mtu" not in link:
             link["mtu"] = rspec.get("mtu", 1500)
+        if spec['_node_map'][link['peer']]['kind'] == 'vm':
+            link["kind"] = "tap"
+        else:
+            link["kind"] = "veth"
         link["src_name"] = rspec["name"]
         link["link_name"] = f"{rspec['name']}_{j}_{link['peer']}"
         link["peer_name"] = f"{link['peer']}_{j}_{rspec['name']}"
@@ -357,6 +394,8 @@ def _complete_ips(ips, spec, rspec):
 def _complete_ip(ip, spec, rspec):
     ip["inet"] = _complete_value(ip["inet"], spec, rspec)
     ip_interface = ipaddress.ip_interface(ip["inet"])
+    ip["inet_compressed"] = ip_interface.compressed
+    ip["inet_exploded"] = ip_interface.exploded
     ip["ip"] = str(ip_interface.ip)
     ip["version"] = ip_interface.version
     ip["network"] = str(ip_interface.network)

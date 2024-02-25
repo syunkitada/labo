@@ -1,0 +1,13 @@
+- hosts: localhost
+  become: true
+  roles:
+    - name: mysql
+      tags: mysql
+    - name: memcached
+      tags: memcached
+    - name: rabbitmq
+      tags: rabbitmq
+    - name: docker
+      tags: docker
+    - name: openstack/bobcat/keystone
+      tags: keystone

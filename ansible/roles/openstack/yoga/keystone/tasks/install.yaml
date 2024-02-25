@@ -1,0 +1,35 @@
+- name: install requirements packages
+  yum:
+    name:
+      - httpd
+      - mod_auth_mellon
+      - python3-mod_wsgi
+
+- name: install
+  shell: |
+    chown -R nobody:nobody /var/log/httpd
+    sed -i 's/Listen 80//g' /etc/httpd/conf/httpd.conf
+
+- name: install
+  shell: |
+    python3 -m venv {{ keystone_venv }} --system-site-packages
+    mkdir -p /etc/keystone
+    mkdir -p /var/log/keystone
+    chown -R nobody:nobody /var/log/keystone/
+
+- name: install
+  copy:
+    src: files/requirements.txt
+    dest: "{{ keystone_venv }}/requirements.txt"
+
+- name: install requirements
+  shell: |
+    {{ keystone_venv }}/bin/pip install pip --upgrade
+    {{ keystone_venv }}/bin/pip install -r {{ keystone_venv }}/requirements.txt
+
+- name: install keystone
+  shell: |
+    mkdir -p {{ keystone_venv }}/src
+    cd {{ keystone_venv }}/src
+    test -e keystone || git clone https://github.com/openstack/keystone.git -b stable/yoga && \
+    cd keystone && {{ keystone_venv }}/bin/python setup.py install

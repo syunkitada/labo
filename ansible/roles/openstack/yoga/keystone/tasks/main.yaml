@@ -1,0 +1,5 @@
+- name: install
+  include_tasks: install.yaml
+
+- name: setup
+  include_tasks: setup.yaml

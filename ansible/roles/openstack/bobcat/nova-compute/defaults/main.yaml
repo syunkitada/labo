@@ -1,0 +1,3 @@
+nova_venv: /opt/nova
+
+nova_compute_driver: libvirt.LibvirtDriver

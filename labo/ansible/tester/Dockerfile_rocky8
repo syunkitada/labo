@@ -1,0 +1,13 @@
+FROM rockylinux:8.7
+
+RUN yum install -y sudo make openssh-server && \
+    mkdir -p /var/run/sshd && \
+    ssh-keygen -A && \
+    chmod 600 /etc/ssh/ssh_*_key && \
+    useradd tester && \
+    gpasswd -a tester tester && \
+    rm -f /run/nologin && \
+    echo "owner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    echo "tester ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+ENTRYPOINT [ "sleep", "36000" ]

@@ -1,0 +1,38 @@
+- name: Install requirement packages
+  yum:
+    name:
+      - gettext
+
+- name: Install venv
+  shell: |
+    set -e
+
+    python3 -m venv {{ horizon_venv }} --system-site-packages
+    {{ horizon_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/horizon
+    mkdir -p /etc/openstack-dashboard/
+
+- name: Put requirements.txt
+  copy:
+    src: files/requirements.txt
+    dest: "{{ horizon_venv }}/requirements.txt"
+
+- name: Install horizon
+  shell: |
+    set -e
+
+    mkdir -p {{ horizon_venv }}/share
+    cd {{ horizon_venv }}/share
+    test -e horizon || git clone {{ horizon_git_repo }} -b {{ horizon_git_branch }}
+
+    cd horizon
+    {{ horizon_venv }}/bin/pip install \
+      -r requirements.txt \
+      -r {{ horizon_venv }}/requirements.txt \
+      -c {{ horizon_upper_constraints }}
+    {{ horizon_venv }}/bin/python setup.py install
+
+    {{ horizon_venv }}/bin/python manage.py compilemessages
+    {{ horizon_venv }}/bin/python manage.py collectstatic --noinput
+    chmod 600 openstack_dashboard/local/.secret_key_store
+    {{ horizon_venv }}/bin/python manage.py compress --force

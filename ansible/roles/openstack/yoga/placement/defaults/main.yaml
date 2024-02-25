@@ -1,0 +1,10 @@
+placement_venv: /opt/placement
+
+placement_mysql_host: localhost
+placement_mysql_user: admin
+placement_mysql_password: adminpass
+
+placement_keystone_host: localhost
+placement_keystone_region: region
+placement_keystone_service_user: system
+placement_keystone_service_password: systempass

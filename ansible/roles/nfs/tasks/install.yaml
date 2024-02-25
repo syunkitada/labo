@@ -1,0 +1,7 @@
+- name: install
+  when: ansible_facts['os_family'] == "Debian"
+  become: true
+  shell: |
+    apt install -y nfs-kernel-server nfs-common
+    mkdir -p /var/nfs/exports
+    chown nobody.nogroup /var/nfs/exports

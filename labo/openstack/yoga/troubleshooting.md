@@ -98,3 +98,27 @@ root@3864d5063faa:/# openstack port list
 
 - models_v2.Port には port_forwardings は定義されていないが、network list などを実行することで、models_v2.Port に port_forwardings が付与される
 - worker ごとに model も別、、
+
+## libvirt
+
+```
+$ virsh version
+Compiled against library: libvirt 9.5.0
+Using library: libvirt 9.5.0
+Using API: QEMU 9.5.0
+error: failed to get the hypervisor version
+error: internal error: Cannot find suitable emulator for x86_64
+```
+
+libvirt のログ
+
+```
+internal error: Failed to start QEMU binary /usr/libexec/qemu-kvm for probing: libvirt:  error : cannot execute binary /usr/libexec/qemu-kvm: Permission denied
+```
+
+```
+$ sudo aa-teardown
+Unloading AppArmor profiles
+```
+
+https://github.com/kubevirt/kubevirt/issues/4303#issuecomment-715564964

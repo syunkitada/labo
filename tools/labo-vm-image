@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+
+import re
+import time
+import subprocess
+import yaml
+import os
+import argparse
+from lib import command
+p = argparse.ArgumentParser()
+p.add_argument('action', choices=[
+    'create', 'recreate',
+    'list', 'delete',
+    'mount', 'umount',
+], help='action')
+p.add_argument('image_name', help='image name', nargs='*', default=[])
+args = p.parse_args()
+
+
+IMAGE_ROOT = '/mnt/nfs/vm_images/'
+
+VM_IMAGE_DIR = os.path.join(os.path.dirname(__file__), '../images/vm')
+
+def main():
+    if args.action == "list":
+        list()
+    else:
+        if len(args.image_name) == 0:
+            p.error(f"{args.action} require image_name")
+        name = args.image_name[0]
+        spec = new_spec(name)
+
+        if args.action == "create":
+            create(spec)
+        elif args.action == "delete":
+            delete(spec)
+        elif args.action == "recreate":
+            delete(spec)
+            create(spec)
+        elif args.action == "mount":
+            mount(spec, spec["_image_path"])
+        elif args.action == "unmount":
+            umount(spec)
+
+
+def list():
+    files = os.listdir(IMAGE_ROOT)
+    for file in files:
+        print(f"local/{file}")
+
+
+def delete(spec):
+    if os.path.exists(spec["_image_path"]):
+        command.must_run(["rm", "-rf", spec["_image_path"]])
+
+
+def create(spec):
+    os.makedirs(VM_IMAGE_DIR, exist_ok=True)
+
+    if os.path.exists(spec["_image_path"]):
+        return
+
+    if spec['from'].startswith('https://'):
+        download(spec)
+        spec['_base_image_path'] = ''
+    elif spec['from'].startswith('local/'):
+        spec['_base_image_path'] = spec['from'].replace('local/', IMAGE_ROOT)
+        custom(spec)
+
+
+def download(spec):
+    tmp_image_path = f"/tmp/{spec['_name']}.tmp"
+    if not os.path.exists(tmp_image_path):
+        result = command.must_run(["wget", "-O", tmp_image_path, spec['from']])
+        if result.returncode != 0:
+            os.remove(tmp_image_path)
+            raise Exception("failed to wget")
+
+    result = command.must_run(["file", tmp_image_path])
+    file_info = result.stdout.decode('utf-8')
+    if 'XZ compressed data' in file_info:
+        command.must_run(["mv", tmp_image_path, f"{spec['_tmp_image_path']}.xz"])
+        command.must_run(["xz", "-d", f"{spec['_tmp_image_path']}.xz"])
+
+    result = command.must_run(["file", tmp_image_path])
+    file_info = result.stdout.decode('utf-8')
+    if "QCOW" in file_info:
+        command.must_run(['cp', tmp_image_path, spec['_image_path']])
+        command.must_run(['rm', tmp_image_path])
+    else:
+        raise Exception(f"Unsupported image format: {spec['_name']}")
+
+
+def new_spec(name):
+    image_src_dir = os.path.join(VM_IMAGE_DIR, name)
+    image_src_yaml = os.path.join(image_src_dir, 'image.yaml')
+    spec = {}
+    if not os.path.exists(image_src_yaml):
+        print(f"{image_src_yaml} is not exists")
+        exit(1)
+    with open(image_src_yaml) as f:
+        spec = yaml.safe_load(f)
+
+    spec["_name"] = name
+    spec["_tmp_image_path"] = f"/tmp/{name}.tmp"
+    spec["_tmp_mount_path"] = f"/tmp/{name}.tmp.mount"
+    spec["_image_path"] = os.path.join(IMAGE_ROOT, name)
+    spec["_image_src_dir"] = image_src_dir
+
+    return spec
+
+
+def mount(spec, image_path):
+    command.must_run(["modprobe", "nbd", "max_part=63"])
+    umount(spec)
+    os.makedirs(spec["_tmp_mount_path"], exist_ok=True)
+    command.must_run(["qemu-nbd", "-c", "/dev/nbd0", image_path])
+
+    result = command.must_run(["/sbin/fdisk", "-l", "-u", "/dev/nbd0"])
+    linux_filesystem_device = ""
+    for line in result.stdout.decode('utf-8').splitlines():
+        splited_line = re.split(r' +', line)
+        if len(splited_line) == 7:
+            if splited_line[5] == "Linux":
+                linux_filesystem_device = splited_line[0]
+    if linux_filesystem_device == "":
+        raise Exception("linux_filesystem_device is not found")
+
+    command.must_run(["mount", linux_filesystem_device, spec["_tmp_mount_path"]], retry=3)
+    command.must_run(["mount", "-o", "bind", "/dev", f"{spec['_tmp_mount_path']}/dev"])
+    command.must_run(["mount", "-o", "bind", "/proc", f"{spec['_tmp_mount_path']}/proc"])
+    command.must_run(["mount", "-o", "bind", "/sys", f"{spec['_tmp_mount_path']}/sys"])
+    print(f"image_path={image_path}")
+    print(f"mount_path={spec['_tmp_mount_path']}")
+
+
+def umount(spec):
+    command.run(["umount", f"{spec['_tmp_mount_path']}/dev"])
+    command.run(["umount", f"{spec['_tmp_mount_path']}/proc"])
+    command.run(["umount", f"{spec['_tmp_mount_path']}/sys"])
+    command.run(["umount", spec['_tmp_mount_path']])
+    command.run(["qemu-nbd", "--disconnect", "/dev/nbd0"])
+    print(f"umount {spec['_tmp_mount_path']}")
+
+
+def size_str_to_float(size_str):
+    if size_str[-1] == "G":
+        return float(size_str[:-1]) * 1024 * 1024 * 1024
+    elif size_str[-1] == "M":
+        return float(size_str[:-1]) * 1024 * 1024
+    elif size_str[-1] == "K":
+        return float(size_str[:-1]) * 1024
+    return int(size_str)
+
+def custom(spec):
+    tmp_base_image_path = f"/tmp/{spec['_name']}.base.tmp"
+    tmp_image_path = f"/tmp/{spec['_name']}.tmp"
+    tmp_mount_path = f"/tmp/{spec['_name']}.tmp.mount"
+    spec['_root_dir'] = tmp_mount_path
+
+    umount(spec)
+
+    if "expand" in spec:
+        command.must_run(["cp", spec['_base_image_path'], tmp_base_image_path])
+
+        result = command.must_run(["virt-filesystems", "--long", "--parts", "--blkdevs", "-h", "-a", tmp_base_image_path])
+        device_size = ""
+        part_size = 0
+        root_part = ""
+        for line in result.stdout.decode('utf-8').splitlines():
+            splited_line = re.split(r" +", line)
+            if splited_line[0] == "/dev/sda1":
+                tmp_size = size_str_to_float(splited_line[3])
+                if part_size < tmp_size:
+                    root_part = splited_line[0]
+                    part_size = tmp_size
+            elif splited_line[1] == "device":
+                device_size = splited_line[3]
+
+        # パッケージがインストールできるようにサイズを少しだけ拡張する
+        size = (size_str_to_float(device_size) + (spec['expand']['size'] * 1024 * 1024 * 1024)) / (1024 * 1024 * 1024)
+        size = "{:.1f}G".format(size)
+
+        command.must_run(['qemu-img', 'create', '-f', 'qcow2', tmp_image_path, size])
+        command.must_run(['virt-resize', '--align-first', 'never', '--expand', root_part, tmp_base_image_path, tmp_image_path])
+    else:
+        command.must_run(["cp", spec['_base_image_path'], tmp_image_path])
+
+    # mount --------------------
+    mount(spec, spec["_tmp_image_path"])
+
+    run_steps(spec)
+
+    if "expand" in spec:
+        command.must_run(["chroot", spec['_tmp_mount_path'], "grub-install", "/dev/nbd0"])
+
+    umount(spec)
+    command.must_run(["cp", tmp_image_path, spec['_image_path']])
+    return
+
+def run_steps(spec):
+    for step in spec.get("steps", []):
+        print("step", step)
+        if 'file' in step:
+            src_path = os.path.join(spec['_image_src_dir'], step['file']['src'])
+            if not os.path.exists(src_path):
+                raise Exception(f"src_path is not exists: {src_path}")
+            dst = step['file']['dst']
+            if dst.startswith("/"):
+                dst = dst[1:]
+            dst_path = os.path.join(spec['_tmp_mount_path'], dst)
+            dst_dir_path = os.path.dirname(dst_path)
+            command.must_run(["mkdir", "-p", dst_dir_path])
+            command.must_run(["cp", "-r", src_path, dst_path])
+            if 'mode' in step['file']:
+                command.must_run(["chmod", str(step['file']['mode']), dst_path])
+        elif 'cmd' in step:
+            command.must_run(["chroot", spec['_tmp_mount_path'], "sh", "-xec", step['cmd']])
+
+
+if __name__ == "__main__":
+    main()

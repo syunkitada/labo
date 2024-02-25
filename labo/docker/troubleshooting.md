@@ -42,3 +42,16 @@ Exiting PID 1...
 ```
 $ docker run -d --cgroup-parent=docker.slice --cgroupns private --privileged -v .:/home/host --name openstack-yoga labo/ubuntu22-openstack-yoga
 ```
+
+## memo
+
+- [Fedora 38: Cannot use cgroupv1 due to systemd-oom](https://discussion.fedoraproject.org/t/fedora-38-cannot-use-cgroupv1-due-to-systemd-oom/82902)
+
+```
+Jan 28 06:52:15 rocky8-test-n1 systemd[1]: Started The Apache HTTP Server.
+Jan 28 06:52:15 rocky8-test-n1 httpd[88]: Server configured, listening on: port 80
+Jan 28 06:52:15 rocky8-test-n1 systemd[1]: httpd.service: Main process exited, code=exited, status=1/FAILURE
+Jan 28 06:52:15 rocky8-test-n1 systemd[1]: httpd.service: Killing process 89 (httpd) with signal SIGKILL.
+Jan 28 06:53:45 rocky8-test-n1 systemd[1]: httpd.service: Processes still around after SIGKILL. Ignoring.
+Jan 28 06:53:45 rocky8-test-n1 systemd[1]: httpd.service: Failed with result 'exit-code'.
+```

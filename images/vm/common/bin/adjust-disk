@@ -1,0 +1,34 @@
+#!/bin/bash
+
+cd $(dirname $0)
+source envrc
+
+type=$(mount | grep 'on / ' | awk -F ' type ' '{print $2}' | awk '{print $1}')
+
+if [ $type = "xfs" ]; then
+	echo "$type is not supported"
+fi
+
+if [ $type = "ext4" ]; then
+	# 初回起動時は実際のスペースが異なるのでFixする必要がある
+	# Warning: Not all of the space available to /dev/vda appears to be used, ... Fix/Ignore?
+	parted /dev/vda ---pretend-input-tty <<EOF
+resizepart
+Fix
+quit
+EOF
+
+	root_part=$(df | grep ' /$' | awk '{print $1}' | awk -F vda '{print $2}')
+
+	# 空きをすべて割り当てる
+	parted '/dev/vda' ---pretend-input-tty <<EOF
+resizepart
+${root_part}
+Yes
+100%
+quit
+EOF
+
+	# ext4のオンラインリサイズ
+	resize2fs "/dev/vda${root_part}"
+fi

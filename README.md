@@ -10,3 +10,27 @@
 | [fabfile_tests](fabfile_tests) | fabfile のテストコードです                           |
 | [infra](infra)                 | 実験環境の spec ファイルの置き場です                 |
 | [labo](labo)                   | 実験用のスクリプトやメモ書きを置く場所です           |
+
+## 初回セットアップ
+
+```
+$ git clone https://github.com/syunkitada/labo.git
+$ make env
+```
+
+```
+$ sudo vim /etc/ansible/local.yaml
+
+local:
+  ipaddr: "{{ CHANGE_ME }}"
+```
+
+```
+$ make infra
+```
+
+## 初回移行セットアップ
+
+```
+$ source laborc
+```

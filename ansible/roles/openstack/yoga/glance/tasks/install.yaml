@@ -1,0 +1,26 @@
+- name: install venv
+  shell: |
+    set -e
+    python3 -m venv {{ glance_venv }} --system-site-packages
+    {{ glance_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/glance
+    mkdir -p /etc/glance
+    mkdir -p /var/lib/glance/images/
+
+- name: put requirements.txt
+  copy:
+    src: files/requirements.txt
+    dest: "{{ glance_venv }}/requirements.txt"
+
+- name: install glance
+  shell: |
+    set -e
+    {{ glance_venv }}/bin/pip install -r {{ glance_venv }}/requirements.txt
+
+    mkdir -p {{ glance_venv }}/src
+    cd {{ glance_venv }}/src
+    test -e glance || git clone https://github.com/openstack/glance.git -b stable/yoga
+    cd glance
+    {{ glance_venv }}/bin/python setup.py install
+
+    cp etc/glance-api-paste.ini /etc/glance/

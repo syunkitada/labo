@@ -1,0 +1,144 @@
+# 以下を参考にした構成です(mirror portの設定まで)
+# - https://www.sidorenko.io/post/2018/11/openstack-networking-open-vswitch-and-vxlan-introduction/
+common:
+  host: VM1.ubuntu22.example.com
+
+ipam:
+  network1:
+    subnet: 10.10.1.0/24
+    kind: l2
+  t1vm_network1:
+    subnet: 10.100.0.0/24
+    kind: l2
+  t2vm_network1:
+    subnet: 10.100.0.0/24
+    kind: l2
+
+template_map:
+  node:
+    kind: container
+    image: docker-registry.local.example.com:5000/labo/rocky8-nwnode:latest
+    mtu: 1500
+  vm:
+    mtu: 1500
+    routes:
+      - dst: default
+        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
+
+nodes:
+  - name: n1
+    templates:
+      - node
+    links:
+      - peer: n2
+        ips:
+          - inet: <%=assign_inet4(network1)%>
+        peer_ips:
+          - inet: <%=assign_inet4(network1)%>
+    child_links:
+      - peer: t1vm1
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network1)%>
+      - peer: t2vm1
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network1)%>
+    childs:
+      - name: t1vm1
+        templates:
+          - node
+          - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t1vm2
+                dst: <%=_node_map.t1vm2._links.0.peer_ips.0.ip%>
+      - name: t2vm1
+        templates:
+          - node
+          - vm
+        tests:
+          - kind: ping
+            targets:
+              - name: t2vm2
+                dst: <%=_node_map.t2vm2._links.0.peer_ips.0.ip%>
+    cmds:
+      - systemctl start openvswitch
+      - ovs-vsctl --may-exist add-br tenant1
+      - ovs-vsctl --may-exist add-br tenant2
+      - ip link set tenant1 up
+      - ip link set tenant2 up
+      - ovs-vsctl --may-exist add-port tenant1 n1_0_t1vm1
+      - ovs-vsctl --may-exist add-port tenant2 n1_1_t2vm1
+      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=5000
+      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=links.0.peer_ips.0.ip%> options:key=6000
+      #
+      # internalPortを追加してみる(vxlanとは関係ない)
+      # internalPortにIPを振るとt1vm1から疎通ができる
+      # ちなみに、add-brで追加したブリッジもtype=internalで作られてる
+      - ovs-vsctl --may-exist add-port tenant1 internalPort -- set interface internalPort type=internal
+      - ip a | grep 10.100.0.10 || ip addr add 10.100.0.10/24 dev internalPort
+      - ip link set internalPort up
+      #
+      # mirrorPortを追加してみる
+      # tsharkでmirrorPortでtcpdumpができるようになります
+      # [root@ovs-t1vm1 /]# ping 10.100.0.3
+      # PING 10.100.0.3 (10.100.0.3) 56(84) bytes of data.
+      # 64 bytes from 10.100.0.3: icmp_seq=1 ttl=64 time=0.134 ms
+      # 64 bytes from 10.100.0.3: icmp_seq=2 ttl=64 time=0.103 ms
+      #
+      # [root@ovs-n1 /]# tshark -c 6 -i mirrorPort
+      #  Running as user "root" and group "root". This could be dangerous.
+      #  Capturing on 'mirrorPort'
+      #      1 0.000000000 Xensourc_00:00:01 → Broadcast    ARP 42 Who has 10.100.0.3? Tell 10.100.0.2
+      #      2 0.000627788 Xensourc_01:00:01 → Xensourc_00:00:01 ARP 42 10.100.0.3 is at 00:16:3e:01:00:01
+      #      3 0.000683332   10.100.0.2 → 10.100.0.3   ICMP 98 Echo (ping) request  id=0x00a8, seq=1/256, ttl=64
+      #      4 0.000934404   10.100.0.3 → 10.100.0.2   ICMP 98 Echo (ping) reply    id=0x00a8, seq=1/256, ttl=64 (request in 3)
+      #      5 1.000729561   10.100.0.2 → 10.100.0.3   ICMP 98 Echo (ping) request  id=0x00a8, seq=2/512, ttl=64
+      #      6 1.000811385   10.100.0.3 → 10.100.0.2   ICMP 98 Echo (ping) reply    id=0x00a8, seq=2/512, ttl=64 (request in 5)
+      - ovs-vsctl --may-exist add-port tenant1 mirrorPort -- set interface mirrorPort type=internal
+      - ip link set mirrorPort up
+      - |-
+        ovs-vsctl --id=@n1_0_t1vm1 get port n1_0_t1vm1 -- \
+                  --id=@mirrorPort get port mirrorPort -- \
+                  --id=@mirror create mirror name=mirror \
+                  select-dst-port=@n1_0_t1vm1 select-src-port=@n1_0_t1vm1 output-port=@mirrorPort -- \
+                  set bridge tenant1 mirrors=@mirror
+      - ovs-vsctl --may-exist add-br tenant3
+      # 途中経路でudpに絞ってみると、vxlanのパケットを観測できます
+      # $ sudo docker exec -it ovs-vxlan1-n1 tcpdump -i any udp
+      # $ sudo docker exec -it ovs-vxlan1-n1 tcpdump -i n1_0_n2 udp
+      # admin@local-vm1:~$ sudo docker exec -it ovs-vxlan1-n1 tcpdump -i n1_0_n2 udp
+      # 14:07:14.347382 IP ovs-vxlan1-n1.48991 > 10.10.1.3.vxlan: VXLAN, flags [I] (0x08), vni 5000
+      # IP 10.100.0.2 > 10.100.0.3: ICMP echo request, id 954, seq 1, length 64
+      # 14:07:14.347644 IP 10.10.1.3.48991 > ovs-vxlan1-n1.vxlan: VXLAN, flags [I] (0x08), vni 5000
+      # IP 10.100.0.3 > 10.100.0.2: ICMP echo reply, id 954, seq 1, length 64
+
+  - name: n2
+    templates:
+      - node
+    child_links:
+      - peer: t1vm2
+        peer_ips:
+          - inet: <%=assign_inet4(t1vm_network1)%>
+      - peer: t2vm2
+        peer_ips:
+          - inet: <%=assign_inet4(t2vm_network1)%>
+    childs:
+      - name: t1vm2
+        templates:
+          - node
+          - vm
+      - name: t2vm2
+        templates:
+          - node
+          - vm
+    cmds:
+      - systemctl start openvswitch
+      - ovs-vsctl --may-exist add-br tenant1
+      - ovs-vsctl --may-exist add-br tenant2
+      - ip link set tenant1 up
+      - ip link set tenant2 up
+      - ovs-vsctl --may-exist add-port tenant1 n2_0_t1vm2
+      - ovs-vsctl --may-exist add-port tenant2 n2_1_t2vm2
+      - ovs-vsctl --may-exist add-port tenant1 vxlan1 -- set interface vxlan1 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=5000
+      - ovs-vsctl --may-exist add-port tenant2 vxlan2 -- set interface vxlan2 type=vxlan options:remote_ip=<%=_links.0.ips.0.ip%> options:key=6000

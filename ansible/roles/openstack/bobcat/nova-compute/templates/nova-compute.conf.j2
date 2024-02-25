@@ -1,0 +1,7 @@
+[DEFAULT]
+
+# compute_driver = fake.FakeDriver
+compute_driver = {{ nova_compute_driver }}
+
+[libvirt]
+virt_type = qemu

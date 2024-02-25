@@ -1,0 +1,15 @@
+common:
+  host: VM1.rocky8.example.com
+
+template_map:
+  node:
+    kind: container
+    image: docker-registry.example.com:5050/local/rocky8-nwnode:latest
+    mtu: 1500
+
+nodes:
+  - name: n1
+    templates:
+      - node
+    cmds:
+      - systemctl start httpd

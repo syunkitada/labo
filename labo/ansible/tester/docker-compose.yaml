@@ -1,0 +1,87 @@
+version: "3"
+services:
+  centos7_ssh_1:
+    hostname: centos7-01.example.com
+    build:
+      context: .
+      dockerfile: ./Dockerfile_centos7
+    volumes:
+      - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/group:/etc/group:ro
+      - /opt/ansible:/opt/ansible:ro
+    networks:
+      localnet:
+        ipv4_address: 10.100.11.11
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=en_US.UTF-8
+    entrypoint: bash -c "chown ${SUDO_UID}:${SUDO_GID} ${HOME} &&  /usr/sbin/sshd -D"
+
+  rocky8_ssh_1:
+    hostname: rocky8-01.example.com
+    build:
+      context: .
+      dockerfile: ./Dockerfile_rocky8
+    volumes:
+      - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/group:/etc/group:ro
+      - /opt/ansible:/opt/ansible:ro
+    networks:
+      localnet:
+        ipv4_address: 10.100.11.21
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=en_US.UTF-8
+    entrypoint: bash -c "chown ${SUDO_UID}:${SUDO_GID} ${HOME} &&  /usr/sbin/sshd -D"
+
+  rocky8_ssh_2:
+    hostname: rocky8-02.example.com
+    build:
+      context: .
+      dockerfile: ./Dockerfile_rocky8
+    volumes:
+      - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/group:/etc/group:ro
+      - /opt/ansible:/opt/ansible:ro
+    networks:
+      localnet:
+        ipv4_address: 10.100.11.22
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=en_US.UTF-8
+    entrypoint: bash -c "chown ${SUDO_UID}:${SUDO_GID} ${HOME} &&  /usr/sbin/sshd -D"
+
+  rocky8_ssh_3:
+    hostname: rocky8-03.example.com
+    build:
+      context: .
+      dockerfile: ./Dockerfile_rocky8
+    volumes:
+      - "${HOME}/.ssh/authorized_keys:${HOME}/.ssh/authorized_keys"
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/group:/etc/group:ro
+      - /opt/ansible:/opt/ansible:ro
+    networks:
+      localnet:
+        ipv4_address: 10.100.11.23
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=en_US.UTF-8
+    entrypoint: bash -c "chown ${SUDO_UID}:${SUDO_GID} ${HOME} &&  /usr/sbin/sshd -D"
+    cgroup_parent: docker.slice
+    cgroupns: private
+
+networks:
+  localnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.100.11.0/24

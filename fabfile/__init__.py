@@ -3,4 +3,4 @@ import sys
 
 sys.path.append(os.path.dirname(__file__))
 
-from .make import *  # noqa
+from .make import make  # noqa

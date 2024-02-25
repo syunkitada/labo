@@ -1,0 +1,19 @@
+nova_venv: /opt/nova
+
+nova_mysql_host: localhost
+nova_mysql_user: admin
+nova_mysql_password: adminpass
+
+nova_rabbitmq_host: localhost
+nova_rabbitmq_port: 5672
+nova_rabbitmq_user: admin
+nova_rabbitmq_password: adminpass
+
+nova_glance_host: localhost
+
+nova_keystone_host: localhost
+nova_keystone_region: region
+nova_keystone_service_user: system
+nova_keystone_service_password: systempass
+
+nova_my_ip: 127.0.0.1

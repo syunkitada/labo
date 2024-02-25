@@ -1,0 +1,12 @@
+FROM centos:centos7.9.2009
+
+RUN yum install -y sudo make openssh-server && \
+    mkdir -p /var/run/sshd && \
+    sshd-keygen && \
+    chmod 600 /etc/ssh/ssh_*_key && \
+    useradd tester && \
+    gpasswd -a tester tester && \
+    echo "owner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    echo "tester ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+ENTRYPOINT [ "sleep", "36000" ]

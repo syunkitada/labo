@@ -1,0 +1,2 @@
+docker_insecure_registries: [172.17.0.1:5050]
+docker_networks: []

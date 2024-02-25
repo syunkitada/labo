@@ -1,0 +1,45 @@
+- name: start docker
+  community.docker.docker_container:
+    name: keystone
+    tls: false
+    debug: true
+    image: 172.17.0.1:5050/local/bobcat-keystone:latest
+    state: started
+    command: sh -c 'sleep 3600'
+
+  #var:
+  #  docker_name: keystone
+  #shell: |
+  #  set -e
+
+  #  set +e
+  #  docker_inspect=$(docker inspect {{ docker_name }} --format "{{lower .State.Status}}" 2>&1)
+  #  docker_inspect_result=$?
+  #  set -e
+
+  #  if [ ${docker_inspect} == "running" ]; then
+  #    exit 0
+  #  fi
+
+  #  docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+  #    docker run -d --net=host --name {{ docker_name }} \
+  #      172.17.0.1:5050/local/bobcat-keystone:latest
+
+  #  # if [ ${docker_inspect_result} != 0 ]; then
+  #  #   if echo "${docker_inspect}" | grep "Error: No such object: {{ docker_name }}$"; then
+
+  #  #     (docker ps --all | grep " {{ docker_name }}$" && sudo docker rm {{ docker_name }} || echo "{{ docker_name }} not found") &&
+  #  #     docker run -d --net=host --name {{ docker_name }} \
+  #  #       -v /mnt/nfs/tls-assets/server.pem:/etc/x509/https/certs/tls.crt:ro \
+  #  #       -v /mnt/nfs/tls-assets/server-key.pem:/etc/x509/https/certs/tls.key:ro \
+  #  #       -e KEYCLOAK_ADMIN={{ keycloak_docker_admin_user }} \
+  #  #       -e KEYCLOAK_ADMIN_PASSWORD={{ keycloak_docker_admin_password }} \
+  #  #       quay.io/keycloak/keycloak:{{ keycloak_docker_version }} start-dev \
+  #  #       --https-certificate-file=/etc/x509/https/certs/tls.crt \
+  #  #       --https-certificate-key-file=/etc/x509/https/certs/tls.key \
+
+  #  #   else
+  #  #     echo "Failed to docker inspect {{ docker_name }}" >&2
+  #  #     exit 1
+  #  #   fi
+  #  # fi

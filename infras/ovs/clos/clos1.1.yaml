@@ -1,0 +1,64 @@
+imports:
+  - infras/ovs/clos/clos1.yaml
+
+ipam:
+  l3admin_network1:
+    subnet: 10.10.10.0/24
+    kind: l3
+
+template_map:
+  hv:
+    l3admin:
+      ips:
+        - inet: <%=assign_inet4(l3admin_network1)%>
+    ansible:
+      roles:
+        - ovs
+        - frr
+      vars:
+        frr_bgp_asn: "<%=ipv4_to_asn(l3admin.ips.0.ip)%>"
+        frr_bgp_router_id: "<%=l3admin.ips.0.ip%>"
+        frr_bgp_peer_groups:
+          - name: ADMIN
+            route_map_v4_ins: [DENY-ANY-v4]
+            route_map_v4_outs: [ADMIN-v4]
+          - name: VM
+            route_map_v4_ins: [DENY-ANY-v4]
+            route_map_v4_outs: [VM-v4]
+        frr_route_map:
+          DENY-ANY-v4:
+            policy: deny
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 deny 0.0.0.0/0
+          ADMIN-v4:
+            policy: permit
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 permit <%=l3admin.ips.0.network%> le 32
+          VM-v4:
+            policy: deny
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 deny 0.0.0.0/0
+        frr_bgp_ipv4_unicast_networks:
+          - <%=l3admin.ips.0.inet%>
+        ovs_hv_clos:
+          external_bridge:
+            name: br-ex
+            interfaces:
+              - name: <%=_links.0.peer_name %>.200
+                peer_mac: <%=_links.0.link_mac %>
+              - name: <%=_links.1.peer_name %>.200
+                peer_mac: <%=_links.1.link_mac %>
+
+node_map:
+  CL1:
+    tests:
+      - kind: ping
+        targets:
+          - name: HV1-L3
+            dst: <%=_node_map.HV1.l3admin.ips.0.ip%>

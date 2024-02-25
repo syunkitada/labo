@@ -1,0 +1,26 @@
+ovs_vxlan:
+  external_bridge:
+    name: br-ex
+    local_ip: 10.10.20.1
+    interfaces:
+      - name: HV1_0_L11.200
+        peer_mac: 00:16:3e:02:00:00
+      - name: HV1_0_L12.200
+        peer_mac: 00:16:3e:03:00:00
+  vxlan_bridges:
+    - name: br-t1
+      kind: vxlan
+      vxlan_id: 5000
+      ports:
+        - name: HV1_0_t1vm1
+          mac: 00:16:3e:04:00:01
+          ips:
+            - 10.100.0.2
+    - name: br-t2
+      kind: vxlan
+      vxlan_id: 6000
+      ports:
+        - name: HV1_1_t2vm1
+          mac: 00:16:3e:04:01:01
+          ips:
+            - 10.100.0.2

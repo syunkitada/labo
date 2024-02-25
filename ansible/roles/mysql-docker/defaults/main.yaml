@@ -1,0 +1,3 @@
+mysql_docker_root_password: rootpass
+mysql_docker_user: admin
+mysql_docker_password: adminpass
