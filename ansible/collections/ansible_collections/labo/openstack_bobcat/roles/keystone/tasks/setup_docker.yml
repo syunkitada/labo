@@ -1,0 +1,52 @@
+- name: Make directories
+  file:
+    path: /etc/keystone
+    state: directory
+    mode: "655"
+
+- name: Put keystone.conf
+  ansible.builtin.template:
+    src: keystone.conf.j2
+    dest: /etc/keystone/keystone.conf
+  register: keystone_conf
+
+- name: Start keystone services
+  community.docker.docker_container:
+    name: test
+    network_mode: "host"
+    image: "{{ keystone_image }}"
+    command: "sleep 3600"
+    volumes:
+      - "/etc/keystone:/etc/keystone:ro"
+    state: started
+
+- name: Sync DB
+  loop:
+    - /opt/keystone/bin/keystone-manage db_sync
+    - /opt/keystone/bin/keystone-manage fernet_setup --keystone-user nobody --keystone-group nobody
+    - /opt/keystone/bin/keystone-manage credential_setup --keystone-user nobody --keystone-group nobody
+    - /opt/keystone/bin/keystone-manage bootstrap --bootstrap-password "{{ keystone_admin_password }}"
+      --bootstrap-admin-url "{{ keystone_admin_url }}"
+      --bootstrap-internal-url "{{ keystone_internal_url }}"
+      --bootstrap-public-url "{{ keystone_public_url }}"
+      --bootstrap-region-id "{{ keystone_region }}"
+  community.docker.docker_container:
+    name: keystone-manage
+    image: "{{ keystone_image }}"
+    command: "{{ item }}"
+    network_mode: "host"
+    detach: false
+    volumes:
+      - "/etc/keystone:/etc/keystone:rw"
+    state: started
+
+- name: Start keystone services
+  loop: "{{ keystone_services }}"
+  community.docker.docker_container:
+    name: "{{ item.name }}"
+    network_mode: "host"
+    image: "{{ keystone_image }}"
+    command: "/opt/keystone/bin/{{ item.name }} --port {{ item.port }}"
+    volumes:
+      - "/etc/keystone:/etc/keystone:ro"
+    state: started

@@ -1,0 +1,7 @@
+- name: Setup memcached
+  hosts: memcached
+  become: true
+  gather_facts: false
+  roles:
+    - role: memcached
+      tags: memcached

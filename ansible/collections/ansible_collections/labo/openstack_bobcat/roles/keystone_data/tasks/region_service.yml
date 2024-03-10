@@ -1,0 +1,22 @@
+- name: Create region
+  ansible.builtin.shell: |
+    set -e -o pipefail
+
+    source /root/adminrc
+
+    stdout=$(openstack region list -f value -c Region)
+    if ! echo "${stdout}" | grep "{{ region_service.region }}"; then
+      openstack region create "{{ region_service.region }}"
+    fi
+  changed_when: false
+
+- name: Create endpoints
+  with_subelements:
+    - "{{ region_service.services }}"
+    - endpoints
+  openstack.cloud.endpoint:
+    auth: "{{ global_keystone_admin_auth }}"
+    region: "{{ region_service.region }}"
+    service: "{{ item.0.service }}"
+    endpoint_interface: "{{ item.1.interface }}"
+    url: "{{ item.1.url }}"

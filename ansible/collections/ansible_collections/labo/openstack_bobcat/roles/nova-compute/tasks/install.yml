@@ -1,0 +1,10 @@
+- include_role:
+    name: openstack/bobcat/nova
+    tasks_from: install.yml
+
+- name: Install requirement packages
+  yum:
+    name:
+      - qemu-kvm
+      - libvirt
+      - python3-libvirt

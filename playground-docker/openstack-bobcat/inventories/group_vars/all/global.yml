@@ -1,0 +1,13 @@
+global_docker_registry: "{{ ansible_facts.default_ipv4.gateway }}:5050"
+
+global_keystone_region: "global"
+global_keystone_admin_url: "http://ctl01:5000/v3/"
+global_keystone_public_url: "http://ctl01:5000/v3/"
+global_keystone_internal_url: "http://ctl01:5000/v3/"
+
+global_keystone_admin_auth:
+  auth_url: http://ctl01:5000/v3
+  username: admin
+  password: adminpass
+  project_name: admin
+  domain_name: default

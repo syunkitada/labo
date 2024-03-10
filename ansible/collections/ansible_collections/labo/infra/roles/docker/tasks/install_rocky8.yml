@@ -1,0 +1,14 @@
+- name: Install yum-utils
+  ansible.builtin.yum:
+    name: yum-utils
+
+- name: Add repo
+  ansible.builtin.command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  changed_when: false
+
+- name: Install
+  ansible.builtin.yum:
+    name:
+      - docker-ce-3:24.0.8-1.el8
+      - docker-ce-cli-1:24.0.8-1.el8
+      - containerd.io-1.6.26-3.1.el8

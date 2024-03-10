@@ -1,0 +1,42 @@
+- name: Start mysql
+  community.docker.docker_container:
+    name: mysql
+    image: mysql
+    network_mode: host
+    env:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+    volumes:
+      - "/var/lib/docker-mysql:/var/lib/mysql:rw"
+
+- name: Put /root/.my.cnf
+  ansible.builtin.template:
+    src: my.cnf.j2
+    dest: /root/.my.cnf
+    mode: "0600"
+
+- name: Wait to start mysql
+  args:
+    executable: /bin/bash
+  ansible.builtin.shell: |
+    set -e -o pipefail
+
+    NEXT_WAIT_TIME=0
+    until mysql -e 'show databases;' || [ $NEXT_WAIT_TIME -eq 4 ]; do
+        sleep $((NEXT_WAIT_TIME++))
+    done
+  changed_when: false
+
+- name: Create databases
+  loop: "{{ mysql_databases }}"
+  community.mysql.mysql_db:
+    name: "{{ item }}"
+    state: present
+
+- name: Create users
+  loop: "{{ mysql_users }}"
+  community.mysql.mysql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    host: "{{ item.host }}"
+    priv: "{{ item.priv }}"
+    state: present

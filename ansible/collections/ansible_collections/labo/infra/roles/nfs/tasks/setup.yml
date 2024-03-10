@@ -1,0 +1,30 @@
+- name: Make nfs_exports
+  loop: "{{ nfs_exports }}"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "755"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    state: directory
+
+- name: Put /etc/exports
+  ansible.builtin.template:
+    src: templates/exports.j2
+    dest: /etc/exports
+    mode: "0644"
+
+# exportfs
+# NFSでエクスポートしているファイルシステムのテーブルを管理するために使うコマンド
+# -a すべてのディレクトリをexport/unexportする
+# -r すべてのディレクトリを再exportする、/var/lib/nfs/xtabを/etc/exportsと同期させる
+- name: Exec exportfs
+  ansible.builtin.command: exportfs -ra
+  changed_when: false
+
+- name: Mount
+  loop: "{{ nfs_mounts }}"
+  ansible.posix.mount:
+    src: "{{ item.src }}"
+    path: "{{ item.path }}"
+    fstype: nfs
+    state: mounted

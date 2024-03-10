@@ -1,0 +1,4 @@
+- name: Put adminrc
+  ansible.builtin.template:
+    src: adminrc.j2
+    dest: /root/adminrc

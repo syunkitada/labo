@@ -1,6 +1,0 @@
-local_ipaddr: "{{ CHANGE_ME }}"
-
-docker_networks:
-  - name: labo-net
-    driver: bridge
-    option: --subnet=172.30.0.0/16

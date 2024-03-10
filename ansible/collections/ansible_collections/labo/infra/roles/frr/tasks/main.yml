@@ -1,0 +1,19 @@
+- name: put daemons
+  template:
+    src: templates/daemons.j2
+    dest: /etc/frr/daemons
+
+- name: restart frr
+  shell: |
+    sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+    systemctl daemon-reload
+    systemctl restart frr
+
+- name: put frr.conf
+  template:
+    src: templates/frr.conf.j2
+    dest: /etc/frr/frr.conf
+
+- name: vtysh
+  shell: |
+    systemctl reload frr

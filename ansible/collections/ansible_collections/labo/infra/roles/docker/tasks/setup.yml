@@ -1,0 +1,25 @@
+- name: Make directories
+  loop:
+    - /var/run/netns
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    recurse: true
+
+- name: Put /etc/docker/daemon.json
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: "644"
+  notify: Restart docker
+
+- name: Start docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+
+- name: Create networks
+  loop: "{{ docker_networks }}"
+  community.docker.docker_network:
+    name: "{{ item.name }}"
+    ipam_config: "{{ item.ipam_config }}"

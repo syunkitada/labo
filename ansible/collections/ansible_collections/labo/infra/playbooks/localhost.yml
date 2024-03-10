@@ -1,0 +1,21 @@
+- name: Setup Labo
+  hosts: localhost
+  become: true
+  gather_facts: false
+  roles:
+    - name: nfs
+      tags: nfs
+    - role: docker
+      tags: docker
+    - name: docker_registry
+      tags: docker_registry
+    - name: libvirt
+      tags: libvirt
+    - name: mysql
+      tags: mysql
+      vars:
+        mysql_execution_mode: docker
+    - name: pdns
+      tags: pdns
+    - name: keycloak
+      tags: keycloak

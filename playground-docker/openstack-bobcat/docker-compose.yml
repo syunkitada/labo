@@ -1,0 +1,72 @@
+version: "3"
+services:
+  ansible:
+    container_name: "${NAMESPACE}-ansible"
+    hostname: ansible
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+      - "./inventories:/etc/ansible/inventories:ro"
+      - "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+  ctl01:
+    container_name: "${NAMESPACE}-ctl01"
+    hostname: ctl01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  ctl02:
+    container_name: "${NAMESPACE}-ctl02"
+    hostname: ctl02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  ctl03:
+    container_name: "${NAMESPACE}-ctl03"
+    hostname: ctl03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  hv01-az1:
+    container_name: "${NAMESPACE}-hv01-az1"
+    hostname: hv01-az1
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  hv01-az2:
+    container_name: "${NAMESPACE}-hv01-az2"
+    hostname: hv01-az2
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+
+  hv01-az3:
+    container_name: "${NAMESPACE}-hv01-az3"
+    hostname: hv01-az3
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice

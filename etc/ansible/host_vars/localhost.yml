@@ -1,0 +1,6 @@
+local_ipaddr: "{{ CHANGE_ME }}"
+
+docker_networks:
+  - name: labo-net
+    ipam_config:
+      - subnet: 172.30.0.0/16

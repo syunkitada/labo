@@ -1,0 +1,8 @@
+- name: Start docker-registry
+  community.docker.docker_container:
+    name: docker-registry
+    image: registry:2
+    ports:
+      - "5050:5000"
+    volumes:
+      - "/var/lib/docker-registry:/var/lib/registry:rw"

@@ -1,0 +1,5 @@
+- name: Install packages
+  ansible.builtin.yum:
+    name:
+      - mysql
+      - python3-PyMySQL

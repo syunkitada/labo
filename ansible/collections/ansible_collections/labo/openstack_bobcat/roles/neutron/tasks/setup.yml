@@ -1,0 +1,34 @@
+- include_tasks: config.yml
+
+- name: Sync DB
+  shell: |
+    set -e
+
+    mysql -e 'CREATE DATABASE IF NOT EXISTS neutron'
+    {{ neutron_venv }}/bin/neutron-db-manage --config-file /etc/neutron/neutron.conf \
+      --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head
+
+- name: Start neutron-server
+  service:
+    name: neutron-server
+    state: started
+
+- name: Restart neutron-server
+  when: neutron_conf.changed
+    or neutron_ml2_conf.changed
+  service:
+    name: neutron-server
+    state: restarted
+
+- name: Register neutron service
+  shell: |
+    set -e
+
+    source /etc/adminrc
+    service_list=$(openstack service list)
+    if [[ ! $service_list =~ " neutron " ]]; then
+      openstack service create --name neutron --description "OpenStack Networking" network
+      openstack endpoint create --region "{{ neutron_keystone_region }}" network public   "http://{{ neutron_keystone_host }}:9696"
+      openstack endpoint create --region "{{ neutron_keystone_region }}" network internal "http://{{ neutron_keystone_host }}:9696"
+      openstack endpoint create --region "{{ neutron_keystone_region }}" network admin    "http://{{ neutron_keystone_host }}:9696"
+    fi

@@ -1,0 +1,32 @@
+keystone_venv: /opt/keystone
+keystone_git_repo: https://github.com/openstack/keystone.git
+keystone_git_branch: stable/2023.2
+keystone_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
+
+keystone_image: "{{ global_docker_registry }}/local/bobcat-keystone:latest"
+
+keystone_services:
+  - name: keystone-wsgi-public
+    port: 5000
+  - name: keystone-wsgi-admin
+    port: 35357
+
+keystone_execution_mode: docker
+
+keystone_mysql_host: localhost
+keystone_mysql_user: admin
+keystone_mysql_password: adminpass
+
+keystone_region: region
+keystone_host: localhost
+keystone_admin_password: adminpass
+
+keystone_runtime: native
+
+keystone_oidc_device_auth_oauth_verify_jwks_uri: "https://192.168.10.121:8443/realms/test/protocol/openid-connect/certs"
+keystone_oidc_device_auth_identity_provider: keycloak-device
+
+keystone_region: "{{ global_keystone_region }}"
+keystone_admin_url: "{{ global_keystone_admin_url }}"
+keystone_public_url: "{{ global_keystone_public_url }}"
+keystone_internal_url: "{{ global_keystone_internal_url }}"

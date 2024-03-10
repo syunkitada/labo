@@ -1,0 +1,3 @@
+neutron_venv: /opt/neutron
+
+neutron_nova_metadata_host: localhost

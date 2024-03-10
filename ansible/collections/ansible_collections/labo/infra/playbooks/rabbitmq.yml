@@ -1,0 +1,7 @@
+- name: Setup rabbitmq
+  hosts: rabbitmq
+  become: true
+  gather_facts: false
+  roles:
+    - name: rabbitmq
+      tags: rabbitmq

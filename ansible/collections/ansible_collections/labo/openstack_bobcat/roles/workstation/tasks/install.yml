@@ -1,0 +1,14 @@
+- name: install
+  ansible.builtin.shell: |
+    python3 -m venv /opt/workstation --system-site-packages
+
+- name: install
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: /opt/workstation/requirements.txt
+
+- name: install
+  ansible.builtin.shell: |
+    /opt/workstation/bin/pip install pip --upgrade
+    /opt/workstation/bin/pip install -r /opt/workstation/requirements.txt
+    test -e /usr/bin/openstack || ln -s /opt/workstation/bin/openstack /usr/bin/openstack

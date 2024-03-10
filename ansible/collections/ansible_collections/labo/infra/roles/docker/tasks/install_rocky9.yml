@@ -1,0 +1,17 @@
+- name: Install requirement packages
+  ansible.builtin.yum:
+    name:
+      - yum-utils
+      - epel-release
+
+- name: Add repo
+  ansible.builtin.command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  changed_when: false
+
+- name: Install docker packages
+  ansible.builtin.yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - python3-docker

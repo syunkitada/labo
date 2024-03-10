@@ -1,0 +1,11 @@
+mysql_execution_mode: host
+mysql_root_password: rootpass
+
+mysql_users:
+  - name: admin
+    password: adminpass
+    host: "%"
+    priv:
+      "*.*": "ALL,GRANT"
+
+mysql_databases: []

@@ -1,0 +1,21 @@
+- name: Create flavors
+  loop: "{{ osdata_flavors }}"
+  shell: |
+    source /etc/adminrc
+
+    set +e
+    flavor_show=$(openstack flavor show "{{ item.name }}"  2>&1)
+    flavor_show_result=$?
+
+    set -e
+    if [ ${flavor_show_result} != 0 ]; then
+      if echo "${flavor_show}" | grep "No Flavor found for {{ item.name }}$"; then
+        openstack flavor create \
+          --vcpus {{ item.vcpus }} --ram {{ item.ram }} --disk {{ item.disk }} \
+          --public \
+          {{ item.name }}
+      else
+        echo "Failed to openstack flavor show {{ item.name }}" >&2
+        exit 1
+      fi
+    fi

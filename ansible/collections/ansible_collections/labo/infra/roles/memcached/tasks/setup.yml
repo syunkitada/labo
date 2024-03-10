@@ -1,0 +1,10 @@
+- name: Put sysconfig/memcached
+  ansible.builtin.template:
+    src: memcached.j2
+    dest: /etc/sysconfig/memcached
+    mode: "644"
+
+- name: Start memcached
+  ansible.builtin.service:
+    name: memcached
+    state: started

@@ -1,0 +1,52 @@
+- name: Start pdns-mysql
+  community.docker.docker_container:
+    name: pdns-mysql
+    image: pschiffe/pdns-mysql
+    network_mode: host
+    env:
+      PDNS_local_address: "127.0.0.1"
+      PDNS_local_port: "8053"
+      PDNS_master: "yes"
+      PDNS_default_ttl: "1500"
+      PDNS_gmysql_host: "{{ pdns_mysql_host }}"
+      PDNS_gmysql_port: "{{ pdns_mysql_port | string }}"
+      PDNS_gmysql_user: "{{ pdns_mysql_user }}"
+      PDNS_gmysql_password: "{{ pdns_mysql_password }}"
+      PDNS_gmysql_dbname: "pdns"
+      PDNS_log_dns_queries: "yes"
+      PDNS_loglevel: "9"
+
+- name: Gather subset
+  ansible.builtin.setup:
+    gather_subset:
+      - distribution
+
+# NOTE: 0.0.0.0でリッスンする場合は、ubuntuだとsystemd-resolvedがスタブとして起動してるとバッティングするので止めておく必要がある
+- name: Stop systemd-resolved
+  when: ansible_facts['distribution'] == "Ubuntu"
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+
+- name: Start pdns-recursor
+  community.docker.docker_container:
+    name: pdns-recursor
+    image: pschiffe/pdns-recursor
+    network_mode: host
+    env:
+      PDNS_local_address: "{{ pdns_local_address }}"
+      PDNS_local_port: "53"
+      PDNS_dnssec: "off"
+      PDNS_forward_zones_recurse: "{{ pdns_domains | join('=127.0.0.1:8053,') }}=127.0.0.1:8053,.=8.8.8.8"
+      PDNS_loglevel: "9"
+
+- name: Create domains
+  loop: "{{ pdns_domains }}"
+  ansible.builtin.command: labo-domain-ctl create {{ item }} {{ local_ipaddr }}
+  changed_when: false
+
+- name: Create records
+  loop: "{{ pdns_records }}"
+  ansible.builtin.command: labo-record-ctl create {{ item.domain }} {{ item.name }} {{ item.type }} {{ item.content }}
+  changed_when: false
