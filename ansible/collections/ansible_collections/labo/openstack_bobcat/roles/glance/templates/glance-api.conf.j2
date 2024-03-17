@@ -1,5 +1,4 @@
 [DEFAULT]
-log_file = /var/log/glance/glance-api.log
 enabled_backends=fs:file
 
 [database]
@@ -11,15 +10,18 @@ default_backend = fs
 [fs]
 filesystem_store_datadir = /var/lib/glance/images/
 
-[keystone_authtoken]
-auth_url = http://{{ glance_keystone_host }}:5000
-memcached_servers = {{ glance_keystone_host }}:11211
-auth_type = password
-project_domain_name = Default
-user_domain_name = Default
-project_name = service
-username = {{ glance_keystone_service_user }}
-password = {{ glance_keystone_service_password }}
-
 [paste_deploy]
 flavor = keystone
+
+[keystone_authtoken]
+auth_url = {{ glance_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ glance_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+auth_type = password
+project_domain_name = Default
+project_name = service
+user_domain_name = Default
+username = {{ glance_keystone_auth_username }}
+password = {{ glance_keystone_auth_password }}
+
+# cache settings
+memcached_servers = {{ glance_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}

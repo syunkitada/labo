@@ -1,0 +1,2 @@
+glance_keystone_auth_username: glance
+glance_keystone_auth_password: glancepass

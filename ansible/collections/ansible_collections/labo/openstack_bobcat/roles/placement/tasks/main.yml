@@ -1,3 +1,7 @@
-- include_tasks: install.yml
+- name: Host main
+  when: placement_execution_mode == "host"
+  ansible.builtin.include_tasks: host/main.yml
 
-- include_tasks: setup.yml
+- name: Docker main
+  when: placement_execution_mode == "docker"
+  ansible.builtin.include_tasks: docker/main.yml

@@ -6,8 +6,8 @@
     type: "{{ item.type }}"
     description: "{{ item.description }}"
 
-- name: Create region_services
-  loop: "{{ keystone_data_region_services }}"
+- name: Create region_endpoints
+  loop: "{{ keystone_data_region_endpoints }}"
   loop_control:
-    loop_var: region_service
-  include_tasks: region_service.yml
+    loop_var: region_endpoint
+  include_tasks: region_endpoint.yml

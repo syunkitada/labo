@@ -1,0 +1,20 @@
+- include_role:
+    name: openstack/bobcat/nova
+    tasks_from: config.yml
+
+- name: Put nova-compute.conf
+  template:
+    src: nova-compute.conf.j2
+    dest: "/etc/nova/nova-compute.conf"
+  register: nova_compute_conf
+
+- name: Start nova-compute
+  service:
+    name: nova-compute
+    state: started
+
+- name: Restart nova-compute
+  when: nova_conf.changed or nova_compute_conf.changed
+  service:
+    name: nova-compute
+    state: restarted

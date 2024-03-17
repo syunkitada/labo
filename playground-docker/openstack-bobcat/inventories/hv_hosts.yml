@@ -1,0 +1,22 @@
+workstation:
+  hosts:
+    ansible:
+
+docker:
+  children:
+    nova_compute:
+    neutron_openvswitch_agent:
+
+nova_compute:
+  children:
+    hv:
+
+neutron_openvswitch_agent:
+  children:
+    hv:
+
+hv:
+  children:
+    az1:
+    az2:
+    az3:

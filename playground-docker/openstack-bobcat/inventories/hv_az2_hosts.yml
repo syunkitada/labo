@@ -1,0 +1,7 @@
+az2:
+  children:
+    rack2:
+
+rack2:
+  hosts:
+    hv01-az2:

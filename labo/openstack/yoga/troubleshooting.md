@@ -99,7 +99,9 @@ root@3864d5063faa:/# openstack port list
 - models_v2.Port には port_forwardings は定義されていないが、network list などを実行することで、models_v2.Port に port_forwardings が付与される
 - worker ごとに model も別、、
 
-## libvirt
+## libvirt on docker with AppArmor
+
+Ubuntuにおいて、docker上でlibvirtを動かすには、AppArmorの設定を変更する必要がある
 
 ```
 $ virsh version
@@ -110,15 +112,39 @@ error: failed to get the hypervisor version
 error: internal error: Cannot find suitable emulator for x86_64
 ```
 
-libvirt のログ
+## Failed to start QEMU binary /usr/libexec/qemu-kvm for probing: libvirt: error : cannot execute binary /usr/libexec/qemu-kvm: Permission denied
+
+参考: https://github.com/kubevirt/kubevirt/issues/4303#issuecomment-715564964
 
 ```
 internal error: Failed to start QEMU binary /usr/libexec/qemu-kvm for probing: libvirt:  error : cannot execute binary /usr/libexec/qemu-kvm: Permission denied
 ```
 
 ```
-$ sudo aa-teardown
-Unloading AppArmor profiles
+   /usr/{lib,lib64,lib/qemu,libexec}/vhost-user-gpu PUx,
+   /usr/{lib,lib64,lib/qemu,libexec}/virtiofsd PUx,
+>  /usr/libexec/qemu-kvm PUx,
 ```
 
-https://github.com/kubevirt/kubevirt/issues/4303#issuecomment-715564964
+## Cannot delete directory '/run/libvirt/xxx'
+
+```
+2024-03-17 13:45:10.711 1 ERROR nova.compute.manager [instance: 87799560-117e-400c-9a25-b70cc0f29e73]     raise libvirtError('virDomainCreateWithFlags() failed')
+2024-03-17 13:45:10.711 1 ERROR nova.compute.manager [instance: 87799560-117e-400c-9a25-b70cc0f29e73] libvirt.libvirtError: internal error: Process exited prior to exec: libvirt:  error : Cannot delete directory '/run/libvirt/qemu/2-instance-00000002.shm': Device or resource busy
+2024-03-17 13:45:10.711 1 ERROR nova.compute.manager [instance: 87799560-117e-400c-9a25-b70cc0f29e73]
+```
+
+```
+2024-03-17 13:50:15.901 1 ERROR nova.compute.manager [instance: e24fc053-15c2-4f1a-a91c-8c9f58427720]     raise libvirtError('virDomainCreateWithFlags() failed')
+2024-03-17 13:50:15.901 1 ERROR nova.compute.manager [instance: e24fc053-15c2-4f1a-a91c-8c9f58427720] libvirt.libvirtError: internal error: Process exited prior to exec: libvirt: QEMU Driver error : failed to umount devfs on /dev: Permission denied
+```
+
+参考: https://mattventura.net/2023/06/21/quick-fix-apparmorlibvirt-errors-in-debian-round-2/
+
+```
+   mount options=(rw,rslave)  -> /,
+   mount options=(rw, nosuid) -> /{var/,}run/libvirt/qemu/*.dev/,
+   umount /{var/,}run/libvirt/qemu/*.dev/,
+>  umount /{var/,}run/libvirt/qemu/**,
+>  umount /dev/,
+```

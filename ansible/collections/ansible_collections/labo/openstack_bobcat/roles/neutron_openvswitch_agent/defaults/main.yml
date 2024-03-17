@@ -1,0 +1,6 @@
+neutron_openvswitch_agent_execution_mode: docker
+neutron_openvswitch_agent_image: "{{ global_docker_registry }}/local/bobcat-neutron-openvswitch-agent:latest"
+
+neutron_venv: /opt/neutron
+
+neutron_nova_metadata_host: localhost

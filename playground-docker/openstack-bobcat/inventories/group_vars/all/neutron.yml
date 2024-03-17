@@ -1,0 +1,12 @@
+neutron_keystone_auth_username: neutron
+neutron_keystone_auth_password: neutronpass
+
+neutron_oslomsg_rpc_servers:
+  - ctl01:5672
+neutron_oslomsg_rpc_vhost: /
+neutron_oslomsg_rpc_userid: admin
+neutron_oslomsg_rpc_password: adminpass
+
+neutron_mysql_host: ctl01
+neutron_mysql_user: admin
+neutron_mysql_password: adminpass

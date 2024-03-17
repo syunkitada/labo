@@ -1,0 +1,9 @@
+- name: Discover hosts
+  community.docker.docker_container:
+    name: "nova-manage"
+    network_mode: "host"
+    image: "{{ nova_image }}"
+    command: /opt/nova/bin/nova-manage cell_v2 discover_hosts --verbose
+    volumes:
+      - "/etc/nova:/etc/nova:ro"
+    state: started

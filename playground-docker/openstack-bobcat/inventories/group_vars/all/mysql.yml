@@ -1,2 +1,8 @@
 mysql_databases:
   - keystone
+  - glance
+  - placement
+  - neutron
+  - nova
+  - nova_api
+  - nova_cell0

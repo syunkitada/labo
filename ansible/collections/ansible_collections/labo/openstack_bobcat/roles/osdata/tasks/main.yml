@@ -1,7 +1,0 @@
-- include_tasks: image.yml
-
-- include_tasks: flavor.yml
-
-- include_tasks: discover-host.yml
-
-- include_tasks: network.yml

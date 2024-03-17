@@ -2,7 +2,7 @@
 core_plugin = ml2
 service_plugins =
 
-transport_url = rabbit://{{ neutron_rabbitmq_user }}:{{ neutron_rabbitmq_password }}@{{ neutron_rabbitmq_host }}:5672/
+transport_url = {{ neutron_oslomsg_rpc_transport|default("rabbit") }}://{% for server in neutron_oslomsg_rpc_servers %}{{ neutron_oslomsg_rpc_userid }}:{{ neutron_oslomsg_rpc_password }}@{{ server }}{% if not loop.last %},{% else %}{{ neutron_oslomsg_rpc_vhost }}{% if neutron_oslomsg_rpc_use_ssl | default(false) | bool %}?ssl=1&ssl_version={{ neutron_oslomsg_rpc_ssl_version }}&ssl_ca_file={{ neutron_oslomsg_rpc_ssl_ca_file }}{% else %}?ssl=0{% endif %}{% endif %}{% endfor %}
 
 auth_strategy = keystone
 
@@ -20,30 +20,25 @@ api_workers = 1
 [oslo_concurrency]
 lock_path = /var/lib/neutron/tmp
 
-[keystone_authtoken]
-region_name = {{ neutron_keystone_region }}
-auth_url = http://{{ neutron_keystone_host }}:5000
-memcached_servers = {{ neutron_keystone_host }}:11211
-auth_type = password
-project_domain_name = Default
-user_domain_name = Default
-project_name = service
-username = {{ neutron_keystone_service_user }}
-password = {{ neutron_keystone_service_password }}
-
 [database]
 connection = mysql+pymysql://{{ neutron_mysql_user }}:{{ neutron_mysql_password }}@{{ neutron_mysql_host }}/neutron
 
-[nova]
-region_name = {{ neutron_keystone_region }}
-auth_url = http://{{ neutron_keystone_host }}:5000
-memcached_servers = {{ neutron_keystone_host }}:11211
-auth_type = password
-project_domain_name = Default
-user_domain_name = Default
-project_name = service
-username = {{ neutron_keystone_service_user }}
-password = {{ neutron_keystone_service_password }}
-
 [agent]
 root_helper = "sudo env PATH=/opt/neutron/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+{% set groups = ['keystone_authtoken', 'nova'] %}
+{% for group in groups %}
+[{{ group }}]
+auth_url = {{ neutron_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ neutron_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+auth_type = password
+project_domain_name = Default
+project_name = service
+user_domain_name = Default
+username = {{ neutron_keystone_auth_username }}
+password = {{ neutron_keystone_auth_password }}
+
+# cache settings
+memcached_servers = {{ neutron_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}
+
+{% endfor %}

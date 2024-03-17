@@ -2,6 +2,7 @@
   ansible.builtin.setup:
     gather_subset:
       - distribution
+      - default_ipv4
 
 - name: Install
   ansible.builtin.include_tasks: "install_{{ ansible_facts['distribution'] | lower }}{{ ansible_facts['distribution_major_version'] }}.yml"

@@ -1,0 +1,1 @@
+nova_image: "{{ global_docker_registry }}/local/bobcat-nova:latest"

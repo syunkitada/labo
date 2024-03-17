@@ -1,0 +1,9 @@
+- name: Restart service neutron-server
+  ansible.builtin.service:
+    name: neutron-server
+    state: restarted
+
+- name: Restart docker neutron-server
+  community.docker.docker_container:
+    name: neutron-server
+    restart: true

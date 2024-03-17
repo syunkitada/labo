@@ -1,0 +1,3 @@
+keystone_mysql_host: ctl01
+keystone_mysql_user: admin
+keystone_mysql_password: adminpass

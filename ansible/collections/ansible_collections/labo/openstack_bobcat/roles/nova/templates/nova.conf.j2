@@ -1,10 +1,7 @@
 [DEFAULT]
-# log_file = /var/log/nova/nova.log
 enabled_apis = osapi_compute,metadata
 
-transport_url = rabbit://{{ nova_rabbitmq_user }}:{{ nova_rabbitmq_password }}@{{ nova_rabbitmq_host }}:5672/
-
-my_ip = {{ nova_my_ip }}
+transport_url = {{ nova_oslomsg_rpc_transport|default("rabbit") }}://{% for server in nova_oslomsg_rpc_servers %}{{ nova_oslomsg_rpc_userid }}:{{ nova_oslomsg_rpc_password }}@{{ server }}{% if not loop.last %},{% else %}{{ nova_oslomsg_rpc_vhost }}{% if nova_oslomsg_rpc_use_ssl | default(false) | bool %}?ssl=1&ssl_version={{ nova_oslomsg_rpc_ssl_version }}&ssl_ca_file={{ nova_oslomsg_rpc_ssl_ca_file }}{% else %}?ssl=0{% endif %}{% endif %}{% endfor %}
 
 instances_path = /var/lib/nova/instances
 
@@ -14,8 +11,10 @@ workers = 1
 [conductor]
 workers = 1
 
+{% if "nova" in group_names %}
 [api_database]
 connection = mysql+pymysql://{{ nova_mysql_user }}:{{ nova_mysql_password }}@{{ nova_mysql_host }}/nova_api
+{% endif %}
 
 [database]
 connection = mysql+pymysql://{{ nova_mysql_user }}:{{ nova_mysql_password }}@{{ nova_mysql_host }}/nova
@@ -23,46 +22,27 @@ connection = mysql+pymysql://{{ nova_mysql_user }}:{{ nova_mysql_password }}@{{ 
 [api]
 auth_strategy = keystone
 
-[keystone_authtoken]
-auth_url = http://{{ nova_keystone_host }}:5000
-region_name = {{ nova_keystone_region }}
-memcached_servers = {{ nova_keystone_host }}:11211
-auth_type = password
-project_domain_name = Default
-user_domain_name = Default
-project_name = service
-username = {{ nova_keystone_service_user }}
-password = {{ nova_keystone_service_password }}
-
 [vnc]
 enabled = true
 server_listen = $my_ip
 server_proxyclient_address = $my_ip
 
-# [glance]
-# api_servers = http://{{ nova_glance_host }}:9292
-
 [oslo_concurrency]
 lock_path = /var/lib/nova/tmp
 
-[placement]
-auth_url = http://{{ nova_keystone_host }}:5000
-region_name = {{ nova_keystone_region }}
-memcached_servers = {{ nova_keystone_host }}:11211
+{% set groups = ['keystone_authtoken', 'placement', 'neutron'] %}
+{% for group in groups %}
+[{{ group }}]
+auth_url = {{ nova_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ nova_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
 auth_type = password
 project_domain_name = Default
-user_domain_name = Default
 project_name = service
-username = {{ nova_keystone_service_user }}
-password = {{ nova_keystone_service_password }}
+user_domain_name = Default
+username = {{ nova_keystone_auth_username }}
+password = {{ nova_keystone_auth_password }}
 
-[neutron]
-auth_url = http://{{ nova_keystone_host }}:5000
-region_name = {{ nova_keystone_region }}
-memcached_servers = {{ nova_keystone_host }}:11211
-auth_type = password
-project_domain_name = Default
-user_domain_name = Default
-project_name = service
-username = {{ nova_keystone_service_user }}
-password = {{ nova_keystone_service_password }}
+# cache settings
+memcached_servers = {{ nova_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}
+
+{% endfor %}

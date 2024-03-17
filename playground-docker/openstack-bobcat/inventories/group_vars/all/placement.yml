@@ -1,0 +1,6 @@
+placement_keystone_auth_username: placement
+placement_keystone_auth_password: placementpass
+
+placement_mysql_host: ctl01
+placement_mysql_user: admin
+placement_mysql_password: adminpass

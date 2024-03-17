@@ -1,3 +1,6 @@
+glance_execution_mode: docker
+glance_image: "{{ global_docker_registry }}/local/bobcat-glance:latest"
+
 glance_venv: /opt/glance
 glance_git_repo: https://github.com/openstack/glance.git
 glance_git_branch: stable/2023.2
@@ -6,8 +9,3 @@ glance_upper_constraints: https://raw.githubusercontent.com/openstack/requiremen
 glance_mysql_host: localhost
 glance_mysql_user: admin
 glance_mysql_password: adminpass
-
-glance_keystone_host: localhost
-glance_keystone_region: region
-glance_keystone_service_user: system
-glance_keystone_service_password: systempass

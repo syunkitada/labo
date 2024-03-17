@@ -11,6 +11,9 @@ services:
       - "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+
   ctl01:
     container_name: "${NAMESPACE}-ctl01"
     hostname: ctl01
@@ -20,6 +23,8 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
 
   ctl02:
     container_name: "${NAMESPACE}-ctl02"
@@ -30,6 +35,8 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
 
   ctl03:
     container_name: "${NAMESPACE}-ctl03"
@@ -40,6 +47,8 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
 
   hv01-az1:
     container_name: "${NAMESPACE}-hv01-az1"
@@ -50,6 +59,8 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
 
   hv01-az2:
     container_name: "${NAMESPACE}-hv01-az2"
@@ -60,6 +71,8 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
 
   hv01-az3:
     container_name: "${NAMESPACE}-hv01-az3"
@@ -70,3 +83,13 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "${NETWORK_SUBNET}"

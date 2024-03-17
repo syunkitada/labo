@@ -1,0 +1,3 @@
+region_keystone_auth_url: http://ctl01:5000/v3
+region_keystone_auth_region_name: playground
+region_keystone_auth_memcached_servers: ctl01:11211

@@ -1,7 +1,0 @@
-- hosts: localhost
-  become: true
-  gather_facts: no
-  tasks:
-    - include_role:
-        name: "{{ playbook_dir }}"
-        tasks_from: install.yml

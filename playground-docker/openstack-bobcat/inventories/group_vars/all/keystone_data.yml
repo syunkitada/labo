@@ -3,8 +3,26 @@ keystone_data_projects:
     domain: default
 
 keystone_data_users:
-  - name: service
-    password: servicepass
+  - name: glance
+    password: glancepass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+  - name: placement
+    password: placementpass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+  - name: nova
+    password: novapass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+  - name: neutron
+    password: neutronpass
     domain: default
     roles:
       - role: admin
@@ -24,7 +42,7 @@ keystone_data_services:
     type: network
     description: OpenStack Network Service
 
-keystone_data_region_services:
+keystone_data_region_endpoints:
   - region: playground
     services:
       - service: keystone

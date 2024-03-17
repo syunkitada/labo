@@ -1,16 +1,7 @@
-- name: Gather facts
-  ansible.builtin.setup:
-    gather_subset:
-      - default_ipv4
-
-- name: Install on host
+- name: Host main
   when: keystone_execution_mode == "host"
-  ansible.builtin.include_tasks: install_host.yml
+  ansible.builtin.include_tasks: host/main.yml
 
-- name: Setup on host
-  when: keystone_execution_mode == "host"
-  ansible.builtin.include_tasks: setup_host.yml
-
-- name: Setup on docker
+- name: Docker main
   when: keystone_execution_mode == "docker"
-  ansible.builtin.include_tasks: setup_docker.yml
+  ansible.builtin.include_tasks: docker/main.yml
