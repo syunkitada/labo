@@ -2,3 +2,9 @@
   ansible.builtin.template:
     src: adminrc.j2
     dest: /root/adminrc
+
+- name: Put openstack-admin
+  ansible.builtin.copy:
+    src: files/openstack-admin
+    dest: /usr/bin/openstack-admin
+    mode: "755"
