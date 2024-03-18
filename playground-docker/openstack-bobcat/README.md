@@ -21,3 +21,16 @@ $ ansible-playbook -i ctl_hosts.yml labo.openstack_bobcat.ctl --tags cmd_nova_di
 ```
 $ openstack server create --flavor 1v-1024m-5g --image cirros --no-network --os-compute-api-version 2.37 testvm1
 ```
+
+```
+$ kind create cluster --config kind.yml
+
+$ kind get clusters
+openstack-bobcat
+
+$ kind export -n openstack-bobcat kubeconfig
+
+$ kind get kubeconfig -n openstack-bobcat
+
+$ kind delete cluster -n openstack-bobcat
+```

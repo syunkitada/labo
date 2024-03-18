@@ -13,6 +13,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
   ctl01:
     container_name: "${NAMESPACE}-ctl01"
@@ -25,6 +28,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
   ctl02:
     container_name: "${NAMESPACE}-ctl02"
@@ -37,6 +43,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
   ctl03:
     container_name: "${NAMESPACE}-ctl03"
@@ -49,6 +58,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
   hv01-az1:
     container_name: "${NAMESPACE}-hv01-az1"
@@ -61,6 +73,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
   hv01-az2:
     container_name: "${NAMESPACE}-hv01-az2"
@@ -73,6 +88,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
   hv01-az3:
     container_name: "${NAMESPACE}-hv01-az3"
@@ -85,6 +103,9 @@ services:
     cgroup_parent: docker.slice
     extra_hosts:
       - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
 
 networks:
   default:
@@ -93,3 +114,6 @@ networks:
       driver: default
       config:
         - subnet: "${NETWORK_SUBNET}"
+  kind:
+    name: kind
+    external: true

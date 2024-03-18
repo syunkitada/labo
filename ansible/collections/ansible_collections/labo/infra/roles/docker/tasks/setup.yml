@@ -23,3 +23,6 @@
   community.docker.docker_network:
     name: "{{ item.name }}"
     ipam_config: "{{ item.ipam_config }}"
+
+- name: Sysctl
+  ansible.builtin.command: sysctl -w fs.inotify.max_user_instances=8192
