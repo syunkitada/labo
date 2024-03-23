@@ -1,4 +1,4 @@
-keystone_execution_mode: docker
+keystone_execution_mode: k8s
 keystone_image: "{{ global_docker_registry }}/local/bobcat-keystone:latest"
 
 keystone_venv: /opt/keystone

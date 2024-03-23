@@ -1,0 +1,33 @@
+- debug:
+    msg: "{{ hostvars[inventory_hostname] }}"
+
+- name: Put value for chart
+  ansible.builtin.copy:
+    content: "{{ hostvars[inventory_hostname] | to_yaml }}"
+    dest: "/etc/ansible/hostvars.yml"
+
+- name: Put value for chart
+  vars:
+    values:
+      keystone_conf: "{{ lookup('template', './keystone.conf.j2') }}"
+  debug:
+    msg: "{{ values }}"
+
+- name: Put value for chart
+  vars:
+    values:
+      keystone_conf: "{{ lookup('template', './keystone.conf.j2') }}"
+  ansible.builtin.copy:
+    content: "{{ values | to_nice_yaml }}"
+    dest: "/etc/ansible/conf_values.yml"
+
+- name: Deploy keystone
+  kubernetes.core.helm:
+    name: keystone
+    chart_ref: /etc/ansible/collections/ansible_collections/labo/openstack_bobcat/roles/keystone/chart
+    release_namespace: openstack
+    create_namespace: true
+    force: true
+    values_files:
+      - /etc/ansible/hostvars.yml
+      - /etc/ansible/conf_values.yml

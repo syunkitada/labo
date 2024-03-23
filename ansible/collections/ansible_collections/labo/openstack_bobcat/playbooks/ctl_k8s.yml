@@ -1,0 +1,51 @@
+- name: Setup docker
+  hosts:
+    - workstation
+  gather_facts: false
+  vars:
+    docker_iptables: false
+  roles:
+    - role: labo.infra.docker
+      tags: docker
+
+- name: Setup workstation
+  hosts: workstation
+  become: true
+  gather_facts: false
+  roles:
+    - role: workstation
+      tags: workstation
+
+- name: Setup memcached
+  hosts: memcached
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.infra.memcached
+      tags: memcached
+
+- name: Setup mysql
+  hosts: mysql
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.infra.mysql
+      tags: mysql
+
+- name: Import rabbitmq
+  hosts: rabbitmq
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.infra.rabbitmq
+      tags: rabbitmq
+
+- name: Setup keystone on k8s
+  hosts: workstation
+  become: true
+  gather_facts: false
+  vars:
+    keystone_execution_mode: k8s
+  roles:
+    - role: labo.openstack_bobcat.keystone
+      tags: keystone

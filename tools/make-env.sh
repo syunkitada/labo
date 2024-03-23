@@ -29,3 +29,21 @@ sudo cp /root/.ssh/labo.pem.pub /root/.ssh/authorized_keys
 for tool in $(find tools -maxdepth 1 -name "labo-*" -printf '%f\n'); do
 	test -L "/usr/local/bin/${tool}" || sudo ln -s "$LABO_DIR/tools/$tool" "/usr/local/bin/${tool}"
 done
+
+if ! command kind; then
+	curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+	sudo install -o root -g root -m 0755 kind /usr/bin/kind
+	rm ./kind
+fi
+
+if ! commnd helm; then
+	curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.14.3-linux-amd64.tar.gz
+	tar xf helm.tar.gz
+	sudo install -o root -g root -m 0755 linux-amd64/helm /usr/local/bin/helm
+	rm -rf linux-amd64
+	rm helm.tar.gz
+fi
+
+# https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+sudo sysctl fs.inotify.max_user_watches=524288
+sudo sysctl fs.inotify.max_user_instances=512
