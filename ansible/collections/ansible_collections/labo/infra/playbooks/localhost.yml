@@ -7,8 +7,14 @@
       tags: nfs
     - role: docker
       tags: docker
+    - name: kind
+      tags: kind
     - name: docker_registry
       tags: docker_registry
+      vars:
+        docker_registry_network_name: kind
+    - name: haproxy_ingress
+      tags: haproxy_ingress
     - name: libvirt
       tags: libvirt
     - name: mysql
@@ -17,5 +23,13 @@
         mysql_execution_mode: docker
     - name: pdns
       tags: pdns
+      vars:
+        pdns_domains:
+          - example.com
+        pdns_records:
+          - domain: example.com
+            name: docker-registry.example.com
+            type: a
+            content: "{{ local_ipaddr }}"
     - name: keycloak
       tags: keycloak

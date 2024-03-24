@@ -1,4 +1,4 @@
-global_docker_registry: "host.docker.internal:5050"
+global_docker_registry: "docker-registry:5000"
 
 global_keystone_region: "global"
 global_keystone_admin_url: "http://ctl01:5000/v3/"

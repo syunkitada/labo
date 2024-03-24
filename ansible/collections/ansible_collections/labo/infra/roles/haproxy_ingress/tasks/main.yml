@@ -1,0 +1,19 @@
+- name: Put haproxy-ingress-values.yml
+  ansible.builtin.template:
+    src: haproxy-ingress-values.yml.j2
+    dest: /tmp/haproxy-ingress-values.yml
+    mode: "644"
+
+- name: Helm repo add
+  ansible.builtin.shell: |
+    helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
+
+- name: Deploy ingress
+  kubernetes.core.helm:
+    name: haproxy-ingress
+    chart_ref: haproxy-ingress/haproxy-ingress
+    release_namespace: haproxy-ingress
+    create_namespace: true
+    force: true
+    values_files:
+      - /tmp/haproxy-ingress-values.yml

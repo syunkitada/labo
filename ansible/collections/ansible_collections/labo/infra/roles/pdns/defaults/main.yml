@@ -4,10 +4,5 @@ pdns_mysql_user: admin
 pdns_mysql_password: adminpass
 
 pdns_local_address: 0.0.0.0
-pdns_domains:
-  - example.com
-pdns_records:
-  - domain: example.com
-    name: docker-registry.example.com
-    type: a
-    content: "{{ local_ipaddr }}"
+pdns_domains: []
+pdns_records: []

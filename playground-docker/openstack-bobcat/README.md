@@ -11,16 +11,7 @@ $ sudo -E docker compose up -d
 ```
 
 ```
-$ kind create cluster --config kind.yml
-
-$ kind get clusters
-kind
-
-$ docker exec -i openstack-bobcat-ansible mkdir -p /root/.kube/
-$ kind get kubeconfig -n kind | sed -e 's|server: .*|server: https://kind-control-plane:6443|g' | sudo docker exec -i openstack-bobcat-ansible tee /root/.kube/config
-
-# $ kind export -n kind kubeconfig
-# $ kind delete cluster -n openstack-bobcat
+$ ./kind.sh
 ```
 
 ```

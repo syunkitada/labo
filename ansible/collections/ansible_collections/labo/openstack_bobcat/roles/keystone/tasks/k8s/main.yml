@@ -10,13 +10,6 @@
   vars:
     values:
       keystone_conf: "{{ lookup('template', './keystone.conf.j2') }}"
-  debug:
-    msg: "{{ values }}"
-
-- name: Put value for chart
-  vars:
-    values:
-      keystone_conf: "{{ lookup('template', './keystone.conf.j2') }}"
   ansible.builtin.copy:
     content: "{{ values | to_nice_yaml }}"
     dest: "/etc/ansible/conf_values.yml"

@@ -6,3 +6,23 @@ metadata:
 data:
   keystone.conf: |
 {{ .Values.keystone_conf | nindent 4 }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-keystone-credential-keys
+data:
+  {{- range .Values.keystone_credential_keys }}
+  {{ .name }}: "{{ .key | b64enc }}"
+  {{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-keystone-fernet-keys
+data:
+  {{- range .Values.keystone_fernet_keys }}
+  {{ .name }}: "{{ .key | b64enc }}"
+  {{- end }}

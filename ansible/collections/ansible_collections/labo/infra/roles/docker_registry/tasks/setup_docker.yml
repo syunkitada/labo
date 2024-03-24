@@ -6,3 +6,5 @@
       - "5050:5000"
     volumes:
       - "/var/lib/docker-registry:/var/lib/registry:rw"
+    networks:
+      - name: "{{ docker_registry_network_name }}"
