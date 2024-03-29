@@ -23,7 +23,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    - host: "keystone.ingress.kind.example.com"
+    - host: "keystone.ingress.kind.test"
       http:
         paths:
           - path: /

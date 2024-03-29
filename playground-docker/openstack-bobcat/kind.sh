@@ -1,7 +1,7 @@
 #!/bin/bash -ex
 
 IP_ADDR=$(sudo docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-worker)
-labo-record-ctl create example.com *.ingress.kind.example.com a ${IP_ADDR}
+labo-record-ctl create test *.ingress.kind.test a ${IP_ADDR}
 
 sudo docker exec -i openstack-bobcat-ansible mkdir -p /root/.kube/
 sudo kind get kubeconfig -n kind | sed -e 's|server: .*|server: https://kind-control-plane:6443|g' | sudo docker exec -i openstack-bobcat-ansible tee /root/.kube/config

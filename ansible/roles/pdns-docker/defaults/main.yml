@@ -5,9 +5,9 @@ pdns_docker_mysql_password: adminpass
 
 pdns_docker_local_address: 0.0.0.0
 pdns_docker_domains:
-  - example.com
+  - test
 pdns_docker_records:
-  - domain: example.com
-    name: docker-registry.example.com
+  - domain: test
+    name: docker-registry.test
     type: a
     content: "{{ local_ipaddr }}"

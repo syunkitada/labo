@@ -25,10 +25,10 @@
       tags: pdns
       vars:
         pdns_domains:
-          - example.com
+          - test
         pdns_records:
-          - domain: example.com
-            name: docker-registry.example.com
+          - domain: test
+            name: docker-registry.test
             type: a
             content: "{{ local_ipaddr }}"
     - name: keycloak
