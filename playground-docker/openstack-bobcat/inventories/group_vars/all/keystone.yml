@@ -16,4 +16,4 @@ keystone_fernet_keys:
   - name: "1"
     key: 0NCzUPd_hDxtu_n6vZo_91fN1jEWXMMrte6qPwln87M=
 
-keystone_public_deployment_replicas: 3
+keystone_public_deployment_replicas: 1

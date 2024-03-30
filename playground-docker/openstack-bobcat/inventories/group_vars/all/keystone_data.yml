@@ -48,40 +48,40 @@ keystone_data_region_endpoints:
       - service: keystone
         endpoints:
           - interface: public
-            url: "http://ctl01:5000/v3/"
+            url: http://keystone.ingress.kind.test/v3/
           - interface: internal
-            url: "http://ctl01:5000/v3/"
+            url: http://keystone.ingress.kind.test/v3/
           - interface: admin
-            url: "http://ctl01:5000/v3/"
+            url: http://keystone.ingress.kind.test/v3/
       - service: glance
         endpoints:
           - interface: public
-            url: http://ctl01:9292
+            url: http://glance.ingress.kind.test
           - interface: internal
-            url: http://ctl01:9292
+            url: http://glance.ingress.kind.test
           - interface: admin
-            url: http://ctl01:9292
+            url: http://glance.ingress.kind.test
       - service: nova
         endpoints:
           - interface: public
-            url: http://ctl01:8774/v2.1
+            url: http://nova.ingress.kind.test/v2.1
           - interface: internal
-            url: http://ctl01:8774/v2.1
+            url: http://nova.ingress.kind.test/v2.1
           - interface: admin
-            url: http://ctl01:8774/v2.1
+            url: http://nova.ingress.kind.test/v2.1
       - service: placement
         endpoints:
           - interface: public
-            url: http://ctl01:8778
+            url: http://placement.ingress.kind.test
           - interface: internal
-            url: http://ctl01:8778
+            url: http://placement.ingress.kind.test
           - interface: admin
-            url: http://ctl01:8778
+            url: http://placement.ingress.kind.test
       - service: neutron
         endpoints:
           - interface: public
-            url: http://ctl01:9696
+            url: http://neutron.ingress.kind.test
           - interface: internal
-            url: http://ctl01:9696
+            url: http://neutron.ingress.kind.test
           - interface: admin
-            url: http://ctl01:9696
+            url: http://neutron.ingress.kind.test

@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,6 +17,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
         {{- include "chart.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
@@ -34,6 +36,9 @@ spec:
             - /opt/keystone/bin/keystone-wsgi-public
             - --port
             - "80"
+          env:
+            - name: OS_KEYSTONE_CONFIG_FILES
+              value: /etc/keystone/keystone.conf;/etc/keystone/secret/keystone-secret.conf
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -47,6 +52,8 @@ spec:
           volumeMounts:
             - name: etc-keystone
               mountPath: /etc/keystone
+            - name: etc-keystone-secret
+              mountPath: /etc/keystone/secret
             - name: etc-keystone-credential-keys
               mountPath: /etc/keystone/credential-keys
             - name: etc-keystone-fernet-keys
@@ -55,6 +62,9 @@ spec:
         - name: etc-keystone
           configMap:
             name: etc-keystone
+        - name: etc-keystone-secret
+          secret:
+            secretName: etc-keystone-secret
         - name: etc-keystone-credential-keys
           secret:
             secretName: etc-keystone-credential-keys

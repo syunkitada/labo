@@ -11,6 +11,14 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
+  name: etc-keystone-secret
+data:
+  keystone-secret.conf: {{ .Values.keystone_secret_conf | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
   name: etc-keystone-credential-keys
 data:
   {{- range .Values.keystone_credential_keys }}
@@ -26,3 +34,11 @@ data:
   {{- range .Values.keystone_fernet_keys }}
   {{ .name }}: "{{ .key | b64enc }}"
   {{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: adminrc
+data:
+  OS_PASSWORD: '{{ required "required" .Values.global_keystone_admin_auth.password | b64enc }}'

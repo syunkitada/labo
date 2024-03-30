@@ -1,6 +1,7 @@
 #!/bin/bash -ex
 
 IP_ADDR=$(sudo docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-worker)
+labo-record-ctl delete *.ingress.kind.test
 labo-record-ctl create test *.ingress.kind.test a ${IP_ADDR}
 
 sudo docker exec -i openstack-bobcat-ansible mkdir -p /root/.kube/

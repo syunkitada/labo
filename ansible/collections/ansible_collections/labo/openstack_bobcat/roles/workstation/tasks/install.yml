@@ -15,7 +15,7 @@
 
 - name: instlal kubectl
   ansible.builtin.shell: |
-    if ! commnd kubectl; then
+    if ! command kubectl; then
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       install -o root -g root -m 0755 kubectl /usr/bin/kubectl
       rm kubectl
@@ -23,7 +23,7 @@
 
 - name: instlal helm
   ansible.builtin.shell: |
-    if ! commnd helm; then
+    if ! command helm; then
       curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.14.3-linux-amd64.tar.gz
       tar xf helm.tar.gz
       install -o root -g root -m 0755 linux-amd64/helm /usr/bin/helm

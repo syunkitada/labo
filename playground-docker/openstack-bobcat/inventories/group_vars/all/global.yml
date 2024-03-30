@@ -1,12 +1,12 @@
 global_docker_registry: "docker-registry:5000"
 
 global_keystone_region: "global"
-global_keystone_admin_url: "http://ctl01:5000/v3/"
-global_keystone_public_url: "http://ctl01:5000/v3/"
-global_keystone_internal_url: "http://ctl01:5000/v3/"
+global_keystone_admin_url: "http://keystone.ingress.kind.test/v3/"
+global_keystone_public_url: "http://keystone.ingress.kind.test/v3/"
+global_keystone_internal_url: "http://keystone.ingress.kind.test/v3/"
 
 global_keystone_admin_auth:
-  auth_url: http://ctl01:5000/v3
+  auth_url: http://keystone.ingress.kind.test/v3
   username: admin
   password: adminpass
   project_name: admin

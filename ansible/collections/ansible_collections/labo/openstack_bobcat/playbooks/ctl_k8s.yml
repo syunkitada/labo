@@ -49,3 +49,11 @@
   roles:
     - role: labo.openstack_bobcat.keystone
       tags: keystone
+
+- name: Setup keystone_data
+  hosts: workstation
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.keystone_data
+      tags: keystone_data
