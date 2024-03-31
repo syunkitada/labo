@@ -1,3 +1,4 @@
+# TODO run on k8s
 - name: Discover hosts
   community.docker.docker_container:
     name: "nova-manage"

@@ -1,6 +1,7 @@
 - name: Make directories
   loop:
     - /etc/nova
+    - /etc/nova/secret
     - /var/lib/nova/instances
   file:
     path: "{{ item }}"
@@ -19,6 +20,14 @@
   ansible.builtin.template:
     src: nova/nova.conf.j2
     dest: "/etc/nova/nova.conf"
+    mode: "600"
+  notify:
+    - Restart docker nova-compute
+
+- name: Put nova.conf
+  ansible.builtin.template:
+    src: nova/secret/nova.conf.j2
+    dest: "/etc/nova/secret/nova.conf"
     mode: "600"
   notify:
     - Restart docker nova-compute
@@ -48,6 +57,7 @@
     command: /opt/nova/bin/nova-compute
       --config-file /etc/nova/nova.conf
       --config-file /etc/nova/nova-compute.conf
+      --config-file /etc/nova/secret/nova.conf
     volumes:
       - "/etc/nova:/etc/nova:ro"
       - "/var/lib/nova:/var/lib/nova:rw"

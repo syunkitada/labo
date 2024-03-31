@@ -16,3 +16,7 @@ nova_oslomsg_rpc_password: adminpass
 nova_mysql_host: ctl01
 nova_mysql_user: admin
 nova_mysql_password: adminpass
+
+nova_api_deployment_replicas: 1
+nova_scheduler_deployment_replicas: 1
+nova_conductor_deployment_replicas: 1

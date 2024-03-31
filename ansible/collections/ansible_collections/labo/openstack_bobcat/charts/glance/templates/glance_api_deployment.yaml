@@ -53,6 +53,8 @@ spec:
               mountPath: /etc/glance
             - name: etc-glance-secret
               mountPath: /etc/glance/secret
+            - name: var-lib-glance-images
+              mountPath: /var/lib/glance/images/
       volumes:
         - name: etc-glance
           configMap:
@@ -62,3 +64,6 @@ spec:
           secret:
             secretName: etc-glance-secret
             defaultMode: 0640
+        - name: var-lib-glance-images
+          emptyDir:
+            sizeLimit: 1G
