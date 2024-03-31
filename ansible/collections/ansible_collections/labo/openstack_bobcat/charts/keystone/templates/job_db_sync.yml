@@ -1,11 +1,11 @@
+# prettier-ignore
 ---
-{{- $fullName := include "chart.fullname" . -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: db-sync
-  annotations:
-    helm.sh/hook: post-install,post-upgrade
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
 spec:
   template:
     spec:

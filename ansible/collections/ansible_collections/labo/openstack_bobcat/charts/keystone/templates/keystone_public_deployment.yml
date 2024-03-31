@@ -1,3 +1,4 @@
+# prettier-ignore
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -12,22 +13,14 @@ spec:
       {{- include "chart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
         {{- include "chart.selectorLabels" . | nindent 8 }}
         {{- include "chart.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
     spec:
-      serviceAccountName: {{ include "chart.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: keystone
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.keystone_image }}"
@@ -40,13 +33,17 @@ spec:
             - name: OS_KEYSTONE_CONFIG_FILES
               value: /etc/keystone/keystone.conf;/etc/keystone/secret/keystone-secret.conf
           ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
+            - name: keystone-public
+              containerPort: 80
               protocol: TCP
           livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
+            httpGet:
+              path: /
+              port: keystone-public
           readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
+            httpGet:
+              path: /
+              port: keystone-public
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
@@ -71,15 +68,3 @@ spec:
         - name: etc-keystone-fernet-keys
           secret:
             secretName: etc-keystone-fernet-keys
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}

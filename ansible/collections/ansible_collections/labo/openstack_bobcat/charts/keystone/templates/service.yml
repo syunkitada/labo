@@ -1,15 +1,17 @@
+# prettier-ignore
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "chart.fullname" . }}
+  name: keystone-public
   labels:
     {{- include "chart.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
+    - name: keystone-public
+      targetPort: keystone-public
+      port: 80
       protocol: TCP
-      name: http
   selector:
     {{- include "chart.selectorLabels" . | nindent 4 }}
