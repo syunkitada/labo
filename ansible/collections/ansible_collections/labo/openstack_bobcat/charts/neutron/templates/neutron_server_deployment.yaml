@@ -1,0 +1,72 @@
+# prettier-ignore
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neutron-server
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.neutron_api_deployment_replicas }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        {{- include "chart.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11003
+        runAsGroup: 11003
+        fsGroup: 11003
+      containers:
+        - name: neutron-server
+          image: "{{ .Values.neutron_image }}"
+          {{- if contains ":latest" .Values.neutron_image }}
+          imagePullPolicy: Always
+          {{- else }}
+          imagePullPolicy: IfNotPresent
+          {{- end }}
+          command:
+            - /opt/neutron/bin/neutron-server
+            - --config-file
+            - /etc/neutron/neutron.conf
+            - --config-file
+            - /etc/neutron/secret/neutron.conf
+            - --config-file
+            - /etc/neutron/plugins/ml2/ml2_conf.ini
+          ports:
+            - name: neutron-server
+              containerPort: 9696
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: neutron-server
+          readinessProbe:
+            httpGet:
+              path: /
+              port: neutron-server
+          volumeMounts:
+            - name: etc-neutron
+              mountPath: /etc/neutron
+            - name: etc-neutron-secret
+              mountPath: /etc/neutron/secret
+            - name: etc-neutron-plugins-ml2
+              mountPath: /etc/neutron/plugins/ml2
+      volumes:
+        - name: etc-neutron
+          configMap:
+            name: etc-neutron
+            defaultMode: 0640
+        - name: etc-neutron-secret
+          secret:
+            secretName: etc-neutron-secret
+            defaultMode: 0640
+        - name: etc-neutron-plugins-ml2
+          configMap:
+            name: etc-neutron-plugins-ml2
+            defaultMode: 0640

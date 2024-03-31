@@ -19,9 +19,6 @@ spec:
     spec:
       # httpd is started as root user and wsgi process is started as keystone(11001) user
       securityContext:
-        # runAsNonRoot: true
-        # runAsUser: 11001
-        # runAsGroup: 11001
         fsGroup: 11001
       containers:
         - name: httpd
@@ -36,7 +33,7 @@ spec:
             - -DFOREGROUND
           env:
             - name: OS_KEYSTONE_CONFIG_FILES
-              value: /etc/keystone/keystone.conf;/etc/keystone/secret/keystone-secret.conf
+              value: /etc/keystone/keystone.conf;/etc/keystone/secret/keystone.conf
           ports:
             - name: keystone-public
               containerPort: 5000

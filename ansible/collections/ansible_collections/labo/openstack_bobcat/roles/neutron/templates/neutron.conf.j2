@@ -21,7 +21,6 @@ api_workers = 1
 lock_path = /var/lib/neutron/tmp
 
 [database]
-connection = mysql+pymysql://{{ neutron_mysql_user }}:{{ neutron_mysql_password }}@{{ neutron_mysql_host }}/neutron
 
 [agent]
 root_helper = "sudo env PATH=/opt/neutron/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -31,12 +30,6 @@ root_helper = "sudo env PATH=/opt/neutron/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 [{{ group }}]
 auth_url = {{ neutron_keystone_auth_url|default(region_keystone_auth_url) }}
 region_name = {{ neutron_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
-auth_type = password
-project_domain_name = Default
-project_name = service
-user_domain_name = Default
-username = {{ neutron_keystone_auth_username }}
-password = {{ neutron_keystone_auth_password }}
 
 # cache settings
 memcached_servers = {{ neutron_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}

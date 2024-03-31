@@ -1,0 +1,36 @@
+# prettier-ignore
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-sync
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-sync
+          image: "{{ .Values.placement_image }}"
+          command: 
+            - /opt/placement/bin/placement-manage
+            - --config-file
+            - /etc/placement/placement.conf
+            - --config-file
+            - /etc/placement/secret/placement.conf
+            - db
+            - sync
+          volumeMounts:
+            - name: etc-placement
+              mountPath: /etc/placement
+            - name: etc-placement-secret
+              mountPath: /etc/placement/secret
+      volumes:
+        - name: etc-placement
+          configMap:
+            name: etc-placement
+        - name: etc-placement-secret
+          secret:
+            secretName: etc-placement-secret
+      restartPolicy: OnFailure
+  backoffLimit: 2

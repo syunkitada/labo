@@ -1,0 +1,17 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: placement-api
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: placement-api
+      targetPort: placement-api
+      port: 8778
+      protocol: TCP
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}

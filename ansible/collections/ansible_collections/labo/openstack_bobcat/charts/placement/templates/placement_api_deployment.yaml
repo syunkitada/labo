@@ -1,0 +1,56 @@
+# prettier-ignore
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: placement-api
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.placement_api_deployment_replicas }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        {{- include "chart.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11004
+        runAsGroup: 11004
+        fsGroup: 11004
+      containers:
+        - name: placement-api
+          image: "{{ .Values.placement_image }}"
+          {{- if contains ":latest" .Values.placement_image }}
+          imagePullPolicy: Always
+          {{- else }}
+          imagePullPolicy: IfNotPresent
+          {{- end }}
+          command:
+            - /opt/placement/bin/placement-api
+            - --port
+            - "8778"
+          ports:
+            - name: placement-api
+              containerPort: 8778
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: placement-api
+          readinessProbe:
+            httpGet:
+              path: /
+              port: placement-api
+          volumeMounts:
+            - name: etc-placement-secret
+              mountPath: /etc/placement
+      volumes:
+        - name: etc-placement-secret
+          secret:
+            secretName: etc-placement-secret
+            defaultMode: 0640

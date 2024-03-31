@@ -1,5 +1,9 @@
 neutron_image: "{{ global_docker_registry }}/local/bobcat-neutron:latest"
 
+neutron_mysql_host: ctl01
+neutron_mysql_user: admin
+neutron_mysql_password: adminpass
+
 neutron_keystone_auth_username: neutron
 neutron_keystone_auth_password: neutronpass
 

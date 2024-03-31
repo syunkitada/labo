@@ -1,5 +1,9 @@
 nova_image: "{{ global_docker_registry }}/local/bobcat-nova:latest"
 
+nova_mysql_host: ctl01
+nova_mysql_user: admin
+nova_mysql_password: adminpass
+
 nova_keystone_auth_username: nova
 nova_keystone_auth_password: novapass
 

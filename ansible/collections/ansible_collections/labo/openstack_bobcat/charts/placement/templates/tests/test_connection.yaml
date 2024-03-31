@@ -1,0 +1,20 @@
+# prettier-ignore
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: placement-public-test-connection
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test,post-install,post-upgrade
+spec:
+  template:
+    spec:
+      containers:
+        - name: wget
+          image: busybox
+          command: ['wget']
+          args: ['http://{{ required "required" .Values.region_placement_host }}']
+      restartPolicy: OnFailure
+  backoffLimit: 2

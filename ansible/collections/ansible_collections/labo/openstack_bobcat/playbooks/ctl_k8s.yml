@@ -64,6 +64,9 @@
   gather_facts: false
   vars:
     glance_execution_mode: k8s
+    neutron_execution_mode: k8s
+    placement_execution_mode: k8s
+    nova_execution_mode: k8s
   roles:
     - role: labo.openstack_bobcat.glance
       tags: glance

@@ -1,0 +1,19 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-nova
+data:
+  nova.conf: |
+{{ .Values.nova_conf | nindent 4 }}
+  api-paste.ini: |
+{{ .Values.nova_api_paste_ini | nindent 4 }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-nova-secret
+data:
+  nova.conf: {{ .Values.secret_nova_conf | b64enc }}

@@ -19,11 +19,11 @@ spec:
             - |
               /opt/keystone/bin/keystone-manage \
                 --config-file /etc/keystone/keystone.conf \
-                --config-file /etc/keystone/secret/keystone-secret.conf \
+                --config-file /etc/keystone/secret/keystone.conf \
                 db_sync &&
               /opt/keystone/bin/keystone-manage \
                 --config-file /etc/keystone/keystone.conf \
-                --config-file /etc/keystone/secret/keystone-secret.conf \
+                --config-file /etc/keystone/secret/keystone.conf \
                 bootstrap \
                 --bootstrap-password "${OS_PASSWORD}" \
                 --bootstrap-admin-url '{{ .Values.global_keystone_admin_url }}' \

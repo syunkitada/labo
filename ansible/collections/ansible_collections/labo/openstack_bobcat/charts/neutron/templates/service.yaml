@@ -1,0 +1,17 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neutron-server
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: neutron-server
+      targetPort: neutron-server
+      port: 9696
+      protocol: TCP
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}

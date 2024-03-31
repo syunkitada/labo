@@ -24,7 +24,7 @@ kind: Secret
 metadata:
   name: etc-keystone-secret
 data:
-  keystone-secret.conf: {{ .Values.keystone_secret_conf | b64enc }}
+  keystone.conf: {{ .Values.secret_keystone_conf | b64enc }}
 
 ---
 apiVersion: v1
