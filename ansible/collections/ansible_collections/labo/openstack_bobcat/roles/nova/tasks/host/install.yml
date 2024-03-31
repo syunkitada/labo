@@ -1,3 +1,8 @@
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11004 nova
+    useradd -r --uid 11004 -g nova -d /opt/nova -s /sbin/nologin nova
+
 - name: Install venv
   shell: |
     set -e

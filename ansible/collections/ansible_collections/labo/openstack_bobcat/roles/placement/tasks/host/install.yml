@@ -1,3 +1,8 @@
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11005 placement
+    useradd -r --uid 11005 -g placement -d /opt/placement -s /sbin/nologin placement
+
 - name: Install venv
   ansible.builtin.shell: |
     set -e

@@ -1,3 +1,5 @@
+neutron_image: "{{ global_docker_registry }}/local/bobcat-neutron:latest"
+
 neutron_keystone_auth_username: neutron
 neutron_keystone_auth_password: neutronpass
 

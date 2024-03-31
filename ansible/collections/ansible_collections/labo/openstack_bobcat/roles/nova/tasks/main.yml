@@ -5,3 +5,7 @@
 - name: Main on docker
   when: nova_execution_mode == "docker"
   ansible.builtin.include_tasks: docker/main.yml
+
+- name: Main on k8s
+  when: nova_execution_mode == "k8s"
+  ansible.builtin.include_tasks: k8s/main.yml

@@ -57,3 +57,19 @@
   roles:
     - role: labo.openstack_bobcat.keystone_data
       tags: keystone_data
+
+- name: Setup k8s
+  hosts: workstation
+  become: true
+  gather_facts: false
+  vars:
+    glance_execution_mode: k8s
+  roles:
+    - role: labo.openstack_bobcat.glance
+      tags: glance
+    - role: labo.openstack_bobcat.neutron
+      tags: neutron
+    - role: labo.openstack_bobcat.nova
+      tags: nova
+    - role: labo.openstack_bobcat.placement
+      tags: placement

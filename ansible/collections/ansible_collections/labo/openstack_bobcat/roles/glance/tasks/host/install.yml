@@ -1,3 +1,8 @@
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11002 glance
+    useradd -r --uid 11002 -g glance -d /opt/glance -s /sbin/nologin glance
+
 - name: Install venv
   ansible.builtin.shell: |
     set -e

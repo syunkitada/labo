@@ -1,3 +1,8 @@
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11003 neutron
+    useradd -r --uid 11003 -g neutron -d /opt/neutron -s /sbin/nologin neutron
+
 - name: Install venv
   shell: |
     set -e

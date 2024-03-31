@@ -1,3 +1,5 @@
+placement_image: "{{ global_docker_registry }}/local/bobcat-placement:latest"
+
 placement_keystone_auth_username: placement
 placement_keystone_auth_password: placementpass
 

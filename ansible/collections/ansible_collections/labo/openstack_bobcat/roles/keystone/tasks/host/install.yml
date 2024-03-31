@@ -1,4 +1,4 @@
-- name: Setu user
+- name: Setup user
   ansible.builtin.shell: |
     groupadd -r --gid 11001 keystone
     useradd -r --uid 11001 -g keystone -d /opt/keystone -s /sbin/nologin keystone

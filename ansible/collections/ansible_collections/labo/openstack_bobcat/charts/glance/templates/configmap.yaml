@@ -1,0 +1,19 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-glance
+data:
+  glance-api.conf: |
+{{ .Values.glance_api_conf | nindent 4 }}
+  glance-api-paste.ini: |
+{{ .Values.glance_api_paste_ini | nindent 4 }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-glance-secret
+data:
+  glance-api.conf: {{ .Values.secret_glance_api_conf | b64enc }}

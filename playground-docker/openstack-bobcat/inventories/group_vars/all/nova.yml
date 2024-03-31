@@ -1,3 +1,5 @@
+nova_image: "{{ global_docker_registry }}/local/bobcat-nova:latest"
+
 nova_keystone_auth_username: nova
 nova_keystone_auth_password: novapass
 
