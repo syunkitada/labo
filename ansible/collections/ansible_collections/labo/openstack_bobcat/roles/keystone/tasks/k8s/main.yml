@@ -4,6 +4,7 @@
     extra_values:
       keystone_conf: "{{ lookup('template', './keystone.conf.j2') }}"
       keystone_secret_conf: "{{ lookup('template', './keystone-secret.conf.j2') }}"
+      httpd_wsgi_keystone_conf: "{{ lookup('template', './wsgi-keystone.conf.j2') }}"
   ansible.builtin.set_fact:
     helm_release_values: "{{ self_values | combine(extra_values) }}"
 

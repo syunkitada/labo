@@ -10,6 +10,16 @@ data:
 
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-httpd-confd
+data:
+  wsgi-keystone.conf: |
+{{ .Values.httpd_wsgi_keystone_conf | nindent 4 }}
+
+
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: etc-keystone-secret

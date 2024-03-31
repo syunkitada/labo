@@ -1,13 +1,19 @@
+- name: Setu user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11001 keystone
+    useradd -r --uid 11001 -g keystone -d /opt/keystone -s /sbin/nologin keystone
+
 - name: Install requirement packages
   ansible.builtin.yum:
     name:
       - httpd
       - mod_auth_mellon
+      - mod_auth_openidc
       - python3-mod_wsgi
 
 - name: Setup httpd
   ansible.builtin.shell: |
-    chown -R nobody:nobody /var/log/httpd
+    chown -R keystone:keystone /var/log/httpd
     sed -i 's/Listen 80//g' /etc/httpd/conf/httpd.conf
 
 - name: Install venv
@@ -19,7 +25,7 @@
 
     mkdir -p /etc/keystone
     mkdir -p /var/log/keystone
-    chown -R nobody:nobody /var/log/keystone/
+    chown -R keystone:keystone /var/log/keystone/
 
 - name: Put requirements.txt
   ansible.builtin.copy:
