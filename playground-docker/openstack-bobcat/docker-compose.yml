@@ -8,6 +8,7 @@ services:
       - "${HOME}:${HOME}:ro"
       - "/root/.ssh:/root/.ssh:ro"
       - "./inventories:/etc/ansible/inventories:ro"
+      - "./scripts:/etc/ansible/scripts:ro"
       - "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro"
     privileged: true
     cgroup_parent: docker.slice

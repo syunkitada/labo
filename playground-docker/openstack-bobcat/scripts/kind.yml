@@ -16,7 +16,16 @@ nodes:
     image: kindest/node:v1.27.3
   - role: worker
     image: kindest/node:v1.27.3
+    extraMounts:
+      - hostPath: "/home/owner"
+        containerPath: "/home/owner"
   - role: worker
     image: kindest/node:v1.27.3
+    extraMounts:
+      - hostPath: "/home/owner"
+        containerPath: "/home/owner"
   - role: worker
     image: kindest/node:v1.27.3
+    extraMounts:
+      - hostPath: "/home/owner"
+        containerPath: "/home/owner"

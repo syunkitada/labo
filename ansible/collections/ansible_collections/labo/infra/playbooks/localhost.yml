@@ -21,6 +21,8 @@
       tags: mysql
       vars:
         mysql_execution_mode: docker
+    - name: postgres
+      tags: postgres
     - name: pdns
       tags: pdns
       vars:
@@ -29,6 +31,10 @@
         pdns_records:
           - domain: test
             name: docker-registry.test
+            type: a
+            content: "{{ local_ipaddr }}"
+          - domain: test
+            name: postgresql.test
             type: a
             content: "{{ local_ipaddr }}"
     - name: keycloak

@@ -1,0 +1,7 @@
+global:
+  postgresql:
+    pasword: testpass
+    auth:
+      username: testuser
+      password: testpass
+      database: testdb
