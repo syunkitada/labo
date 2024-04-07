@@ -41,7 +41,7 @@
       tags: rabbitmq
 
 - name: Setup keystone on k8s
-  hosts: workstation
+  hosts: localhost
   become: true
   gather_facts: false
   vars:

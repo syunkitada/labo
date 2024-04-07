@@ -17,6 +17,10 @@ echo "${kubeconfig}" |
 	sed -e 's|server: .*|server: https://kind-control-plane:6443|g' |
 	sudo docker exec -i openstack-bobcat-ansible tee /root/.kube/config
 
+sudo mkdir -p /etc/ansible/root/.kube
+echo "${kubeconfig}" | sudo tee /etc/ansible/root/.kube/config
+sudo sed -i 's|server: .*|server: https://kind-control-plane:6443|g' /etc/ansible/root/.kube/config
+
 sudo helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
 sudo helm upgrade -i ingress haproxy-ingress/haproxy-ingress
 

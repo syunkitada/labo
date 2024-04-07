@@ -6,9 +6,10 @@ shift
 sudo docker run --rm \
     -v "${HOME}:${HOME}:ro" \
     -v "/root/.ssh:/root/.ssh:ro" \
+    -v "/etc/ansible/root/.kube:/root/.kube:ro" \
     -v "./inventories:/etc/ansible/inventories:ro" \
     -v "./scripts:/etc/ansible/scripts:ro" \
     -v "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro" \
-    --network openstack-bobcat_default \
+    --network kind \
     -w "${WD}" \
     local/ansible $*
