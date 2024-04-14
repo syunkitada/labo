@@ -1,0 +1,4 @@
+[Filters]
+
+# DEBUG
+sleep: RegExpFilter, sleep, root, sleep, \d+

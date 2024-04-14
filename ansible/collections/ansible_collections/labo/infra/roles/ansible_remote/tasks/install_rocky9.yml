@@ -1,0 +1,57 @@
+- name: Install requirement packages
+  ansible.builtin.yum:
+    name:
+      - podman
+      - podman-docker
+
+- name: Install venv
+  ansible.builtin.shell: |
+    python3 -m venv /opt/ansible-nonroot --system-site-packages
+    /opt/ansible-nonroot/bin/pip install pip --upgrade
+
+- name: Put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "/opt/ansible-nonroot/requirements.txt"
+
+- name: Install keystone
+  ansible.builtin.command: /opt/ansible-nonroot/bin/pip install -r /opt/ansible-nonroot/requirements.txt
+
+- name: Add the group 'ansible-nonroot'
+  ansible.builtin.group:
+    name: ansible-nonroot
+    gid: 11101
+
+- name: Add the user 'ansible-nonroot'
+  ansible.builtin.user:
+    name: ansible-nonroot
+    uid: 11101
+    group: ansible-nonroot
+    home: /home/ansible-nonroot
+    shell: /bin/bash
+
+- name: Put service
+  ansible.builtin.copy:
+    src: files/ansible-rootwrap.service
+    dest: /etc/systemd/system/ansible-rootwrap.service
+
+- name: Create directories
+  loop:
+    - /etc/ansible
+    - /etc/ansible/rootwrap.d
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Put file
+  ansible.builtin.copy:
+    src: files/rootwrap.conf
+    dest: /etc/ansible/rootwrap.conf
+
+- name: Put file
+  ansible.builtin.copy:
+    src: files/ansible.filters
+    dest: /etc/ansible/rootwrap.d/ansible.filters

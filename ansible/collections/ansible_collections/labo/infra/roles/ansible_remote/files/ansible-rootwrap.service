@@ -1,0 +1,12 @@
+[Unit]
+Description=Ansible Rootwrap
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ansible-nonroot/bin/oslo-rootwrap-daemon /etc/ansible/rootwrap.conf > /etc/ansible/rootwrap-socket-info
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

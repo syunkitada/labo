@@ -1,0 +1,23 @@
+- name: Install requirement packages
+  ansible.builtin.yum:
+    name:
+      - podman
+      - podman-docker
+
+- name: Install venv
+  ansible.builtin.shell: |
+    python3 -m venv /opt/ansible-nonroot --system-site-packages
+    /opt/ansible-nonroot/bin/pip install pip --upgrade
+
+- name: Put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "/opt/ansible-nonroot/requirements.txt"
+
+- name: Install keystone
+  ansible.builtin.command: /opt/ansible-nonroot/bin/pip install -r /opt/ansible-nonroot/requirements.txt
+
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11101 ansible-nonroot
+    useradd -r --uid 11101 -g ansible-nonroot -d /opt/ansible-nonroot -s /bin/sh ansible-nonroot

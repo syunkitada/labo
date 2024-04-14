@@ -4,7 +4,7 @@ cd "$(dirname "$0")/../" || exit 1
 
 kind_clusters=$(sudo kind get clusters)
 if ! echo "${kind_clusters}" | grep "^kind$"; then
-	sudo kind create cluster --config kind.yml
+	sudo kind create cluster --config scripts/kind.yml
 fi
 
 IP_ADDR=$(sudo docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-worker)

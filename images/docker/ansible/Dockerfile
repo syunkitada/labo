@@ -2,8 +2,10 @@ FROM rockylinux:9
 
 COPY etc/tls-assets/tmp/ca.pem /usr/share/pki/ca-trust-source/anchors/self-ca.crt
 
-RUN dnf install -y python3 python3-pip openssh-clients git
+RUN dnf install -y ca-certificates systemd sudo man vim findutils procps-ng \
+                    python3 python3-pip openssh-clients git
 
+# Install ansible
 RUN pip install --upgrade pip && \
     pip install ansible
 
@@ -25,4 +27,7 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
     install -o root -g root -m 0755 kubectl /usr/bin/kubectl && \
     rm ./kubectl
 
-CMD ["/usr/local/bin/ansible-playbook"]
+RUN update-ca-trust \
+    && ls /lib/systemd/system/*.wants/* | grep -v journald | xargs rm -rf
+
+CMD ["/usr/sbin/init"]

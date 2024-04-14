@@ -12,6 +12,9 @@ RUN dnf install -y systemd sudo man vim findutils procps-ng \
 RUN pip install --upgrade pip && \
     pip install ansible
 
+RUN useradd --uid 5000 ansible-minimal \
+    mkdir -p /home/ansible-minimal/.ssh
+
 RUN update-ca-trust \
     && ls /lib/systemd/system/*.wants/* | grep -v journald | xargs rm -rf \
     && systemctl enable sshd
