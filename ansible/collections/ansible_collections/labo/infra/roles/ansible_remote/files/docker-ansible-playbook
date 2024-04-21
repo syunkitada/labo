@@ -1,0 +1,3 @@
+#!/bin/bash -xe
+
+docker run --rm --name ansible-playbook docker-registry.test:5050/local/ansible ansible-playbook "$*"

@@ -4,10 +4,21 @@
       - podman
       - podman-docker
 
+- name: Put /etc/containers/registries.conf
+  ansible.builtin.template:
+    src: registries.conf
+    dest: /etc/containers/registries.conf
+
 - name: Install venv
   ansible.builtin.shell: |
     python3 -m venv /opt/ansible-nonroot --system-site-packages
     /opt/ansible-nonroot/bin/pip install pip --upgrade
+
+- name: Put /opt/ansible-nonroot/bin/docker-ansible-playbook
+  ansible.builtin.copy:
+    src: files/docker-ansible-playbook
+    dest: "/opt/ansible-nonroot/bin/docker-ansible-playbook"
+    mode: "0755"
 
 - name: Put requirements.txt
   ansible.builtin.copy:
@@ -30,6 +41,52 @@
     home: /home/ansible-nonroot
     shell: /bin/bash
 
+- name: Add the group 'ansible-root'
+  ansible.builtin.group:
+    name: ansible-root
+    gid: 11102
+
+- name: Add the user 'ansible-root'
+  ansible.builtin.user:
+    name: ansible-root
+    uid: 11102
+    group: ansible-root
+    home: /home/ansible-root
+    shell: /bin/bash
+
+- name: Allow the user 'ansible-root' to sudo ALL
+  community.general.sudoers:
+    name: ansible-root
+    state: present
+    user: ansible-root
+    commands: ALL
+
+- name: Create directories
+  loop:
+    - /home/ansible-root/.ssh
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: ansible-root
+    group: ansible-root
+    mode: 0700
+
+- name: Create ssh key
+  ansible.builtin.shell: |
+    set -e
+    test -e /home/ansible-root/.ssh/ssh.pem || ssh-keygen -t ed25519 -N '' -f /home/ansible-root/.ssh/ssh.pem
+    if test -e /home/ansible-root/.ssh/authorized_keys; then
+      cp /home/ansible-root/.ssh/ssh.pem.pub /home/ansible-root/.ssh/authorized_keys
+      sed -i '1s/^/from "127.0.0.1" /' /home/ansible-root/.ssh/authorized_keys
+    fi
+    chown -R ansible-root:ansible-root /home/ansible-root/.ssh
+
+- name: Put ansible-rootwrap
+  ansible.builtin.copy:
+    src: files/ansible-rootwrap.py
+    dest: /opt/ansible-nonroot/bin/ansible-rootwrap
+    mode: 0755
+
 - name: Put service
   ansible.builtin.copy:
     src: files/ansible-rootwrap.service
@@ -39,6 +96,7 @@
   loop:
     - /etc/ansible
     - /etc/ansible/rootwrap.d
+    - /etc/ansible/inventory
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
