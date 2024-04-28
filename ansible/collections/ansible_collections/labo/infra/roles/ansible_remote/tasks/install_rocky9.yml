@@ -75,9 +75,10 @@
   ansible.builtin.shell: |
     set -e
     test -e /home/ansible-root/.ssh/ssh.pem || ssh-keygen -t ed25519 -N '' -f /home/ansible-root/.ssh/ssh.pem
-    if test -e /home/ansible-root/.ssh/authorized_keys; then
+    if ! test -e /home/ansible-root/.ssh/authorized_keys; then
       cp /home/ansible-root/.ssh/ssh.pem.pub /home/ansible-root/.ssh/authorized_keys
-      sed -i '1s/^/from "127.0.0.1" /' /home/ansible-root/.ssh/authorized_keys
+      sed -i '1s/^/from="127.0.0.1,::1" /' /home/ansible-root/.ssh/authorized_keys
+      chmod 600 /home/ansible-root/.ssh/authorized_keys
     fi
     chown -R ansible-root:ansible-root /home/ansible-root/.ssh
 
@@ -100,8 +101,8 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: root
-    group: root
+    owner: ansible-nonroot
+    group: ansible-nonroot
     mode: 0755
 
 - name: Put file
