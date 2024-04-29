@@ -14,10 +14,16 @@
     python3 -m venv /opt/ansible-nonroot --system-site-packages
     /opt/ansible-nonroot/bin/pip install pip --upgrade
 
-- name: Put /opt/ansible-nonroot/bin/docker-ansible-playbook
+- name: Put /opt/ansible-nonroot/bin/lansible-playbook
   ansible.builtin.copy:
-    src: files/docker-ansible-playbook
-    dest: "/opt/ansible-nonroot/bin/docker-ansible-playbook"
+    src: files/lansible-playbook
+    dest: "/opt/ansible-nonroot/bin/lansible-playbook"
+    mode: "0755"
+
+- name: Put /opt/ansible-nonroot/bin/_lansible-playbook
+  ansible.builtin.copy:
+    src: files/_lansible-playbook
+    dest: "/opt/ansible-nonroot/bin/_lansible-playbook"
     mode: "0755"
 
 - name: Put requirements.txt
@@ -60,6 +66,7 @@
     state: present
     user: ansible-root
     commands: ALL
+    nopassword: true
 
 - name: Create directories
   loop:
@@ -90,14 +97,20 @@
 
 - name: Put service
   ansible.builtin.copy:
-    src: files/ansible-rootwrap.service
-    dest: /etc/systemd/system/ansible-rootwrap.service
+    src: files/ansible-rootwrap-daemon.service
+    dest: /etc/systemd/system/ansible-rootwrap-daemon.service
+
+- name: Put service
+  ansible.builtin.copy:
+    src: files/lansible-playbook.service
+    dest: /etc/systemd/system/lansible-playbook.service
 
 - name: Create directories
   loop:
     - /etc/ansible
     - /etc/ansible/rootwrap.d
-    - /etc/ansible/inventory
+    - /etc/ansible/group_vars/all/
+    - /etc/ansible/host_vars
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory

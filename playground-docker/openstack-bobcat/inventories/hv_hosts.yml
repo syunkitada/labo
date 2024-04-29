@@ -1,11 +1,6 @@
-workstation:
-  hosts:
-    ansible:
-
-docker:
-  children:
-    nova_compute:
-    neutron_openvswitch_agent:
+# workstation:
+#   hosts:
+#     ansible:
 
 nova_compute:
   children:
@@ -16,6 +11,9 @@ neutron_openvswitch_agent:
     hv:
 
 hv:
+  vars:
+    local_ansible_playbook: labo.openstack_bobcat.hv
+    local_ansible_image_tag: latest
   children:
     az1:
     az2:

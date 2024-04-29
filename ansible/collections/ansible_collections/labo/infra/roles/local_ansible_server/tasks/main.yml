@@ -3,9 +3,6 @@
     gather_subset:
       - distribution
 
-- debug:
-    msg: "hogeinstall_{{ ansible_facts['distribution'] | lower }}{{ ansible_facts['distribution_major_version'] }}.yml"
-
 - name: Install
   ansible.builtin.include_tasks: "install_{{ ansible_facts['distribution'] | lower }}{{ ansible_facts['distribution_major_version'] }}.yml"
 

@@ -1,5 +1,0 @@
-- name: Put values
-  ansible.builtin.copy:
-    content: "{{ hostvars[inventory_hostname] | to_nice_yaml }}"
-    dest: "/etc/ansible/values.yml"
-    mode: "0600"

@@ -3,4 +3,4 @@
   become: true
   gather_facts: false
   roles:
-    - role: local_ansible_server
+    - role: local_ansible_client

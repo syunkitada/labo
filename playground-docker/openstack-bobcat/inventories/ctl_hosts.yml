@@ -1,6 +1,11 @@
-workstation:
-  hosts:
-    ansible:
+# workstation:
+#   hosts:
+#     ansible:
+
+all:
+  vars:
+    lansible_playbook: labo.openstack_bobcat.ctl_k8s.yml
+    lansible_image_tag: latest
 
 mysql:
   hosts:
@@ -13,23 +18,22 @@ memcached:
 rabbitmq:
   hosts:
     ctl01:
-
-keystone:
-  hosts:
-    ctl01:
-
-glance:
-  hosts:
-    ctl01:
-
-placement:
-  hosts:
-    ctl01:
-
-nova:
-  hosts:
-    ctl01:
-
-neutron:
-  hosts:
-    ctl01:
+# keystone:
+#   hosts:
+#     ctl01:
+#
+# glance:
+#   hosts:
+#     ctl01:
+#
+# placement:
+#   hosts:
+#     ctl01:
+#
+# nova:
+#   hosts:
+#     ctl01:
+#
+# neutron:
+#   hosts:
+#     ctl01:

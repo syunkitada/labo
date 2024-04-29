@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/ansible-nonroot/bin/oslo-rootwrap-daemon /etc/ansible/rootwrap.conf > /etc/ansible/rootwrap-socket-info
+ExecStart=/opt/ansible-nonroot/bin/ansible-rootwrap-daemon
 KillMode=process
 Restart=on-failure
 

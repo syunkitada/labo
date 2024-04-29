@@ -1,6 +1,0 @@
-[Filters]
-
-# DEBUG
-sleep: RegExpFilter, sleep, root, sleep, \d+
-
-docker: CommandFilter, docker, root

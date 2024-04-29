@@ -1,17 +1,3 @@
-- name: Setup docker
-  hosts:
-    - workstation
-    - keystone
-    - glance
-    - nova
-    - neutron
-  gather_facts: false
-  vars:
-    docker_iptables: false
-  roles:
-    - role: labo.infra.docker
-      tags: docker
-
 - name: Setup workstation
   hosts: workstation
   become: true

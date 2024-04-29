@@ -1,6 +1,0 @@
-#!/bin/bash -xe
-
-docker run --rm \
-	-v /etc/ansible/inventory:/etc/ansible/inventory \
-	--name ansible-playbook docker-registry.test:5050/local/ansible \
-	ansible-playbook -i /etc/ansible/inventory/hosts.yml -l $(hostname) labo.openstack.hv
