@@ -18,9 +18,27 @@ services:
       - default
       - kind
 
-  ctl01:
-    container_name: "${NAMESPACE}-ctl01"
-    hostname: ctl01
+  az1-ctl01:
+    container_name: "${NAMESPACE}-az1-ctl01"
+    hostname: az1-ctl01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    ports:
+      - "8500:8500" # consul-ui
+      - "2080:80"
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az1-ctl02:
+    container_name: "${NAMESPACE}-az1-ctl02"
+    hostname: az1-ctl02
     image: local/rocky9-base
     volumes:
       - "${HOME}:${HOME}:ro"
@@ -33,9 +51,9 @@ services:
       - default
       - kind
 
-  ctl02:
-    container_name: "${NAMESPACE}-ctl02"
-    hostname: ctl02
+  az1-ctl03:
+    container_name: "${NAMESPACE}-az1-ctl03"
+    hostname: az1-ctl03
     image: local/rocky9-base
     volumes:
       - "${HOME}:${HOME}:ro"
@@ -48,9 +66,9 @@ services:
       - default
       - kind
 
-  ctl03:
-    container_name: "${NAMESPACE}-ctl03"
-    hostname: ctl03
+  az2-ctl01:
+    container_name: "${NAMESPACE}-az2-ctl01"
+    hostname: az2-ctl01
     image: local/rocky9-base
     volumes:
       - "${HOME}:${HOME}:ro"
@@ -63,9 +81,9 @@ services:
       - default
       - kind
 
-  hv01-az1:
-    container_name: "${NAMESPACE}-hv01-az1"
-    hostname: hv01-az1
+  az2-ctl02:
+    container_name: "${NAMESPACE}-az2-ctl02"
+    hostname: az2-ctl02
     image: local/rocky9-base
     volumes:
       - "${HOME}:${HOME}:ro"
@@ -78,9 +96,9 @@ services:
       - default
       - kind
 
-  hv01-az2:
-    container_name: "${NAMESPACE}-hv01-az2"
-    hostname: hv01-az2
+  az2-ctl03:
+    container_name: "${NAMESPACE}-az2-ctl03"
+    hostname: az2-ctl03
     image: local/rocky9-base
     volumes:
       - "${HOME}:${HOME}:ro"
@@ -93,9 +111,174 @@ services:
       - default
       - kind
 
-  hv01-az3:
-    container_name: "${NAMESPACE}-hv01-az3"
-    hostname: hv01-az3
+  az3-ctl01:
+    container_name: "${NAMESPACE}-az3-ctl01"
+    hostname: az3-ctl01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az3-ctl02:
+    container_name: "${NAMESPACE}-az3-ctl02"
+    hostname: az3-ctl02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az3-ctl03:
+    container_name: "${NAMESPACE}-az3-ctl03"
+    hostname: az3-ctl03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az1-hv01:
+    container_name: "${NAMESPACE}-az1-hv01"
+    hostname: az1-hv01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az1-hv02:
+    container_name: "${NAMESPACE}-az1-hv02"
+    hostname: az1-hv02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az1-hv03:
+    container_name: "${NAMESPACE}-az1-hv03"
+    hostname: az1-hv03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az2-hv01:
+    container_name: "${NAMESPACE}-az2-hv01"
+    hostname: az2-hv01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az2-hv02:
+    container_name: "${NAMESPACE}-az2-hv02"
+    hostname: az2-hv02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az2-hv03:
+    container_name: "${NAMESPACE}-az2-hv03"
+    hostname: az2-hv03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az3-hv01:
+    container_name: "${NAMESPACE}-az3-hv01"
+    hostname: az3-hv01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az3-hv02:
+    container_name: "${NAMESPACE}-az3-hv02"
+    hostname: az3-hv02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    extra_hosts:
+      - "host.docker.internal:${NETWORK_GATEWAY}"
+    networks:
+      - default
+      - kind
+
+  az3-hv03:
+    container_name: "${NAMESPACE}-az3-hv03"
+    hostname: az3-hv03
     image: local/rocky9-base
     volumes:
       - "${HOME}:${HOME}:ro"

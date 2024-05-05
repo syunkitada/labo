@@ -7,17 +7,39 @@ all:
     lansible_playbook: labo.openstack_bobcat.ctl_k8s.yml
     lansible_image_tag: latest
 
-mysql:
-  hosts:
-    ctl01:
+consul:
+  children:
+    consul_az1:
+    consul_az2:
+    consul_az3:
 
-memcached:
+consul_az1:
   hosts:
-    ctl01:
+    az1-ctl01:
+    az1-ctl02:
+    az1-ctl03:
+  vars:
+    consul_retry_join: "{{ consul_az1_retry_join }}"
 
-rabbitmq:
+consul_az2:
   hosts:
-    ctl01:
+    az2-ctl01:
+    az2-ctl02:
+    az2-ctl03:
+  vars:
+    consul_retry_join: "{{ consul_az2_retry_join }}"
+# mysql:
+#   hosts:
+#     ctl01:
+#
+# memcached:
+#   hosts:
+#     ctl01:
+#
+# rabbitmq:
+#   hosts:
+#     ctl01:
+
 # keystone:
 #   hosts:
 #     ctl01:

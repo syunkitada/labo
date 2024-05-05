@@ -1,0 +1,15 @@
+- name: Create ACL configuration
+  ansible.builtin.include_tasks:
+    file: acl.yml
+
+- name: Create Consul configuration
+  ansible.builtin.import_tasks:
+    file: config.yml
+
+- name: Create TLS configuration
+  ansible.builtin.include_tasks:
+    file: tls.yml
+
+- name: Setup
+  ansible.builtin.include_tasks:
+    file: setup.yml

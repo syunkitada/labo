@@ -1,0 +1,6 @@
+- name: Setup Consul
+  hosts: consul
+  become: true
+  gather_facts: false
+  roles:
+    - role: consul

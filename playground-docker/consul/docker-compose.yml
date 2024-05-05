@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  n1:
+    image: consul:1.15
+    container_name: consul_n1
+    environment:
+      - CONSUL_BIND_ADDRESS=172.20.20.10
+    command: agent -server -bootstrap-expect=1 -ui -client="0.0.0.0" -node=agent-one -enable-script-checks=true
+    ports:
+      - "28500:8500" # consul-ui
+      - "20080:80"
+    networks:
+      consul:
+        ipv4_address: 172.20.20.10
+  n2:
+    image: consul:1.15
+    container_name: consul_n2
+    environment:
+      - CONSUL_BIND_ADDRESS=172.20.20.11
+    command: agent -node=agent-two -enable-script-checks=true
+    volumes:
+      - "./consul.d:/consul/config"
+    depends_on:
+      - n1
+    networks:
+      consul:
+        ipv4_address: 172.20.20.11
+
+networks:
+  consul:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.20.0/24

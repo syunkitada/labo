@@ -1,0 +1,70 @@
+- name: Create dir
+  ansible.builtin.file:
+    path: /consul/config
+    state: directory
+    mode: "0755"
+
+- name: Create dir
+  ansible.builtin.file:
+    path: /consul/data
+    state: directory
+    mode: "0755"
+
+- ansible.builtin.setup:
+    gather_subset:
+      - system
+
+- name: Debug
+  debug:
+    msg: "{{ ansible_facts }}"
+
+- name: Debug
+  debug:
+    msg: "{{ groups }}"
+
+- name: Create configuration
+  vars:
+    consul_config:
+      bootstrap_expect: 1
+      client_addr: "0.0.0.0"
+      datacenter: "east-aws"
+      data_dir: "/opt/consul"
+      node_name: "{{ ansible_facts.hostname }}"
+      log_level: "DEBUG"
+      server: true
+      retry_join: "{{ consul_retry_join }}"
+      enable_script_checks: true
+      watches:
+        - type: "checks"
+          handler: "/usr/bin/health-check-handler.sh"
+      telemetry:
+        statsite_address: "127.0.0.1:2180"
+      ui_config:
+        enabled: true
+  ansible.builtin.copy:
+    dest: "/consul/config/config.json"
+    content: "{{ consul_config | to_nice_json }}"
+    mode: "644"
+  notify:
+    - Restart container-consul-server
+
+- name: Create consul-server
+  containers.podman.podman_container:
+    name: consul-server
+    image: docker.io/library/consul:1.15
+    network: host
+    command: agent
+    state: present
+    volumes:
+      - /consul/config:/consul/config
+    generate_systemd:
+      path: /etc/systemd/system/
+      restart_policy: always
+  notify:
+    - Restart container-consul-server
+
+- name: Start container-consul-server
+  ansible.builtin.systemd_service:
+    name: container-consul-server
+    daemon_reload: true
+    state: started

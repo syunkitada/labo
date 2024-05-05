@@ -24,11 +24,11 @@ sudo sed -i 's|server: .*|server: https://kind-control-plane:6443|g' /etc/ansibl
 sudo helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
 sudo helm upgrade -i ingress haproxy-ingress/haproxy-ingress
 
-echo $PWD
-sudo helm repo add bitnami https://charts.bitnami.com/bitnami
-sudo helm upgrade -i -n awx --create-namespace postgresql bitnami/postgresql -f scripts/postgresql.yml
-
-sudo helm repo add awx-operator https://ansible.github.io/awx-operator
-sudo helm upgrade -i -n awx --create-namespace awx-operator awx-operator/awx-operator
+# echo $PWD
+# sudo helm repo add bitnami https://charts.bitnami.com/bitnami
+# sudo helm upgrade -i -n awx --create-namespace postgresql bitnami/postgresql -f scripts/postgresql.yml
+#
+# sudo helm repo add awx-operator https://ansible.github.io/awx-operator
+# sudo helm upgrade -i -n awx --create-namespace awx-operator awx-operator/awx-operator
 
 # sudo kubectl apply -f scripts/awx.yml

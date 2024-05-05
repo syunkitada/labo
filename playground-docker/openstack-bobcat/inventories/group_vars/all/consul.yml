@@ -1,0 +1,14 @@
+consul_az1_retry_join:
+  - az1-ctl01:8301
+  - az1-ctl02:8301
+  - az1-ctl03:8301
+
+consul_az2_retry_join:
+  - az2-ctl01:8301
+  - az2-ctl02:8301
+  - az2-ctl03:8301
+
+consul_az3_retry_join:
+  - az3-ctl01:8301
+  - az3-ctl02:8301
+  - az3-ctl03:8301
