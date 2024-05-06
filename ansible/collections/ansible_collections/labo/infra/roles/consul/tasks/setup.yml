@@ -14,46 +14,71 @@
     gather_subset:
       - system
 
-- name: Debug
-  debug:
-    msg: "{{ ansible_facts }}"
-
-- name: Debug
-  debug:
-    msg: "{{ groups }}"
-
-- name: Create configuration
+- name: Create common configuration
   vars:
     consul_config:
-      bootstrap_expect: 1
+      bind_addr: "0.0.0.0"
       client_addr: "0.0.0.0"
-      datacenter: "east-aws"
-      data_dir: "/opt/consul"
+      datacenter: "{{ consul_datacenter }}"
       node_name: "{{ ansible_facts.hostname }}"
-      log_level: "DEBUG"
-      server: true
+      data_dir: "/consul/data"
+      log_level: "INFO"
+      server: "{{ consul_server }}"
       retry_join: "{{ consul_retry_join }}"
-      enable_script_checks: true
+      # leave_on_terminate: If enabled, when the agent receives a TERM signal,
+      # it will send a Leave message to the rest of the cluster and gracefully leave.
+      leave_on_terminate: true
+      # rejoin_after_leave: When provided, Consul will ignore a previous leave and attempt to rejoin the cluster when starting.
+      # By default, Consul treats leave as a permanent intent and does not attempt to join the cluster again when starting.
+      # This flag allows the previous state to be used to rejoin the cluster.
+      rejoin_after_leave: true
+      # Disable check script registration via HTTP API
+      enable_script_checks: false
+      enable_local_script_checks: true
       watches:
         - type: "checks"
           handler: "/usr/bin/health-check-handler.sh"
       telemetry:
         statsite_address: "127.0.0.1:2180"
-      ui_config:
-        enabled: true
   ansible.builtin.copy:
     dest: "/consul/config/config.json"
     content: "{{ consul_config | to_nice_json }}"
     mode: "644"
   notify:
-    - Restart container-consul-server
+    - Restart container-consul
 
-- name: Create consul-server
+- shell: rm -rf /consul/config/admin-token.json
+
+- name: Create server configuration
+  when: consul_server
+  vars:
+    consul_config:
+      bootstrap_expect: 1
+      retry_join_wan: "{{ consul_retry_join_wan }}"
+      primary_datacenter: "{{ consul_primary_datacenter }}"
+      acl:
+        enabled: true
+        default_policy: "deny"
+        tokens:
+          initial_management: "{{ consul_acl_admin_token }}"
+          agent: "{{ consul_acl_agent_token }}"
+      ui_config:
+        enabled: true
+      watches:
+        - type: "checks"
+          handler: "/usr/bin/health-check-handler.sh"
+  ansible.builtin.copy:
+    dest: "/consul/config/server.json"
+    content: "{{ consul_config | to_nice_json }}"
+    mode: "644"
+  notify:
+    - Restart container-consul
+
+- name: Create consul
   containers.podman.podman_container:
-    name: consul-server
+    name: consul
     image: docker.io/library/consul:1.15
     network: host
-    command: agent
     state: present
     volumes:
       - /consul/config:/consul/config
@@ -61,10 +86,10 @@
       path: /etc/systemd/system/
       restart_policy: always
   notify:
-    - Restart container-consul-server
+    - Restart container-consul
 
-- name: Start container-consul-server
+- name: Start container-consul
   ansible.builtin.systemd_service:
-    name: container-consul-server
+    name: container-consul
     daemon_reload: true
     state: started

@@ -1,5 +1,0 @@
-# - name: Create configuration
-#   ansible.builtin.copy:
-#     dest: "/etc/consul/config.json"
-#     content: ""
-#     mode: "600"
