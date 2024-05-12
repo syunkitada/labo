@@ -1,12 +1,7 @@
 #!/bin/bash -xe
 
-sudo docker run --rm \
-	-v "${HOME}:${HOME}:ro" \
+sudo docker run --rm --net host \
 	-v "/root/.ssh:/root/.ssh:ro" \
-	-v "/etc/ansible/root/.kube:/root/.kube:ro" \
-	-v "./inventories:/etc/ansible/inventories:ro" \
-	-v "./scripts:/etc/ansible/scripts:ro" \
-	-v "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro" \
-	--network kind \
-	-w "/etc/ansible/inventories" \
-	local/ansible ansible-playbook "$@"
+	-v "/etc/ansible:/etc/ansible" \
+	-e "ANSIBLE_COLLECTIONS_PATHS=/etc/ansible/collections" \
+	docker-registry.test:5050/local/ansible ansible-playbook "$@"

@@ -21,14 +21,15 @@ sudo mkdir -p /etc/ansible/root/.kube
 echo "${kubeconfig}" | sudo tee /etc/ansible/root/.kube/config
 sudo sed -i 's|server: .*|server: https://kind-control-plane:6443|g' /etc/ansible/root/.kube/config
 
-sudo helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
+repo_list=$(sudo helm repo list)
+echo ${repo_list} | grep 'haproxy-ingress' || sudo helm repo add haproxy-ingress https://haproxy-ingress.github.io/charts
 sudo helm upgrade -i ingress haproxy-ingress/haproxy-ingress
 
 # echo $PWD
 # sudo helm repo add bitnami https://charts.bitnami.com/bitnami
 # sudo helm upgrade -i -n awx --create-namespace postgresql bitnami/postgresql -f scripts/postgresql.yml
 #
-# sudo helm repo add awx-operator https://ansible.github.io/awx-operator
-# sudo helm upgrade -i -n awx --create-namespace awx-operator awx-operator/awx-operator
+echo ${repo_list} | grep 'awx-operator' || sudo helm repo add awx-operator https://ansible.github.io/awx-operator
+sudo helm upgrade -i -n awx --create-namespace awx-operator awx-operator/awx-operator
 
 # sudo kubectl apply -f scripts/awx.yml

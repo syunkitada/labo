@@ -6,4 +6,11 @@ metadata:
   name: awx
 spec:
   service_type: clusterip
-  ingress_type: Route
+  ingress_type: route
+  postgres_extra_args:
+    - "-c"
+    - "huge_pages=off"
+    - "-c"
+    - "shared_buffers=256MB"
+    - "-c"
+    - "max_connections=1000"

@@ -1,7 +1,60 @@
-global:
-  postgresql:
-    pasword: testpass
-    auth:
-      username: testuser
-      password: testpass
-      database: testdb
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: postgres
+  name: postgres-password
+type: Opaque
+data:
+  password: dGVzdA==
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: postgres
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          env:
+            - name: POSTGRES_PASSWORD
+              value: password
+          volumeMounts:
+            - name: postgres-config-volume
+              mountPath: /usr/share/postgresql/postgresql.conf.sample
+              subPath: postgresql.conf.sample
+          ports:
+            - containerPort: 5432
+      volumes:
+        - name: postgres-config-volume
+          configMap:
+            name: postgres-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: postgres
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: postgres
+  name: postgres-config
+data:
+  postgresql.conf.sample: |
+    huge_pages = off

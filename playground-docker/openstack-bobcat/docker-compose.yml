@@ -12,8 +12,6 @@ services:
       - "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -30,8 +28,6 @@ services:
     ports:
       - "8500:8500" # consul-ui
       - "2080:80"
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -45,8 +41,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -60,8 +54,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -75,8 +67,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -90,8 +80,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -105,8 +93,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -119,9 +105,7 @@ services:
       - "${HOME}:${HOME}:ro"
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
-    cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
+    # cgroup_parent: docker.slice
     networks:
       - default
       - kind
@@ -135,8 +119,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -150,8 +132,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -165,8 +145,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -180,8 +158,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -195,8 +171,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -210,8 +184,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -225,8 +197,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -240,8 +210,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -255,8 +223,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -270,8 +236,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind
@@ -285,8 +249,6 @@ services:
       - "/root/.ssh:/root/.ssh:ro"
     privileged: true
     cgroup_parent: docker.slice
-    extra_hosts:
-      - "host.docker.internal:${NETWORK_GATEWAY}"
     networks:
       - default
       - kind

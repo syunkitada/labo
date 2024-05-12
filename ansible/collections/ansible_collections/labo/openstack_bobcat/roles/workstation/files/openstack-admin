@@ -1,3 +1,0 @@
-#!/bin/bash -e
-
-sudo bash -c "source /root/adminrc; openstack $*"
