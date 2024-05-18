@@ -2,77 +2,21 @@
 
 - https://www.postgresql.org/
 
-## トラブルシューティング
+## ログイン方法
 
-### kind上でPostgreSQLが動かない
-
-エラーの内容
+参考: https://qiita.com/domodomodomo/items/04026157b75324e4ea27
 
 ```
-$ sudo kubectl logs -n postgres postgres-6766d5c987-44wfs
-The files belonging to this database system will be owned by user "postgres".
-This user must also own the server process.
-
-The database cluster will be initialized with locale "en_US.utf8".
-The default database encoding has accordingly been set to "UTF8".
-The default text search configuration will be set to "english".
-
-Data page checksums are disabled.
-
-fixing permissions on existing directory /var/lib/postgresql/data ... ok
-creating subdirectories ... ok
-selecting dynamic shared memory implementation ... posix
-selecting default max_connections ... 20
-selecting default shared_buffers ... 400kB
-selecting default time zone ... Etc/UTC
-creating configuration files ... ok
-Bus error (core dumped)
-child process exited with exit code 135
-initdb: removing contents of data directory "/var/lib/postgresql/data"
+$ psql -h localhost -U postgres
 ```
 
-manifest
+パスワードファイルを利用すると、パスワード入力を省略できる
 
 ```
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  namespace: postgres
-  name: postgres
-spec:
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-        - name: postgres
-          image: docker.io/library/postgres
-          env:
-            - name: POSTGRES_PASSWORD
-              value: postgres
+$ cat ~/.pgpass
+127.0.0.1:5432:*:postgres:postgrespass
 ```
 
-Docker上ではpostgresが動くことが確認できた。
+## 使い方
 
-また、Docker on Docker上でもpostgresが動くことが確認できた。
-
-```
-$ docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres docker.io/library/postgres
-```
-
-kindのworker上で直接以下を実行できることも確認できた。(k8sを通すとダメそう)
-
-```
-$ ctr run --rm --env POSTGRES_PASSWORD=postgres docker.io/library/postgres:latest postgres-test
-```
-
-以下によると、hugepageが利用できないにもかかわらず、k8s上で稼働しようとするとhugepageを利用しようとしてしまいエラーとなる。
-
-これはpostgresのhugepageの利用を無効化するか、k8sでhugepageを利用できるようにすることで回避ができる。
-
-- https://www.enterprisedb.com/docs/postgres_for_kubernetes/latest/troubleshooting/#error-while-bootstrapping-the-data-directory
-- https://github.com/docker-library/postgres/issues/451#issuecomment-447472044
+https://www.tohoho-web.com/ex/postgresql.html
