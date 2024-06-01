@@ -1,0 +1,2 @@
+- name: Manage groups and users
+  ansible.builtin.include_tasks: group_user.yml

@@ -34,6 +34,7 @@
 
 - name: Install docker packages
   ansible.builtin.apt:
+    allow_downgrade: true
     name:
       - "docker-ce=5:24.0.8-1~ubuntu.22.04~jammy"
       - "docker-ce-cli=5:24.0.8-1~ubuntu.22.04~jammy"

@@ -2,9 +2,12 @@ FROM local/rocky9-base
 
 COPY . /etc/ansible
 
-RUN python3 -m venv /opt/ansible --system-site-packages && \
-    /opt/ansible/bin/pip install pip --upgrade && \
-    /opt/ansible/bin/pip install -r /etc/ansible/requirements.txt
+# RUN python3 -m venv /opt/ansible --system-site-packages && \
+#     /opt/ansible/bin/pip install pip --upgrade
+
+RUN dnf -y install python3-pip
+
+RUN pip install -r /etc/ansible/requirements.txt
 
 # Install helm
 RUN curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.14.3-linux-amd64.tar.gz && \

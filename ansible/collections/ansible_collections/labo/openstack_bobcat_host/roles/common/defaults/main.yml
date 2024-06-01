@@ -1,0 +1,28 @@
+common_groups:
+  keystone:
+    gid: 1101
+  glance:
+    gid: 1102
+  placement:
+    gid: 1103
+  neutron:
+    gid: 1104
+  nova:
+    gid: 1105
+
+common_users:
+  keystone:
+    uid: 1101
+    groups: keystone
+  glance:
+    uid: 1102
+    groups: glance
+  placement:
+    uid: 1103
+    groups: placement
+  neutron:
+    uid: 1104
+    groups: neutron
+  nova:
+    uid: 1105
+    groups: nova

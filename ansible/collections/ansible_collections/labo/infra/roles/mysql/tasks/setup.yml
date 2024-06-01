@@ -1,12 +1,30 @@
-- name: Start mysql
+- name: Create directories
+  ansible.builtin.file:
+    path: /var/lib/docker-mysql
+    state: directory
+
+- name: Start mysql on docker
+  when: container_engine == "docker"
   community.docker.docker_container:
     name: mysql
-    image: mysql
+    image: mysql:8.0.37
     network_mode: host
     env:
       MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
     volumes:
       - "/var/lib/docker-mysql:/var/lib/mysql:rw"
+
+- name: Start mysql on podman
+  when: container_engine == "podman"
+  containers.podman.podman_container:
+    name: mysql
+    image: docker.io/mysql:8.0.37
+    network: host
+    env:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+    volumes:
+      - "/var/lib/docker-mysql:/var/lib/mysql:rw"
+    state: started
 
 - name: Put /root/.my.cnf
   ansible.builtin.template:
@@ -21,7 +39,7 @@
     set -e -o pipefail
 
     NEXT_WAIT_TIME=0
-    until mysql -e 'show databases;' || [ $NEXT_WAIT_TIME -eq 4 ]; do
+    until mysql -e 'show databases;' || [ $NEXT_WAIT_TIME -eq 10 ]; do
         sleep $((NEXT_WAIT_TIME++))
     done
   changed_when: false

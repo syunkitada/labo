@@ -1,0 +1,17 @@
+openstack_data_flavors:
+  - name: 1v-1024m-5g
+    vcpus: 1
+    ram: 1024
+    disk: 5
+
+openstack_data_images:
+  - name: cirros
+    url: https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
+    options: --container-format bare --disk-format qcow2 --public
+
+openstack_data_networks:
+  - name: local-net
+    options: --provider-network-type local
+    subnets:
+      - name: local-net
+        options: --subnet-range 192.168.0.0/24 --gateway 192.168.0.1 --allocation-pool start=192.168.0.2,end=192.168.0.254

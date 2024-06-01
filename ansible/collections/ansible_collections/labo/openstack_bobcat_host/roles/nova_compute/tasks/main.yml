@@ -1,0 +1,14 @@
+- name: Gather subset
+  ansible.builtin.setup:
+    gather_subset: default_ipv4
+
+- name: Setup libvirt
+  ansible.builtin.include_tasks: setup_libvirt.yml
+
+- name: Main on host
+  when: nova_compute_execution_mode == "host"
+  ansible.builtin.include_tasks: host/main.yml
+
+- name: Main on docker
+  when: nova_compute_execution_mode == "docker"
+  ansible.builtin.include_tasks: docker/main.yml

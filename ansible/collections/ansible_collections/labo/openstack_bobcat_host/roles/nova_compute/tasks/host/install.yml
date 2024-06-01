@@ -1,0 +1,6 @@
+- name: Install requirement packages
+  yum:
+    name:
+      - qemu-kvm
+      - libvirt
+      - python3-libvirt

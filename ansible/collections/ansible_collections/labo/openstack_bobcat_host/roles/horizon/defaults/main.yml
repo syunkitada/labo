@@ -1,0 +1,4 @@
+horizon_venv: /opt/horizon
+horizon_git_repo: https://github.com/openstack/horizon.git
+horizon_git_branch: stable/2023.2
+horizon_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt

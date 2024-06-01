@@ -1,0 +1,32 @@
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11005 placement
+    useradd -r --uid 11005 -g placement -d /opt/placement -s /sbin/nologin placement
+
+- name: Install venv
+  ansible.builtin.shell: |
+    set -e
+
+    python3 -m venv {{ placement_venv }} --system-site-packages
+    {{ placement_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/placement
+    mkdir -p /etc/placement
+
+- name: Put pip requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ placement_venv }}/requirements.txt"
+
+- name: Install placement
+  ansible.builtin.shell: |
+    set -e
+
+    mkdir -p {{ placement_venv }}/src
+    cd {{ placement_venv }}/src
+    test -e placement || git clone {{ placement_git_repo }} -b {{ placement_git_branch }}
+
+    cd placement
+    {{ placement_venv }}/bin/pip install . \
+      -r requirements.txt \
+      -r {{ placement_venv }}/requirements.txt \
+      -c {{ placement_upper_constraints }}

@@ -1,0 +1,4 @@
+nova_compute_execution_mode: docker
+nova_compute_image: "{{ global_docker_registry }}/local/bobcat-nova-compute:latest"
+
+nova_compute_driver: libvirt.LibvirtDriver

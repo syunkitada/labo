@@ -1,0 +1,16 @@
+version: "3"
+services:
+  ctl01:
+    container_name: openstack-bobcat-allinone
+    hostname: openstack-bobcat-allinone
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+      - "./inventories:/etc/ansible/inventories:ro"
+      - "./scripts:/etc/ansible/scripts:ro"
+      - "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    ports:
+      - "2080:80"

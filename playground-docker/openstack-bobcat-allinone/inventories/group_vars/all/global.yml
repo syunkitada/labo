@@ -1,0 +1,23 @@
+global_docker_registry: "docker-registry:5000"
+
+global_keystone_region: "global"
+global_keystone_host: "localhost:5000"
+global_keystone_admin_url: "http://{{ global_keystone_host }}/v3/"
+global_keystone_public_url: "http://{{ global_keystone_host }}/v3/"
+global_keystone_internal_url: "http://{{ global_keystone_host }}/v3/"
+
+global_keystone_admin_auth:
+  auth_url: "http://{{ global_keystone_host }}/v3/"
+  username: admin
+  password: adminpass
+  project_name: admin
+  domain_name: default
+
+global_keystone_admin_envs:
+  OS_USERNAME: "admin"
+  OS_PASSWORD: "{{ global_keystone_admin_auth.password }}"
+  OS_PROJECT_NAME: "admin"
+  OS_USER_DOMAIN_NAME: "Default"
+  OS_PROJECT_DOMAIN_NAME: "Default"
+  OS_AUTH_URL: "{{ global_keystone_admin_auth.auth_url }}"
+  OS_IDENTITY_API_VERSION: "3"

@@ -1,0 +1,7 @@
+- name: Create projects
+  loop: "{{ keystone_data_projects }}"
+  openstack.cloud.project:
+    auth: "{{ global_keystone_admin_auth }}"
+    domain: "{{ item.domain }}"
+    name: "{{ item.name }}"
+    state: present

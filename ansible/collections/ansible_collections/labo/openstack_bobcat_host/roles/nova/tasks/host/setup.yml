@@ -1,0 +1,46 @@
+- include_tasks: config.yml
+
+- name: Sync DB
+  shell: |
+    set -e
+
+    {{ nova_venv }}/bin/nova-manage api_db sync
+    {{ nova_venv }}/bin/nova-manage cell_v2 map_cell0
+    {{ nova_venv }}/bin/nova-manage cell_v2 list_cells | grep ' cell1 ' || {{ nova_venv }}/bin/nova-manage cell_v2 create_cell --name=cell1 --verbose
+    {{ nova_venv }}/bin/nova-manage db sync
+
+- name: Start nova services
+  loop:
+    - nova-api
+    - nova-conductor
+    - nova-scheduler
+    - nova-novncproxy
+  service:
+    name: "{{ item }}"
+    state: started
+
+- name: Restart nova services
+  when: nova_conf.changed
+  loop:
+    - nova-api
+    - nova-conductor
+    - nova-scheduler
+    - nova-novncproxy
+  service:
+    name: "{{ item }}"
+    state: restarted
+
+- name: Register nova service
+  shell: |
+    set -e
+
+    source /etc/adminrc
+    service_list=$(openstack service list)
+    if [[ ! $service_list =~ " nova " ]]; then
+      openstack service create --name nova --description "OpenStack Compute" compute
+      openstack endpoint create --region "{{ nova_keystone_region }}" compute public "http://{{ nova_keystone_host }}:8774/v2.1"
+      openstack endpoint create --region "{{ nova_keystone_region }}" compute internal "http://{{ nova_keystone_host }}:8774/v2.1"
+      openstack endpoint create --region "{{ nova_keystone_region }}" compute admin "http://{{ nova_keystone_host }}:8774/v2.1"
+    fi
+
+    timeout 5 bash -c 'until openstack flavor list; do sleep 1; done'

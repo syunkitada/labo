@@ -1,0 +1,11 @@
+- name: Restart service nova-services
+  loop: "{{ nova_services }}"
+  ansible.builtin.service:
+    name: "{{ item.name }}"
+    state: restarted
+
+- name: Restart docker nova-services
+  loop: "{{ nova_services }}"
+  community.docker.docker_container:
+    name: "{{ item.name }}"
+    restart: true
