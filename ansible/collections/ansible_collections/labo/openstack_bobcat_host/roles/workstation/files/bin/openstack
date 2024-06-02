@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+sudo podman run --rm --net host \
+     --env-file=/root/admin.env \
+     docker-registry.test:5050/local/ansible openstack "$@"

@@ -1,9 +1,4 @@
-- name: Restart service nova-compute
+- name: Restart keystone-public
   ansible.builtin.service:
-    name: nova-compute
+    name: keystone-public
     state: restarted
-
-- name: Restart docker nova-compute
-  community.docker.docker_container:
-    name: nova-compute
-    restart: true

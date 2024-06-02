@@ -1,12 +1,12 @@
 placement_image: "{{ global_docker_registry }}/local/bobcat-placement:latest"
 
-placement_mysql_host: ctl01
+placement_mysql_host: localhost
 placement_mysql_user: admin
 placement_mysql_password: adminpass
 
 placement_keystone_auth_username: placement
 placement_keystone_auth_password: placementpass
 
-placement_mysql_host: ctl01
+placement_mysql_host: localhost
 placement_mysql_user: admin
 placement_mysql_password: adminpass

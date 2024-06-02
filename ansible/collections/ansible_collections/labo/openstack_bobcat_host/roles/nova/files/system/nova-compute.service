@@ -11,8 +11,7 @@ TimeoutStartSec=0
 Restart=always
 User=root
 ExecStart=/opt/nova/bin/nova-compute \
-    --config-file /etc/nova/nova.conf \
-    --config-file /etc/nova/nova-compute.conf \
+    --config-file /etc/nova/nova_compute.conf \
     --log-file /var/log/nova/compute.log
 
 [Install]

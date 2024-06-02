@@ -1,8 +1,7 @@
 - name: Create flavors
+  environment: "{{ global_keystone_admin_envs }}"
   loop: "{{ openstack_data_flavors }}"
   shell: |
-    source /root/adminrc
-
     set +e
     flavor_show=$(openstack flavor show "{{ item.name }}"  2>&1)
     flavor_show_result=$?

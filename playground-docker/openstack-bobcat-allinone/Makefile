@@ -1,6 +1,7 @@
 .PHONY: all
 all:
 	@make env
+	@make deploy
 
 .PHONY: env
 env:

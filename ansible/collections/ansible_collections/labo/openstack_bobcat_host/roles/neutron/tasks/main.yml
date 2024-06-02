@@ -1,11 +1,5 @@
-- name: Main on host
-  when: neutron_execution_mode == "host"
-  ansible.builtin.include_tasks: host/main.yml
+- name: Install
+  ansible.builtin.include_tasks: install.yml
 
-- name: Main on docker
-  when: neutron_execution_mode == "docker"
-  ansible.builtin.include_tasks: docker/main.yml
-
-- name: Main on k8s
-  when: neutron_execution_mode == "k8s"
-  ansible.builtin.include_tasks: k8s/main.yml
+- name: Setup
+  ansible.builtin.include_tasks: setup.yml

@@ -1,5 +1,0 @@
-- name: Install
-  ansible.builtin.include_tasks: install.yml
-
-- name: Setup
-  ansible.builtin.include_tasks: setup.yml

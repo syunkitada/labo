@@ -7,7 +7,7 @@ Type=notify
 NotifyAccess=all
 TimeoutStartSec=0
 Restart=always
-User=nova
+User=root
 ExecStart=/opt/nova/bin/nova-conductor \
     --config-file /etc/nova/nova.conf \
     --log-file /var/log/nova/conductor.log

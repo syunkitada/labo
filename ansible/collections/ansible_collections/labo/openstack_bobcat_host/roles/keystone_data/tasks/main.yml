@@ -1,7 +1,3 @@
-- name: Set_fact
-  set_fact:
-    ansible_connection: local
-
 - name: Sync service data
   ansible.builtin.include_tasks: service.yml
 

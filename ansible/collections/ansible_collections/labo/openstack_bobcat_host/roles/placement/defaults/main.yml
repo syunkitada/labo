@@ -1,6 +1,3 @@
-placement_execution_mode: docker
-placement_image: "{{ global_docker_registry }}/local/bobcat-placement:latest"
-
 placement_venv: /opt/placement
 placement_git_repo: https://github.com/openstack/placement.git
 placement_git_branch: stable/2023.2

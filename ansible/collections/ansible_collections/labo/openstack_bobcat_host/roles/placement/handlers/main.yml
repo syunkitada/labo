@@ -1,9 +1,4 @@
-- name: Restart service placement-api
+- name: Restart placement-api
   ansible.builtin.service:
     name: placement-api
     state: restarted
-
-- name: Restart docker placement-api
-  community.docker.docker_container:
-    name: placement-api
-    restart: true

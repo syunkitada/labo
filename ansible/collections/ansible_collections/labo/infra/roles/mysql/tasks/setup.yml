@@ -3,8 +3,19 @@
     path: /var/lib/docker-mysql
     state: directory
 
+- name: Create directories
+  ansible.builtin.file:
+    path: /etc/mysql/conf.d
+    state: directory
+
+- name: Put /etc/mysql/conf.d/server.cnf
+  ansible.builtin.template:
+    src: server.cnf.j2
+    dest: /etc/mysql/conf.d/server.cnf
+    mode: "0644"
+
 - name: Start mysql on docker
-  when: container_engine == "docker"
+  when: mysql_container_engine == "docker"
   community.docker.docker_container:
     name: mysql
     image: mysql:8.0.37
@@ -15,7 +26,7 @@
       - "/var/lib/docker-mysql:/var/lib/mysql:rw"
 
 - name: Start mysql on podman
-  when: container_engine == "podman"
+  when: mysql_container_engine == "podman"
   containers.podman.podman_container:
     name: mysql
     image: docker.io/mysql:8.0.37

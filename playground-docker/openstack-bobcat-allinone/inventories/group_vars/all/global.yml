@@ -14,9 +14,9 @@ global_keystone_admin_auth:
   domain_name: default
 
 global_keystone_admin_envs:
-  OS_USERNAME: "admin"
+  OS_USERNAME: "{{ global_keystone_admin_auth.username }}"
   OS_PASSWORD: "{{ global_keystone_admin_auth.password }}"
-  OS_PROJECT_NAME: "admin"
+  OS_PROJECT_NAME: "{{ global_keystone_admin_auth.project_name }}"
   OS_USER_DOMAIN_NAME: "Default"
   OS_PROJECT_DOMAIN_NAME: "Default"
   OS_AUTH_URL: "{{ global_keystone_admin_auth.auth_url }}"

@@ -4,7 +4,7 @@
     dest: "/etc/glance/glance-api.conf"
     mode: "600"
   notify:
-    - Restart service glance-api
+    - Restart glance-api
 
 - name: Sync DB
   ansible.builtin.command: "{{ glance_venv }}/bin/glance-manage db_sync"
@@ -18,18 +18,4 @@
     systemctl status glance-api || systemd-run \
       --unit glance-api -- \
       {{ glance_venv }}/bin/glance-api --config-file /etc/glance/glance-api.conf
-  changed_when: false
-
-- name: Register glance service
-  ansible.builtin.shell: |
-    set -e
-
-    source /etc/adminrc
-    service_list=$(openstack service list)
-    if [[ ! $service_list =~ " glance " ]]; then
-      openstack service create --name glance --description "OpenStack Image" image
-      openstack endpoint create --region "{{ glance_keystone_region }}" image public "http://{{ glance_keystone_host }}:9292"
-      openstack endpoint create --region "{{ glance_keystone_region }}" image internal "http://{{ glance_keystone_host }}:9292"
-      openstack endpoint create --region "{{ glance_keystone_region }}" image admin "http://{{ glance_keystone_host }}:9292"
-    fi
   changed_when: false

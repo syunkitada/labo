@@ -4,7 +4,7 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-User=nova
+User=root
 Restart=always
 ExecStart=/opt/nova/bin/nova-novncproxy \
     --config-file /etc/nova/nova.conf \

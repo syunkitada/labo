@@ -1,9 +1,4 @@
-- name: Restart service glance-api
-  ansible.builtin.service:
+- name: Restart glance-api
+  ansible.builtin.systemd_service:
     name: glance-api
     state: restarted
-
-- name: Restart docker glance-api
-  community.docker.docker_container:
-    name: glance-api
-    restart: true

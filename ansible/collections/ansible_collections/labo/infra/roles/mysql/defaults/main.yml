@@ -9,3 +9,5 @@ mysql_users:
       "*.*": "ALL,GRANT"
 
 mysql_databases: []
+
+mysql_foreign_key_checks: 0

@@ -1,7 +1,3 @@
-- include_role:
-    name: openstack/bobcat/neutron
-    tasks_from: install.yml
-
 - name: Install require packages
   when: ansible_facts['os_family'] == "RedHat" and ansible_facts["distribution_major_version"] == "9"
   yum:

@@ -1,4 +1,27 @@
 - name: Put adminrc
-  ansible.builtin.template:
-    src: adminrc.j2
+  ansible.builtin.copy:
+    content: |
+      {% for key, value in global_keystone_admin_envs.items() %}
+      export {{ key }}={{ value }}
+      {% endfor %}
     dest: /root/adminrc
+
+- name: Put admin.env
+  ansible.builtin.copy:
+    content: |
+      {% for key, value in global_keystone_admin_envs.items() %}
+      {{ key }}={{ value }}
+      {% endfor %}
+    dest: /root/admin.env
+
+- name: Put openstack command
+  ansible.builtin.copy:
+    src: files/bin/openstack
+    dest: /usr/local/bin/openstack
+    mode: "0755"
+
+- name: Put run-workstation command
+  ansible.builtin.copy:
+    src: files/bin/run-workstation
+    dest: /usr/local/bin/run-workstation
+    mode: "0755"

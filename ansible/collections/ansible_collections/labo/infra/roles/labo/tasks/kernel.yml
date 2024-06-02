@@ -1,0 +1,6 @@
+- name: Enable modprobe
+  loop:
+    - openvswitch
+    - vxlan
+  community.general.modprobe:
+    name: "{{ item }}"

@@ -1,7 +1,13 @@
-- name: Main on host
-  when: glance_execution_mode == "host"
-  ansible.builtin.include_tasks: host/main.yml
+- name: Gather subset
+  ansible.builtin.setup:
+    gather_subset: default_ipv4
 
-- name: Main on docker
-  when: glance_execution_mode == "docker"
-  ansible.builtin.include_tasks: docker/main.yml
+- include_role:
+    name: labo.openstack_bobcat_host.neutron
+    tasks_from: install.yml
+
+- name: Install
+  ansible.builtin.include_tasks: install.yml
+
+- name: Setup
+  ansible.builtin.include_tasks: setup.yml

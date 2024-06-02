@@ -1,8 +1,7 @@
 - name: Create images
+  environment: "{{ global_keystone_admin_envs }}"
   loop: "{{ openstack_data_images }}"
   shell: |
-    source /root/adminrc
-
     set +e
     image_show=$(openstack image show "{{ item.name }}"  2>&1)
     image_show_result=$?

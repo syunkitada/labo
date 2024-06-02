@@ -1,8 +1,3 @@
-region_keystone_auth_url: http://keystone.ingress.kind.test/v3
+region_keystone_auth_url: http://localhost:5000/v3
 region_keystone_auth_region_name: playground
-region_keystone_auth_memcached_servers: ctl01:11211
-
-region_glance_host: glance.ingress.kind.test
-region_neutron_host: neutron.ingress.kind.test
-region_nova_host: nova.ingress.kind.test
-region_placement_host: placement.ingress.kind.test
+region_keystone_auth_memcached_servers: localhost:11211

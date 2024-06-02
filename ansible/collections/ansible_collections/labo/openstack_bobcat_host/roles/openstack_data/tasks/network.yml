@@ -1,8 +1,7 @@
 - name: Create networks
+  environment: "{{ global_keystone_admin_envs }}"
   loop: "{{ openstack_data_networks }}"
   shell: |
-    source /root/adminrc
-
     set +e
     network_show=$(openstack network show "{{ item.name }}"  2>&1)
     network_show_result=$?
