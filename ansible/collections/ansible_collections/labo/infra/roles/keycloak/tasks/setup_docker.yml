@@ -9,5 +9,5 @@
       KEYCLOAK_ADMIN: "{{ keycloak_admin_user }}"
       KEYCLOAK_ADMIN_PASSWORD: "{{ keycloak_admin_password }}"
     volumes:
-      - "/mnt/nfs/tls-assets/server.pem:/etc/x509/https/certs/tls.crt:ro"
-      - "/mnt/nfs/tls-assets/server-key.pem:/etc/x509/https/certs/tls.key:ro"
+      - "/etc/labo/tls-assets/server.pem:/etc/x509/https/certs/tls.crt:ro"
+      - "/etc/labo/tls-assets/server-key.pem:/etc/x509/https/certs/tls.key:ro"

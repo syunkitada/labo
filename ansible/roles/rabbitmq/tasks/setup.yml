@@ -1,9 +1,0 @@
-- name: Start rabbitmq-server
-  service:
-    name: rabbitmq-server
-    state: started
-
-- name: Create user
-  shell: |
-    rabbitmqctl list_users | grep "{{ rabbitmq_user }} " || rabbitmqctl add_user "{{ rabbitmq_user }}" "{{ rabbitmq_password }}"
-    rabbitmqctl set_permissions "{{ rabbitmq_user }}" ".*" ".*" ".*"

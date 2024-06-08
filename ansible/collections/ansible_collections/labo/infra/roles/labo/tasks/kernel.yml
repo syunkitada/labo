@@ -4,3 +4,19 @@
     - vxlan
   community.general.modprobe:
     name: "{{ item }}"
+
+- name: Sysctl
+  loop:
+    # fs.inotify.max_user_watches
+    # https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+    - key: fs.inotify.max_user_watches
+      value: "524288"
+    # fs.inotify.max_user_instances
+    # https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+    - key: fs.inotify.max_user_instances
+      value: "512"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: "/etc/sysctl.d/999-labo.conf"
+    reload: true

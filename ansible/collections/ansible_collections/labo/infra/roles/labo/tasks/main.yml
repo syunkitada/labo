@@ -1,2 +1,8 @@
-- name: Install
+- name: Setup kernel
   ansible.builtin.include_tasks: kernel.yml
+
+- name: Setup ssh
+  ansible.builtin.include_tasks: ssh.yml
+
+- name: Setup tls-assets
+  ansible.builtin.include_tasks: tls_assets.yml

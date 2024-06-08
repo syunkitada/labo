@@ -1,4 +1,0 @@
-- name: include vars
-  include_vars:
-    name: "{{ playbook_dir | basename | replace('-', '_') }}_package"
-    file: "{{ playbook_dir }}/vars/package.yaml"

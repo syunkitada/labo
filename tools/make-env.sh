@@ -19,17 +19,7 @@ test -L /etc/ansible/collections || sudo ln -s "${LABO_DIR}/ansible/collections"
 test -e /etc/ansible/host_vars/localhost.yaml || sudo cp etc/ansible/host_vars/localhost.yaml /etc/ansible/host_vars/
 test -L /etc/ansible/roles || sudo ln -s "${LABO_DIR}/ansible/roles" /etc/ansible/
 
-# setup for ssh
-sudo mkdir -p /root/.ssh
-sudo test -e /root/.ssh/labo.pem || sudo ssh-keygen -t ed25519 -N '' -f /root/.ssh/labo.pem
-sudo cp etc/ssh/config /root/.ssh/config
-sudo cp /root/.ssh/labo.pem.pub /root/.ssh/authorized_keys
-
 # install tools
 for tool in $(find tools -maxdepth 1 -name "labo-*" -printf '%f\n'); do
 	test -L "/usr/local/bin/${tool}" || sudo ln -s "$LABO_DIR/tools/$tool" "/usr/local/bin/${tool}"
 done
-
-# https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-sudo sysctl fs.inotify.max_user_watches=524288
-sudo sysctl fs.inotify.max_user_instances=512
