@@ -1,0 +1,17 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nova-api
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: nova-api
+      targetPort: nova-api
+      port: 8774
+      protocol: TCP
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}

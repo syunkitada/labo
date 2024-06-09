@@ -1,0 +1,6 @@
+[Unit]
+Description=/opt/ansible-nonroot/bin/_lansible-playbook
+
+[Service]
+Type=simple
+ExecStart=/opt/ansible-nonroot/bin/_lansible-playbook

@@ -1,0 +1,8 @@
+pdns_mysql_host: 127.0.0.1
+pdns_mysql_port: 3306
+pdns_mysql_user: admin
+pdns_mysql_password: adminpass
+
+pdns_local_address: 0.0.0.0
+pdns_domains: []
+pdns_records: []

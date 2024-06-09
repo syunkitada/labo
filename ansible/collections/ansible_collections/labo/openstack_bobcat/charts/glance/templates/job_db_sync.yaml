@@ -1,0 +1,35 @@
+# prettier-ignore
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-sync
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-sync
+          image: "{{ .Values.glance_image }}"
+          command: 
+            - /opt/glance/bin/glance-manage
+            - --config-file
+            - /etc/glance/glance-api.conf
+            - --config-file
+            - /etc/glance/secret/glance-api.conf
+            - db_sync
+          volumeMounts:
+            - name: etc-glance
+              mountPath: /etc/glance
+            - name: etc-glance-secret
+              mountPath: /etc/glance/secret
+      volumes:
+        - name: etc-glance
+          configMap:
+            name: etc-glance
+        - name: etc-glance-secret
+          secret:
+            secretName: etc-glance-secret
+      restartPolicy: OnFailure
+  backoffLimit: 2

@@ -1,0 +1,17 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: glance-api
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: glance-api
+      targetPort: glance-api
+      port: 9292
+      protocol: TCP
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}

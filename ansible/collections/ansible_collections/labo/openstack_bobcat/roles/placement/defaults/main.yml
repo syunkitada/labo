@@ -1,0 +1,9 @@
+placement_execution_mode: docker
+placement_image: "{{ global_docker_registry }}/local/bobcat-placement:latest"
+
+placement_venv: /opt/placement
+placement_git_repo: https://github.com/openstack/placement.git
+placement_git_branch: stable/2023.2
+placement_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt
+
+placement_api_port: 8778

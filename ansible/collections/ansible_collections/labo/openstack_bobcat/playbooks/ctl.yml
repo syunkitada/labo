@@ -1,0 +1,96 @@
+- name: Setup workstation
+  hosts: workstation
+  become: true
+  gather_facts: false
+  roles:
+    - role: workstation
+      tags: workstation
+
+- name: Setup memcached
+  hosts: memcached
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.infra.memcached
+      tags: memcached
+
+- name: Setup mysql
+  hosts: mysql
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.infra.mysql
+      tags: mysql
+
+- name: Import rabbitmq
+  hosts: rabbitmq
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.infra.rabbitmq
+      tags: rabbitmq
+
+- name: Setup keystone
+  hosts: keystone
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.keystone
+      tags: keystone
+
+- name: Setup keystone_data
+  hosts: workstation
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.keystone_data
+      tags: keystone_data
+
+- name: Setup glance
+  hosts: glance
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.glance
+      tags: glance
+
+- name: Setup placement
+  hosts: placement
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.placement
+      tags: placement
+
+- name: Setup nova
+  hosts: nova
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.nova
+      tags: nova
+
+- name: Setup neutron
+  hosts: neutron
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.neutron
+      tags: neutron
+
+- name: Setup openstack_data
+  hosts: workstation
+  become: true
+  gather_facts: false
+  roles:
+    - role: labo.openstack_bobcat.openstack_data
+      tags: openstack_data
+
+- name: Exec nova_discover_hosts
+  hosts: nova
+  become: true
+  gather_facts: false
+  run_once: true
+  roles:
+    - role: labo.openstack_bobcat.cmd_nova_discover_hosts
+      tags: cmd_nova_discover_hosts

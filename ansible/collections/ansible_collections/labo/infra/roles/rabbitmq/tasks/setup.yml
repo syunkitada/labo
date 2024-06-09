@@ -1,0 +1,21 @@
+- name: Start rabbitmq-server
+  ansible.builtin.service:
+    name: rabbitmq-server
+    state: started
+
+- name: Ensure that the vhost /test exists.
+  loop: "{{ rabbitmq_vhosts }}"
+  community.rabbitmq.rabbitmq_vhost:
+    name: "{{ item.name }}"
+    state: present
+
+- name: Create user
+  loop: "{{ rabbitmq_users }}"
+  community.rabbitmq.rabbitmq_user:
+    user: "{{ item.user }}"
+    password: "{{ item.password }}"
+    vhost: "{{ item.vhost }}"
+    configure_priv: "{{ item.configure_priv }}"
+    read_priv: "{{ item.read_priv }}"
+    write_priv: "{{ item.write_priv }}"
+    state: present

@@ -1,0 +1,11 @@
+- name: Start pdns-recursor
+  community.docker.docker_container:
+    name: pdns-recursor
+    image: pschiffe/pdns-recursor
+    network_mode: host
+    env:
+      PDNS_local_address: "{{ pdns_local_address }}"
+      PDNS_local_port: "53"
+      PDNS_dnssec: "off"
+      PDNS_forward_zones_recurse: "{{ pdns_domains | join('=127.0.0.1:8053,') }}=127.0.0.1:8053,.=8.8.8.8"
+      PDNS_loglevel: "9"

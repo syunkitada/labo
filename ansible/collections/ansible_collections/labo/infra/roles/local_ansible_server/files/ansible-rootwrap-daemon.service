@@ -1,0 +1,12 @@
+[Unit]
+Description=Ansible Rootwrap
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ansible-nonroot/bin/ansible-rootwrap-daemon
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

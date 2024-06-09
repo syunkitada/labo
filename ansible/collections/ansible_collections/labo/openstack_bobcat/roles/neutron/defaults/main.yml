@@ -1,0 +1,7 @@
+neutron_execution_mode: docker
+neutron_image: "{{ global_docker_registry }}/local/bobcat-neutron:latest"
+
+neutron_venv: /opt/neutron
+neutron_git_repo: https://github.com/openstack/neutron.git
+neutron_git_branch: stable/2023.2
+neutron_upper_constraints: https://raw.githubusercontent.com/openstack/requirements/stable/2023.2/upper-constraints.txt

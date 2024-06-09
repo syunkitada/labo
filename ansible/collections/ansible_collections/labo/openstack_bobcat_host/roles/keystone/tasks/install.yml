@@ -1,0 +1,42 @@
+- name: Install requirement packages
+  ansible.builtin.yum:
+    name:
+      - httpd
+      - mod_auth_mellon
+      - mod_auth_openidc
+      - python3-mod_wsgi
+
+- name: Setup httpd
+  ansible.builtin.shell: |
+    chown -R keystone:keystone /var/log/httpd
+    sed -i 's/Listen 80//g' /etc/httpd/conf/httpd.conf
+
+- name: Install venv
+  ansible.builtin.shell: |
+    set -e
+
+    python3 -m venv {{ keystone_venv }} --system-site-packages
+    {{ keystone_venv }}/bin/pip install pip --upgrade
+
+    mkdir -p /etc/keystone
+    mkdir -p /var/log/keystone
+    chown -R keystone:keystone /var/log/keystone/
+
+- name: Put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ keystone_venv }}/requirements.txt"
+
+- name: Install keystone
+  ansible.builtin.shell: |
+    set -e
+
+    mkdir -p {{ keystone_venv }}/src
+    cd {{ keystone_venv }}/src
+    test -e keystone || git clone {{ keystone_git_repo }} -b {{ keystone_git_branch }} && \
+
+    cd keystone
+    {{ keystone_venv }}/bin/pip install . \
+      -r requirements.txt \
+      -r {{ keystone_venv }}/requirements.txt \
+      -c {{ keystone_upper_constraints }}

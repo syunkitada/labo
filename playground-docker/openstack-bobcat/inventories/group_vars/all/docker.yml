@@ -1,0 +1,3 @@
+docker_iptables: false
+docker_insecure_registries:
+  - "{{ global_docker_registry }}"

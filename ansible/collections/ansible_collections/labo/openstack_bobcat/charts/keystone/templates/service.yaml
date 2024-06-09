@@ -1,0 +1,17 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keystone-public
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: keystone-public
+      targetPort: keystone-public
+      port: 5000
+      protocol: TCP
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}

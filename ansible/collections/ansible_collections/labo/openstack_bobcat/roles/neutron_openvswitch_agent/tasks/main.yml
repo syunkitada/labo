@@ -1,0 +1,7 @@
+- name: Main on host
+  when: glance_execution_mode == "host"
+  ansible.builtin.include_tasks: host/main.yml
+
+- name: Main on docker
+  when: glance_execution_mode == "docker"
+  ansible.builtin.include_tasks: docker/main.yml

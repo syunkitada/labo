@@ -1,0 +1,6 @@
+- name: Setup ansible_remote
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - role: local_ansible_server

@@ -1,0 +1,39 @@
+# prettier-ignore
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-sync
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-sync
+          image: "{{ .Values.nova_image }}"
+          command:
+            - bash
+            - -c
+            - |
+              /opt/nova/bin/nova-manage --config-file /etc/nova/nova.conf --config-file /etc/nova/secret/nova.conf api_db sync && \
+              /opt/nova/bin/nova-manage --config-file /etc/nova/nova.conf --config-file /etc/nova/secret/nova.conf cell_v2 map_cell0 && \
+              result=$(/opt/nova/bin/nova-manage --config-file /etc/nova/nova.conf --config-file /etc/nova/secret/nova.conf cell_v2 list_cells) && \
+              (echo ${result} | grep ' cell1 ' || \
+                /opt/nova/bin/nova-manage --config-file /etc/nova/nova.conf --config-file /etc/nova/secret/nova.conf cell_v2 create_cell \
+                --name=cell1 --verbose) && \
+              /opt/nova/bin/nova-manage --config-file /etc/nova/nova.conf --config-file /etc/nova/secret/nova.conf db sync
+          volumeMounts:
+            - name: etc-nova
+              mountPath: /etc/nova
+            - name: etc-nova-secret
+              mountPath: /etc/nova/secret
+      volumes:
+        - name: etc-nova
+          configMap:
+            name: etc-nova
+        - name: etc-nova-secret
+          secret:
+            secretName: etc-nova-secret
+      restartPolicy: OnFailure
+  backoffLimit: 4

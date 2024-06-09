@@ -1,0 +1,22 @@
+nova_image: "{{ global_docker_registry }}/local/bobcat-nova:latest"
+
+nova_mysql_host: localhost
+nova_mysql_user: admin
+nova_mysql_password: adminpass
+
+nova_keystone_auth_username: nova
+nova_keystone_auth_password: novapass
+
+nova_oslomsg_rpc_servers:
+  - localhost:5672
+nova_oslomsg_rpc_vhost: /
+nova_oslomsg_rpc_userid: admin
+nova_oslomsg_rpc_password: adminpass
+
+nova_mysql_host: localhost
+nova_mysql_user: admin
+nova_mysql_password: adminpass
+
+nova_api_deployment_replicas: 1
+nova_scheduler_deployment_replicas: 1
+nova_conductor_deployment_replicas: 1

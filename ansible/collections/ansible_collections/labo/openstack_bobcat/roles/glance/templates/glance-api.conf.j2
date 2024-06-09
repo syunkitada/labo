@@ -1,0 +1,18 @@
+[DEFAULT]
+enabled_backends=fs:file
+
+[glance_store]
+default_backend = fs
+
+[fs]
+filesystem_store_datadir = /var/lib/glance/images/
+
+[paste_deploy]
+flavor = keystone
+
+[keystone_authtoken]
+auth_url = {{ glance_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ glance_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+
+# cache settings
+memcached_servers = {{ glance_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}

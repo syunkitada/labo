@@ -1,0 +1,7 @@
+#!/bin/bash -xe
+
+sudo docker run --rm --net host \
+	-v "/root/.ssh:/root/.ssh:ro" \
+	-v "/etc/ansible:/etc/ansible" \
+	-e "ANSIBLE_COLLECTIONS_PATHS=/etc/ansible/collections" \
+	docker-registry.test:5050/local/ansible ansible-playbook "$@"

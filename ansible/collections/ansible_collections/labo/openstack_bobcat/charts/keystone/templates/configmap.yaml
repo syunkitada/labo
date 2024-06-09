@@ -1,0 +1,55 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-keystone
+data:
+  keystone.conf: |
+{{ .Values.keystone_conf | nindent 4 }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-httpd-confd
+data:
+  wsgi-keystone.conf: |
+{{ .Values.httpd_wsgi_keystone_conf | nindent 4 }}
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-keystone-secret
+data:
+  keystone.conf: {{ .Values.secret_keystone_conf | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-keystone-credential-keys
+data:
+  {{- range .Values.keystone_credential_keys }}
+  {{ .name }}: "{{ .key | b64enc }}"
+  {{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-keystone-fernet-keys
+data:
+  {{- range .Values.keystone_fernet_keys }}
+  {{ .name }}: "{{ .key | b64enc }}"
+  {{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: adminrc
+data:
+  OS_PASSWORD: '{{ required "required" .Values.global_keystone_admin_auth.password | b64enc }}'

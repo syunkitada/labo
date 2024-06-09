@@ -1,0 +1,81 @@
+# prettier-ignore
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keystone-public
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.keystone_public_deployment_replicas }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        {{- include "chart.labels" . | nindent 8 }}
+    spec:
+      # httpd is started as root user and wsgi process is started as keystone(11001) user
+      securityContext:
+        fsGroup: 11001
+      containers:
+        - name: httpd
+          image: "{{ .Values.keystone_image }}"
+          {{- if contains ":latest" .Values.keystone_image }}
+          imagePullPolicy: Always
+          {{- else }}
+          imagePullPolicy: IfNotPresent
+          {{- end }}
+          command:
+            - /usr/sbin/httpd
+            - -DFOREGROUND
+          env:
+            - name: OS_KEYSTONE_CONFIG_FILES
+              value: /etc/keystone/keystone.conf;/etc/keystone/secret/keystone.conf
+          ports:
+            - name: keystone-public
+              containerPort: 5000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: keystone-public
+          readinessProbe:
+            httpGet:
+              path: /
+              port: keystone-public
+          volumeMounts:
+            - name: etc-keystone
+              mountPath: /etc/keystone
+            - name: etc-keystone-secret
+              mountPath: /etc/keystone/secret
+            - name: etc-keystone-credential-keys
+              mountPath: /etc/keystone/credential-keys
+            - name: etc-keystone-fernet-keys
+              mountPath: /etc/keystone/fernet-keys
+            - name: etc-httpd-confd
+              mountPath: /etc/httpd/conf.d/wsgi-keystone.conf
+              subPath: wsgi-keystone.conf
+      volumes:
+        - name: etc-keystone
+          configMap:
+            name: etc-keystone
+            defaultMode: 0640
+        - name: etc-keystone-secret
+          secret:
+            secretName: etc-keystone-secret
+            defaultMode: 0640
+        - name: etc-keystone-credential-keys
+          secret:
+            secretName: etc-keystone-credential-keys
+            defaultMode: 0640
+        - name: etc-keystone-fernet-keys
+          secret:
+            secretName: etc-keystone-fernet-keys
+            defaultMode: 0640
+        - name: etc-httpd-confd
+          configMap:
+            name: etc-httpd-confd
+            defaultMode: 0640

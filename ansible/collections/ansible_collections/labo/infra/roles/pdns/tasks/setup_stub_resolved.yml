@@ -1,0 +1,15 @@
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: "0755"
+
+- name: Put resolv-labo.conf
+  ansible.builtin.template:
+    src: resolv-labo.conf.j2
+    dest: /etc/systemd/resolved.conf.d/resolv-labo.conf
+
+- name: Restart systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: restarted

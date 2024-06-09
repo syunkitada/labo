@@ -1,0 +1,17 @@
+- name: Install requirement packages
+  yum:
+    name:
+      - qemu-kvm
+      - libvirt
+      - python3-libvirt
+
+- name: Put libvirtd.conf
+  template:
+    src: libvirtd.conf.j2
+    dest: "/etc/libvirt/libvirtd.conf"
+  register: libvirtd_conf
+
+- name: Start libvirtd
+  service:
+    name: libvirtd
+    state: started

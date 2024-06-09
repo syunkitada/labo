@@ -1,0 +1,10 @@
+#!/bin/bash -xe
+
+source /etc/ansible/local_ansible.env
+
+docker run --rm --net host --name ansible-playbook \
+	-v /home/ansible-root:/home/ansible-root:ro \
+	-v /etc/ansible/host_vars:/etc/ansible/host_vars:ro \
+	-v /etc/ansible/hosts:/etc/ansible/hosts \
+	docker-registry.test:5050/local/ansible:${IMAGE_TAG} \
+	ansible-playbook ${PLAYBOOK} "$@"

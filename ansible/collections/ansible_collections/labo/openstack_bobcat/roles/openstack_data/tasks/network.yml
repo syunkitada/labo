@@ -1,0 +1,41 @@
+- name: Create networks
+  loop: "{{ openstack_data_networks }}"
+  shell: |
+    source /root/adminrc
+
+    set +e
+    network_show=$(openstack network show "{{ item.name }}"  2>&1)
+    network_show_result=$?
+
+    set -e
+    if [ ${network_show_result} != 0 ]; then
+      if echo "${network_show}" | grep "No Network found for {{ item.name }}$"; then
+        openstack network create \
+          {{ item.options }} \
+          {{ item.name }}
+      else
+        echo "Failed to openstack network show {{ item.name }}" >&2
+        exit 1
+      fi
+    fi
+
+
+    set +e
+    {% for subnet in item.get('subnets', []) %}
+    subnet_show=$(openstack subnet show "{{ subnet.name }}"  2>&1)
+    subnet_show_result=$?
+
+    set -e
+    if [ ${subnet_show_result} != 0 ]; then
+      if echo "${subnet_show}" | grep "No Subnet found for {{ subnet.name }}$"; then
+        openstack subnet create \
+          --network {{ item.name }} \
+          {{ subnet.options }} \
+          {{ subnet.name }}
+      else
+        echo "Failed to openstack subnet show {{ subnet.name }}" >&2
+        exit 1
+      fi
+    fi
+
+    {% endfor %}

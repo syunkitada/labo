@@ -1,0 +1,13 @@
+- name: Create services
+  loop: "{{ keystone_data_services }}"
+  openstack.cloud.catalog_service:
+    auth: "{{ global_keystone_admin_auth }}"
+    name: "{{ item.name }}"
+    type: "{{ item.type }}"
+    description: "{{ item.description }}"
+
+- name: Create region_endpoints
+  loop: "{{ keystone_data_region_endpoints }}"
+  loop_control:
+    loop_var: region_endpoint
+  include_tasks: region_endpoint.yml

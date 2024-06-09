@@ -1,0 +1,66 @@
+- name: Make directories
+  loop:
+    - /etc/nova
+    - /etc/nova/secret
+    - /var/lib/nova/instances
+  file:
+    path: "{{ item }}"
+    state: directory
+
+- name: Stat compute_id
+  stat:
+    path: /etc/nova/compute_id
+  register: compute_id_stat
+
+- name: Generate compute_id
+  shell: uuidgen > /etc/nova/compute_id
+  when: compute_id_stat.stat.exists == False
+
+- name: Put nova.conf
+  ansible.builtin.template:
+    src: nova/nova.conf.j2
+    dest: "/etc/nova/nova.conf"
+    mode: "600"
+  notify:
+    - Restart docker nova-compute
+
+- name: Put nova.conf
+  ansible.builtin.template:
+    src: nova/secret/nova.conf.j2
+    dest: "/etc/nova/secret/nova.conf"
+    mode: "600"
+  notify:
+    - Restart docker nova-compute
+
+- name: Put rootwrap.conf
+  ansible.builtin.template:
+    src: nova/rootwrap.conf.j2
+    dest: "/etc/nova/rootwrap.conf"
+    mode: "600"
+  notify:
+    - Restart docker nova-compute
+
+- name: Put nova-compute.conf
+  ansible.builtin.template:
+    src: nova-compute.conf.j2
+    dest: "/etc/nova/nova-compute.conf"
+    mode: "600"
+  notify:
+    - Restart docker nova-compute
+
+- name: Start nova-compute
+  community.docker.docker_container:
+    name: "nova-compute"
+    privileged: true
+    network_mode: "host"
+    image: "{{ nova_compute_image }}"
+    command: /opt/nova/bin/nova-compute
+      --config-file /etc/nova/nova.conf
+      --config-file /etc/nova/nova-compute.conf
+      --config-file /etc/nova/secret/nova.conf
+    volumes:
+      - "/etc/nova:/etc/nova:ro"
+      - "/var/lib/nova:/var/lib/nova:rw"
+      - "/var/run/libvirt:/var/run/libvirt:rw"
+      - "/run/libvirt:/run/libvirt:rw"
+    state: started

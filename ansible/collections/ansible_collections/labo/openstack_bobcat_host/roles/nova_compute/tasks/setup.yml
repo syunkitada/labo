@@ -1,0 +1,9 @@
+- name: Put nova-compute.conf
+  template:
+    src: nova_compute.conf.j2
+    dest: "/etc/nova/nova_compute.conf"
+
+- name: Start nova-compute
+  service:
+    name: nova-compute
+    state: started

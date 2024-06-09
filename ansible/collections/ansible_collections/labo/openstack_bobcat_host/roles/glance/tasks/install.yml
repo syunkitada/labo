@@ -1,0 +1,33 @@
+- name: Install venv
+  ansible.builtin.shell: |
+    set -e
+
+    python3 -m venv {{ glance_venv }} --system-site-packages
+    {{ glance_venv }}/bin/pip install pip --upgrade
+    mkdir -p /var/log/glance
+    mkdir -p /etc/glance
+    mkdir -p /var/lib/glance/images/
+  changed_when: false
+
+- name: Put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "{{ glance_venv }}/requirements.txt"
+    mode: "644"
+
+- name: Install glance
+  ansible.builtin.shell: |
+    set -e
+
+    mkdir -p {{ glance_venv }}/src
+    cd {{ glance_venv }}/src
+    test -e glance || git clone {{ glance_git_repo }} -b {{ glance_git_branch }}
+
+    cd glance
+    {{ glance_venv }}/bin/pip install . \
+      -r requirements.txt \
+      -r {{ glance_venv }}/requirements.txt \
+      -c {{ glance_upper_constraints }}
+
+    cp etc/glance-api-paste.ini /etc/glance/
+  changed_when: false

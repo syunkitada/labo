@@ -1,0 +1,14 @@
+- name: Sync service data
+  vars:
+    ansible_python_interpreter: /opt/workstation/bin/python
+  ansible.builtin.include_tasks: service.yml
+
+- name: Sync project data
+  vars:
+    ansible_python_interpreter: /opt/workstation/bin/python
+  ansible.builtin.include_tasks: project.yml
+
+- name: Sync user data
+  vars:
+    ansible_python_interpreter: /opt/workstation/bin/python
+  ansible.builtin.include_tasks: user.yml

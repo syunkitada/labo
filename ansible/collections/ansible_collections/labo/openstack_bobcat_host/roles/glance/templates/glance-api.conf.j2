@@ -1,0 +1,29 @@
+[DEFAULT]
+enabled_backends=fs:file
+
+[glance_store]
+default_backend = fs
+
+[fs]
+filesystem_store_datadir = /var/lib/glance/images/
+
+[paste_deploy]
+flavor = keystone
+
+[keystone_authtoken]
+auth_url = {{ glance_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ glance_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+
+# cache settings
+memcached_servers = {{ glance_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}
+
+[database]
+connection = mysql+pymysql://{{ glance_mysql_user }}:{{ glance_mysql_password }}@{{ glance_mysql_host }}/glance
+
+[keystone_authtoken]
+auth_type = password
+user_domain_name = Default
+username = {{ glance_keystone_auth_username }}
+password = {{ glance_keystone_auth_password }}
+project_domain_name = Default
+project_name = service

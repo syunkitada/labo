@@ -1,0 +1,13 @@
+- name: Gather subset
+  ansible.builtin.setup:
+    gather_subset: default_ipv4
+
+- include_role:
+    name: labo.openstack_bobcat_host.neutron
+    tasks_from: install.yml
+
+- name: Install
+  ansible.builtin.include_tasks: install.yml
+
+- name: Setup
+  ansible.builtin.include_tasks: setup.yml

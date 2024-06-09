@@ -1,0 +1,50 @@
+- name: Setup user
+  ansible.builtin.shell: |
+    groupadd -r --gid 11003 neutron
+    useradd -r --uid 11003 -g neutron -d /opt/neutron -s /sbin/nologin neutron
+
+- name: Install venv
+  shell: |
+    set -e
+
+    python3 -m venv {{ neutron_venv }} --system-site-packages
+    {{ neutron_venv }}/bin/pip install pip --upgrade
+
+    mkdir -p /var/log/neutron
+    mkdir -p /etc/neutron
+    mkdir -p /etc/neutron/plugins/ml2
+    mkdir -p /var/lib/neutron
+
+- name: Put pip requirements.txt
+  copy:
+    src: files/requirements.txt
+    dest: "{{ neutron_venv }}/requirements.txt"
+
+- name: Install neutron
+  shell: |
+    set -e
+
+    mkdir -p {{ neutron_venv }}/src
+    cd {{ neutron_venv }}/src
+    test -e neutron || git clone {{ neutron_git_repo }} -b {{ neutron_git_branch }}
+
+    cd neutron
+    {{ neutron_venv }}/bin/pip install . \
+      -r requirements.txt \
+      -r {{ neutron_venv }}/requirements.txt \
+      -c {{ neutron_upper_constraints }}
+
+    cp etc/api-paste.ini /etc/neutron/
+
+- name: Put rootwrap.conf
+  copy:
+    src: files/rootwrap.conf
+    dest: /etc/neutron/rootwrap.conf
+
+- name: Put systemd service files
+  loop:
+    - neutron-server
+    - neutron-openvswitch-agent
+  copy:
+    src: files/system/{{ item }}.service
+    dest: /usr/lib/systemd/system/{{ item }}.service

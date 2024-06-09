@@ -1,0 +1,74 @@
+# workstation:
+#   hosts:
+#     ansible:
+
+all:
+  vars:
+    lansible_playbook: labo.openstack_bobcat.ctl_k8s.yml
+    lansible_image_tag: latest
+
+consul:
+  vars:
+    consul_server: true
+  children:
+    consul_az1:
+    consul_az2:
+    consul_az3:
+
+consul_az1:
+  vars:
+    consul_datacenter: region1-az1
+    consul_retry_join: "{{ consul_az1_retry_join }}"
+  hosts:
+    az1-ctl01:
+    az1-ctl02:
+    az1-ctl03:
+
+consul_az2:
+  vars:
+    consul_datacenter: region1-az2
+    consul_retry_join: "{{ consul_az2_retry_join }}"
+  hosts:
+    az2-ctl01:
+    az2-ctl02:
+    az2-ctl03:
+
+consul_az3:
+  vars:
+    consul_datacenter: region1-az3
+    consul_retry_join: "{{ consul_az3_retry_join }}"
+  hosts:
+    az3-ctl01:
+    az3-ctl02:
+    az3-ctl03:
+# mysql:
+#   hosts:
+#     ctl01:
+#
+# memcached:
+#   hosts:
+#     ctl01:
+#
+# rabbitmq:
+#   hosts:
+#     ctl01:
+
+# keystone:
+#   hosts:
+#     ctl01:
+#
+# glance:
+#   hosts:
+#     ctl01:
+#
+# placement:
+#   hosts:
+#     ctl01:
+#
+# nova:
+#   hosts:
+#     ctl01:
+#
+# neutron:
+#   hosts:
+#     ctl01:

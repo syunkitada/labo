@@ -1,0 +1,5 @@
+- name: Restart nova-services
+  loop: "{{ nova_services }}"
+  ansible.builtin.systemd_service:
+    name: "{{ item.name }}"
+    state: restarted

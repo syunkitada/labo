@@ -1,0 +1,40 @@
+- name: Make directories
+  loop:
+    - /etc/placement
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+
+- name: Put /etc/placement/placement.conf
+  ansible.builtin.template:
+    src: placement.conf.j2
+    dest: "/etc/placement/placement.conf"
+    mode: "0600"
+  notify:
+    - Restart docker placement-api
+
+- name: Sync DB
+  loop:
+    - "{{ placement_venv }}/bin/placement-manage db sync"
+  community.docker.docker_container:
+    name: keystone-manage
+    image: "{{ placement_image }}"
+    command: "{{ item }}"
+    network_mode: "host"
+    detach: false
+    volumes:
+      - "/etc/placement:/etc/placement:ro"
+    state: started
+  changed_when: false
+
+- name: Start placement-api
+  community.docker.docker_container:
+    name: "placement-api"
+    network_mode: "host"
+    image: "{{ placement_image }}"
+    command: "/opt/placement/bin/placement-api --port {{ placement_api_port }}"
+    volumes:
+      - "/etc/placement:/etc/placement:ro"
+      - "/var/lib//placement:/var/lib/placement:rw"
+    state: started

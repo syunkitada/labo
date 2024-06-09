@@ -1,0 +1,265 @@
+version: "3"
+services:
+  ansible:
+    container_name: "${NAMESPACE}-ansible"
+    hostname: ansible
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+      - "./inventories:/etc/ansible/inventories:ro"
+      - "./scripts:/etc/ansible/scripts:ro"
+      - "/mnt/nfs/labo/ansible/collections:/etc/ansible/collections:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-ctl01:
+    container_name: "${NAMESPACE}-az1-ctl01"
+    hostname: az1-ctl01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    ports:
+      - "8500:8500" # consul-ui
+      - "2080:80"
+    networks:
+      - default
+      - kind
+
+  az1-ctl02:
+    container_name: "${NAMESPACE}-az1-ctl02"
+    hostname: az1-ctl02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-ctl03:
+    container_name: "${NAMESPACE}-az1-ctl03"
+    hostname: az1-ctl03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-ctl01:
+    container_name: "${NAMESPACE}-az2-ctl01"
+    hostname: az2-ctl01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-ctl02:
+    container_name: "${NAMESPACE}-az2-ctl02"
+    hostname: az2-ctl02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-ctl03:
+    container_name: "${NAMESPACE}-az2-ctl03"
+    hostname: az2-ctl03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-ctl01:
+    container_name: "${NAMESPACE}-az3-ctl01"
+    hostname: az3-ctl01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    # cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-ctl02:
+    container_name: "${NAMESPACE}-az3-ctl02"
+    hostname: az3-ctl02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-ctl03:
+    container_name: "${NAMESPACE}-az3-ctl03"
+    hostname: az3-ctl03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-hv01:
+    container_name: "${NAMESPACE}-az1-hv01"
+    hostname: az1-hv01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-hv02:
+    container_name: "${NAMESPACE}-az1-hv02"
+    hostname: az1-hv02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-hv03:
+    container_name: "${NAMESPACE}-az1-hv03"
+    hostname: az1-hv03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-hv01:
+    container_name: "${NAMESPACE}-az2-hv01"
+    hostname: az2-hv01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-hv02:
+    container_name: "${NAMESPACE}-az2-hv02"
+    hostname: az2-hv02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-hv03:
+    container_name: "${NAMESPACE}-az2-hv03"
+    hostname: az2-hv03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-hv01:
+    container_name: "${NAMESPACE}-az3-hv01"
+    hostname: az3-hv01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-hv02:
+    container_name: "${NAMESPACE}-az3-hv02"
+    hostname: az3-hv02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-hv03:
+    container_name: "${NAMESPACE}-az3-hv03"
+    hostname: az3-hv03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+      - "/root/.ssh:/root/.ssh:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "${NETWORK_SUBNET}"
+  kind:
+    name: kind
+    external: true

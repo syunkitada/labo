@@ -1,0 +1,19 @@
+- name: Set helm_release_values
+  vars:
+    self_values: "{{ hostvars[inventory_hostname] }}"
+    extra_values:
+      keystone_conf: "{{ lookup('template', './keystone.conf.j2') }}"
+      secret_keystone_conf: "{{ lookup('template', './secret/keystone.conf.j2') }}"
+      httpd_wsgi_keystone_conf: "{{ lookup('template', './wsgi-keystone.conf.j2') }}"
+  ansible.builtin.set_fact:
+    helm_release_values: "{{ self_values | combine(extra_values) }}"
+
+- name: Deploy keystone
+  kubernetes.core.helm:
+    name: keystone
+    release_namespace: keystone
+    chart_ref: /etc/ansible/collections/ansible_collections/labo/openstack_bobcat/charts/keystone
+    release_values: "{{ helm_release_values }}"
+    create_namespace: true
+    atomic: true
+    timeout: 1m

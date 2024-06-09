@@ -1,0 +1,19 @@
+- name: Make directories
+  loop:
+    - /etc/labo
+    - /etc/labo/ssh
+    - /etc/labo/tls-assets
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+
+- name: Create ssh-key
+  changed_when: false
+  ansible.builtin.shell: |
+    test -e /etc/labo/ssh/labo.pem || sudo ssh-keygen -t ed25519 -N '' -f /etc/labo/ssh/labo.pem
+    cp /etc/labo/ssh/labo.pem.pub /etc/labo/ssh/authorized_keys
+
+- name: Put ssh/config
+  ansible.builtin.copy:
+    src: files/ssh/config
+    dest: /etc/labo/ssh/config

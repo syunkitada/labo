@@ -1,0 +1,41 @@
+- name: Apt update
+  ansible.builtin.command: apt update
+  changed_when: false
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+
+- name: Apt update
+  ansible.builtin.command: apt update
+  changed_when: false
+
+- name: Add sources.list
+  args:
+    executable: /bin/bash
+  ansible.builtin.shell: |
+    set -e -o pipefail
+
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | tee /etc/apt/sources.list.d/docker.list >/dev/null
+  changed_when: false
+
+- name: Apt update
+  ansible.builtin.command: apt update
+  changed_when: false
+
+- name: Install docker packages
+  ansible.builtin.apt:
+    allow_downgrade: true
+    name:
+      - "docker-ce=5:24.0.8-1~ubuntu.22.04~jammy"
+      - "docker-ce-cli=5:24.0.8-1~ubuntu.22.04~jammy"
+      - "containerd.io=1.6.26-1"

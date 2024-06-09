@@ -1,0 +1,51 @@
+- name: Collect only facts returned by facter
+  ansible.builtin.setup:
+    gather_subset:
+      - default_ipv4
+
+- name: Install
+  ansible.builtin.apt:
+    name:
+      - golang-cfssl
+
+- name: Put ca-config.json
+  ansible.builtin.copy:
+    src: files/tls-assets/ca-config.json
+    dest: /etc/labo/tls-assets/ca-config.json
+
+- name: Put ca-csr.json
+  ansible.builtin.copy:
+    src: files/tls-assets/ca-csr.json
+    dest: /etc/labo/tls-assets/ca-csr.json
+
+- name: Put srver-csr.json
+  ansible.builtin.copy:
+    src: files/tls-assets/server-csr.json
+    dest: /etc/labo/tls-assets/server-csr.json
+
+- name: Shell
+  changed_when: false
+  ansible.builtin.shell: |
+    if [ -e /etc/labo/tls-assets/certs ]; then
+      exit 0
+    fi
+
+    mkdir -p /etc/labo/tls-assets/certs
+    cd /etc/labo/tls-assets/certs
+
+    cfssl gencert -config ../ca-config.json -initca ../ca-csr.json | cfssljson -bare ca
+    cfssl gencert \
+      -ca=ca.pem \
+      -ca-key=ca-key.pem \
+      -config=../ca-config.json \
+      -hostname={{ ansible_facts.default_ipv4.address }},127.0.0.1 \
+      -profile=server \
+      ../server-csr.json | cfssljson -bare server
+
+# rocky8
+# cp /mnt/nfs/tls-assets/ca.pem /usr/share/pki/ca-trust-source/anchors/
+# sudo update-ca-trust
+
+# ubuntu22
+# sudo cp /mnt/nfs/tls-assets/ca.pem /usr/local/share/ca-certificates/self-ca.crt
+# sudo update-ca-certificates

@@ -1,0 +1,4 @@
+- name: Restart placement-api
+  ansible.builtin.service:
+    name: placement-api
+    state: restarted

@@ -1,0 +1,19 @@
+keystone_image: "{{ global_docker_registry }}/local/bobcat-keystone:latest"
+
+keystone_mysql_host: ctl01
+keystone_mysql_user: admin
+keystone_mysql_password: adminpass
+
+keystone_credential_keys:
+  - name: "0"
+    key: Psa8Dd8_ZxabcT57qwq24uav9znMhEKodu9w_XN9vUk=
+  - name: "1"
+    key: JKWRJbdsKxwDX8dja04m_DK2WDJn0oNkWqw75t_XB4c=
+
+keystone_fernet_keys:
+  - name: "0"
+    key: UfIAE4OH-aAYm_dddvvojaTxbJ71mKQTsHVb3YEwzhM=
+  - name: "1"
+    key: 0NCzUPd_hDxtu_n6vZo_91fN1jEWXMMrte6qPwln87M=
+
+keystone_public_deployment_replicas: 1

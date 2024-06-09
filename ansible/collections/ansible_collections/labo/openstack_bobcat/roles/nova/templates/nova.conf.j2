@@ -1,0 +1,36 @@
+[DEFAULT]
+enabled_apis = osapi_compute,metadata
+
+instances_path = /var/lib/nova/instances
+
+[scheduler]
+workers = 1
+
+[conductor]
+workers = 1
+
+[api_database]
+
+[database]
+
+[api]
+auth_strategy = keystone
+
+[vnc]
+enabled = true
+server_listen = $my_ip
+server_proxyclient_address = $my_ip
+
+[oslo_concurrency]
+lock_path = /var/lib/nova/tmp
+
+{% set groups = ['keystone_authtoken', 'placement', 'neutron'] %}
+{% for group in groups %}
+[{{ group }}]
+auth_url = {{ nova_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ nova_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+
+# cache settings
+memcached_servers = {{ nova_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}
+
+{% endfor %}

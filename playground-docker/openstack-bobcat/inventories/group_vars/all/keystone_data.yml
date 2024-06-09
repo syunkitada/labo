@@ -1,0 +1,87 @@
+keystone_data_projects:
+  - name: service
+    domain: default
+
+keystone_data_users:
+  - name: glance
+    password: glancepass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+  - name: placement
+    password: placementpass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+  - name: nova
+    password: novapass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+  - name: neutron
+    password: neutronpass
+    domain: default
+    roles:
+      - role: admin
+        project: service
+
+keystone_data_services:
+  - name: glance
+    type: image
+    description: OpenStack Image Service
+  - name: nova
+    type: compute
+    description: OpenStack Compute Service
+  - name: placement
+    type: placement
+    description: OpenStack Placement Service
+  - name: neutron
+    type: network
+    description: OpenStack Network Service
+
+keystone_data_region_endpoints:
+  - region: playground
+    services:
+      - service: keystone
+        endpoints:
+          - interface: public
+            url: http://keystone.ingress.kind.test/v3/
+          - interface: internal
+            url: http://keystone.ingress.kind.test/v3/
+          - interface: admin
+            url: http://keystone.ingress.kind.test/v3/
+      - service: glance
+        endpoints:
+          - interface: public
+            url: http://glance.ingress.kind.test
+          - interface: internal
+            url: http://glance.ingress.kind.test
+          - interface: admin
+            url: http://glance.ingress.kind.test
+      - service: nova
+        endpoints:
+          - interface: public
+            url: http://nova.ingress.kind.test/v2.1
+          - interface: internal
+            url: http://nova.ingress.kind.test/v2.1
+          - interface: admin
+            url: http://nova.ingress.kind.test/v2.1
+      - service: placement
+        endpoints:
+          - interface: public
+            url: http://placement.ingress.kind.test
+          - interface: internal
+            url: http://placement.ingress.kind.test
+          - interface: admin
+            url: http://placement.ingress.kind.test
+      - service: neutron
+        endpoints:
+          - interface: public
+            url: http://neutron.ingress.kind.test
+          - interface: internal
+            url: http://neutron.ingress.kind.test
+          - interface: admin
+            url: http://neutron.ingress.kind.test

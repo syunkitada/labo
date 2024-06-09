@@ -1,0 +1,31 @@
+name: kind
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.configs]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."docker-registry:5000".tls]
+        insecure_skip_verify = true
+    [plugins."io.containerd.grpc.v1.cri".registry.headers]
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker-registry:5000"]
+        endpoint = ["http://docker-registry:5000"]
+
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.27.3
+  - role: worker
+    image: kindest/node:v1.27.3
+    extraMounts:
+      - hostPath: "/home/owner"
+        containerPath: "/home/owner"
+  - role: worker
+    image: kindest/node:v1.27.3
+    extraMounts:
+      - hostPath: "/home/owner"
+        containerPath: "/home/owner"
+  - role: worker
+    image: kindest/node:v1.27.3
+    extraMounts:
+      - hostPath: "/home/owner"
+        containerPath: "/home/owner"

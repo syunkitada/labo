@@ -1,6 +1,6 @@
 env:
 	tools/make-env.sh
-	sudo ansible-playbook /etc/ansible/playbook.yaml
+	sudo ansible-playbook labo.infra.labo
 
 test:
 	pytest -x -vv fabfile_tests

@@ -1,0 +1,10 @@
+glance_image: "{{ global_docker_registry }}/local/bobcat-glance:latest"
+
+glance_mysql_host: ctl01
+glance_mysql_user: admin
+glance_mysql_password: adminpass
+
+glance_keystone_auth_username: glance
+glance_keystone_auth_password: glancepass
+
+glance_api_deployment_replicas: 1

@@ -1,0 +1,13 @@
+[DEFAULT]
+
+[api]
+auth_strategy = keystone
+
+[placement_database]
+
+[keystone_authtoken]
+auth_url = {{ placement_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ placement_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+
+# cache settings
+memcached_servers = {{ placement_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}

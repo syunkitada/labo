@@ -1,0 +1,49 @@
+- name: Make directories
+  loop:
+    - /etc/glance
+    - /var/lib/glance/images
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+
+- name: Put glance-api.conf
+  ansible.builtin.template:
+    src: glance-api.conf.j2
+    dest: "/etc/glance/glance-api.conf"
+    mode: "0600"
+  notify:
+    - Restart docker glance-api
+
+- name: Put glance-api-paste.ini
+  ansible.builtin.template:
+    src: "glance-api-paste.ini.j2"
+    dest: "/etc/glance/glance-api-paste.ini"
+    mode: "0600"
+  notify:
+    - Restart docker glance-api
+
+- name: Sync DB
+  loop:
+    - "{{ glance_venv }}/bin/glance-manage db_sync"
+  community.docker.docker_container:
+    name: keystone-manage
+    image: "{{ glance_image }}"
+    command: "{{ item }}"
+    network_mode: "host"
+    detach: false
+    volumes:
+      - "/etc/glance:/etc/glance:rw"
+    state: started
+  changed_when: false
+
+- name: Start glance-api
+  community.docker.docker_container:
+    name: "glance-api"
+    network_mode: "host"
+    image: "{{ glance_image }}"
+    command: "/opt/glance/bin/glance-api"
+    volumes:
+      - "/etc/glance:/etc/glance:ro"
+      - "/var/lib/glance:/var/lib/glance:rw"
+    state: started

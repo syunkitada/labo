@@ -1,0 +1,7 @@
+- name: Assign roles
+  loop: "{{ user.roles }}"
+  openstack.cloud.role_assignment:
+    auth: "{{ global_keystone_admin_auth }}"
+    user: "{{ user.name }}"
+    role: "{{ item.role }}"
+    project: "{{ item.project }}"

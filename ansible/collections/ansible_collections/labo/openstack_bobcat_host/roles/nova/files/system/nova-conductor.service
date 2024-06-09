@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenStack Nova Conductor Server
+After=syslog.target network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+TimeoutStartSec=0
+Restart=always
+User=root
+ExecStart=/opt/nova/bin/nova-conductor \
+    --config-file /etc/nova/nova.conf \
+    --log-file /var/log/nova/conductor.log
+
+[Install]
+WantedBy=multi-user.target

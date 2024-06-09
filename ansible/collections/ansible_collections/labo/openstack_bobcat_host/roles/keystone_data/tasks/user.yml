@@ -1,0 +1,14 @@
+- name: Create users
+  loop: "{{ keystone_data_users }}"
+  openstack.cloud.identity_user:
+    auth: "{{ global_keystone_admin_auth }}"
+    domain: "{{ item.domain }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    state: present
+
+- name: Assign roles
+  loop: "{{ keystone_data_users }}"
+  loop_control:
+    loop_var: user
+  include_tasks: user_role.yml

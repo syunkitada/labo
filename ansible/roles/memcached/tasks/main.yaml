@@ -1,3 +1,0 @@
-- include_tasks: install.yaml
-
-- include_tasks: setup.yaml

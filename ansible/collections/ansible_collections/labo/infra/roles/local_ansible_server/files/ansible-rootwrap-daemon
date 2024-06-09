@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/opt/ansible-nonroot/bin/oslo-rootwrap-daemon /etc/ansible/rootwrap.conf > /etc/ansible/rootwrap-socket-info

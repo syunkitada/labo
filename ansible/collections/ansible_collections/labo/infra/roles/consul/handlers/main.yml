@@ -1,0 +1,5 @@
+- name: Restart container-consul
+  ansible.builtin.systemd_service:
+    name: container-consul
+    daemon_reload: true
+    state: restarted

@@ -1,0 +1,28 @@
+# prettier-ignore
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-neutron
+data:
+  neutron.conf: |
+{{ .Values.neutron_conf | nindent 4 }}
+  api-paste.ini: |
+{{ .Values.neutron_api_paste_ini | nindent 4 }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: etc-neutron-secret
+data:
+  neutron.conf: {{ .Values.secret_neutron_conf | b64enc }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etc-neutron-plugins-ml2
+data:
+  ml2_conf.ini: |
+{{ .Values.ml2_conf_ini | nindent 4 }}

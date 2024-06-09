@@ -1,0 +1,4 @@
+- name: Restart neutron-server
+  ansible.builtin.systemd_service:
+    name: neutron-server
+    state: restarted

@@ -1,0 +1,53 @@
+[DEFAULT]
+core_plugin = ml2
+service_plugins =
+
+transport_url = {{ neutron_oslomsg_rpc_transport|default("rabbit") }}://{% for server in neutron_oslomsg_rpc_servers %}{{ neutron_oslomsg_rpc_userid }}:{{ neutron_oslomsg_rpc_password }}@{{ server }}{% if not loop.last %},{% else %}{{ neutron_oslomsg_rpc_vhost }}{% if neutron_oslomsg_rpc_use_ssl | default(false) | bool %}?ssl=1&ssl_version={{ neutron_oslomsg_rpc_ssl_version }}&ssl_ca_file={{ neutron_oslomsg_rpc_ssl_ca_file }}{% else %}?ssl=0{% endif %}{% endif %}{% endfor %}
+
+auth_strategy = keystone
+
+# Networking to notify Compute of network topology changes
+notify_nova_on_port_status_changes = true
+notify_nova_on_port_data_changes = true
+
+# dhcp_agent_notification = true
+# dhcp_agents_per_network = 2
+# allow_overlapping_ips = False
+# agent_down_time = 90
+api_workers = 1
+
+
+[oslo_concurrency]
+lock_path = /var/lib/neutron/tmp
+
+[database]
+
+[agent]
+root_helper = "sudo env PATH=/opt/neutron/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+{% set groups = ['keystone_authtoken', 'nova'] %}
+{% for group in groups %}
+[{{ group }}]
+auth_url = {{ neutron_keystone_auth_url|default(region_keystone_auth_url) }}
+region_name = {{ neutron_keystone_auth_region_name|default(region_keystone_auth_region_name) }}
+
+# cache settings
+memcached_servers = {{ neutron_keystone_auth_memcached_servers|default(region_keystone_auth_memcached_servers) }}
+
+{% endfor %}
+
+
+[database]
+connection = mysql+pymysql://{{ neutron_mysql_user }}:{{ neutron_mysql_password }}@{{ neutron_mysql_host }}/neutron
+
+{% set groups = ['keystone_authtoken', 'nova'] %}
+{% for group in groups %}
+[{{ group }}]
+auth_type = password
+project_domain_name = Default
+project_name = service
+user_domain_name = Default
+username = {{ neutron_keystone_auth_username }}
+password = {{ neutron_keystone_auth_password }}
+
+{% endfor %}

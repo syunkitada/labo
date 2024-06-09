@@ -1,0 +1,4 @@
+{
+    "iptables": {{ docker_iptables | lower }},
+    "insecure-registries": {{ docker_insecure_registries|to_nice_json }}
+}

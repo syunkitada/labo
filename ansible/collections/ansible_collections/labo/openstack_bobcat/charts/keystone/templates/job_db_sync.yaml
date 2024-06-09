@@ -1,0 +1,59 @@
+# prettier-ignore
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-sync
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-sync
+          image: "{{ .Values.keystone_image }}"
+          command:
+            - bash
+            - -e
+            - -c
+            - |
+              /opt/keystone/bin/keystone-manage \
+                --config-file /etc/keystone/keystone.conf \
+                --config-file /etc/keystone/secret/keystone.conf \
+                db_sync &&
+              /opt/keystone/bin/keystone-manage \
+                --config-file /etc/keystone/keystone.conf \
+                --config-file /etc/keystone/secret/keystone.conf \
+                bootstrap \
+                --bootstrap-password "${OS_PASSWORD}" \
+                --bootstrap-admin-url '{{ .Values.global_keystone_admin_url }}' \
+                --bootstrap-internal-url '{{ .Values.global_keystone_internal_url }}' \
+                --bootstrap-public-url '{{ .Values.global_keystone_public_url }}' \
+                --bootstrap-region-id '{{ .Values.global_keystone_region }}'
+          volumeMounts:
+            - name: etc-keystone
+              mountPath: /etc/keystone
+            - name: etc-keystone-secret
+              mountPath: /etc/keystone/secret
+            - name: etc-keystone-credential-keys
+              mountPath: /etc/keystone/credential-keys
+            - name: etc-keystone-fernet-keys
+              mountPath: /etc/keystone/fernet-keys
+          envFrom:
+            - secretRef:
+                name: adminrc
+      volumes:
+        - name: etc-keystone
+          configMap:
+            name: etc-keystone
+        - name: etc-keystone-secret
+          secret:
+            secretName: etc-keystone-secret
+        - name: etc-keystone-credential-keys
+          secret:
+            secretName: etc-keystone-credential-keys
+        - name: etc-keystone-fernet-keys
+          secret:
+            secretName: etc-keystone-fernet-keys
+      restartPolicy: OnFailure
+  backoffLimit: 1

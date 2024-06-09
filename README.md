@@ -17,20 +17,3 @@
 $ git clone https://github.com/syunkitada/labo.git
 $ make env
 ```
-
-```
-$ sudo vim /etc/ansible/local.yaml
-
-local:
-  ipaddr: "{{ CHANGE_ME }}"
-```
-
-```
-$ make infra
-```
-
-## 初回移行セットアップ
-
-```
-$ source laborc
-```

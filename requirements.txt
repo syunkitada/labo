@@ -3,4 +3,5 @@ pytest
 pyyaml
 tabulate
 ansible
+ansible-lint
 requests

@@ -1,0 +1,9 @@
+- name: Restart service nova-compute
+  ansible.builtin.service:
+    name: nova-compute
+    state: restarted
+
+- name: Restart docker nova-compute
+  community.docker.docker_container:
+    name: nova-compute
+    restart: true

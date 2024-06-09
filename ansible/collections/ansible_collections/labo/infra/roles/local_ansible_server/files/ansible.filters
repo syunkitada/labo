@@ -1,0 +1,8 @@
+[Filters]
+
+# DEBUG
+# sleep: RegExpFilter, sleep, root, sleep, \d+
+
+# docker: CommandFilter, docker, root
+
+_local-ansible-playbook: CommandFilter, /opt/ansible-nonroot/bin/_local-ansible-playbook, root

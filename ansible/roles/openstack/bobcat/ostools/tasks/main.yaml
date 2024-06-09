@@ -1,2 +1,0 @@
-- name: install
-  include_tasks: tasks/install.yaml

@@ -1,0 +1,71 @@
+- name: Create directories
+  ansible.builtin.file:
+    path: /var/lib/docker-mysql
+    state: directory
+
+- name: Create directories
+  ansible.builtin.file:
+    path: /etc/mysql/conf.d
+    state: directory
+
+- name: Put /etc/mysql/conf.d/server.cnf
+  ansible.builtin.template:
+    src: server.cnf.j2
+    dest: /etc/mysql/conf.d/server.cnf
+    mode: "0644"
+
+- name: Start mysql on docker
+  when: mysql_container_engine == "docker"
+  community.docker.docker_container:
+    name: mysql
+    image: mysql:8.0.37
+    network_mode: host
+    env:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+    volumes:
+      - "/var/lib/docker-mysql:/var/lib/mysql:rw"
+
+- name: Start mysql on podman
+  when: mysql_container_engine == "podman"
+  containers.podman.podman_container:
+    name: mysql
+    image: docker.io/mysql:8.0.37
+    network: host
+    env:
+      MYSQL_ROOT_PASSWORD: "{{ mysql_root_password }}"
+    volumes:
+      - "/var/lib/docker-mysql:/var/lib/mysql:rw"
+    state: started
+
+- name: Put /root/.my.cnf
+  ansible.builtin.template:
+    src: my.cnf.j2
+    dest: /root/.my.cnf
+    mode: "0600"
+
+- name: Wait to start mysql
+  args:
+    executable: /bin/bash
+  ansible.builtin.shell: |
+    set -e -o pipefail
+
+    NEXT_WAIT_TIME=0
+    until mysql -e 'show databases;' || [ $NEXT_WAIT_TIME -eq 10 ]; do
+        sleep $((NEXT_WAIT_TIME++))
+    done
+  changed_when: false
+
+- name: Create databases
+  loop: "{{ mysql_databases }}"
+  community.mysql.mysql_db:
+    name: "{{ item }}"
+    state: present
+
+- name: Create users
+  loop: "{{ mysql_users }}"
+  community.mysql.mysql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    host: "{{ item.host }}"
+    priv: "{{ item.priv }}"
+    state: present

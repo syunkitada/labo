@@ -1,0 +1,52 @@
+# prettier-ignore
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nova-scheduler
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.nova_scheduler_deployment_replicas }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        {{- include "chart.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11005
+        runAsGroup: 11005
+        fsGroup: 11005
+      containers:
+        - name: nova-scheduler
+          image: "{{ .Values.nova_image }}"
+          {{- if contains ":latest" .Values.nova_image }}
+          imagePullPolicy: Always
+          {{- else }}
+          imagePullPolicy: IfNotPresent
+          {{- end }}
+          command:
+            - /opt/nova/bin/nova-scheduler
+            - --config-file
+            - /etc/nova/nova.conf
+            - --config-file
+            - /etc/nova/secret/nova.conf
+          volumeMounts:
+            - name: etc-nova
+              mountPath: /etc/nova
+            - name: etc-nova-secret
+              mountPath: /etc/nova/secret
+      volumes:
+        - name: etc-nova
+          configMap:
+            name: etc-nova
+            defaultMode: 0640
+        - name: etc-nova-secret
+          secret:
+            secretName: etc-nova-secret
+            defaultMode: 0640

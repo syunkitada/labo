@@ -1,0 +1,8 @@
+- name: Sync service data
+  ansible.builtin.include_tasks: service.yml
+
+- name: Sync project data
+  ansible.builtin.include_tasks: project.yml
+
+- name: Sync user data
+  ansible.builtin.include_tasks: user.yml

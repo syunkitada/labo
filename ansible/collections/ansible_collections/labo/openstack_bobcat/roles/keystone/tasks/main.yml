@@ -1,0 +1,11 @@
+- name: Host main
+  when: keystone_execution_mode == "host"
+  ansible.builtin.include_tasks: host/main.yml
+
+- name: Docker main
+  when: keystone_execution_mode == "docker"
+  ansible.builtin.include_tasks: docker/main.yml
+
+- name: K8S main
+  when: keystone_execution_mode == "k8s"
+  ansible.builtin.include_tasks: k8s/main.yml

@@ -1,0 +1,69 @@
+# prettier-ignore
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance-api
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.glance_api_deployment_replicas }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        {{- include "chart.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11002
+        runAsGroup: 11002
+        fsGroup: 11002
+      containers:
+        - name: glance-api
+          image: "{{ .Values.glance_image }}"
+          {{- if contains ":latest" .Values.glance_image }}
+          imagePullPolicy: Always
+          {{- else }}
+          imagePullPolicy: IfNotPresent
+          {{- end }}
+          command:
+            - /opt/glance/bin/glance-api
+            - --config-file
+            - /etc/glance/glance-api.conf
+            - --config-file
+            - /etc/glance/secret/glance-api.conf
+          ports:
+            - name: glance-api
+              containerPort: 9292
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: glance-api
+          readinessProbe:
+            httpGet:
+              path: /
+              port: glance-api
+          volumeMounts:
+            - name: etc-glance
+              mountPath: /etc/glance
+            - name: etc-glance-secret
+              mountPath: /etc/glance/secret
+            - name: var-lib-glance-images
+              mountPath: /var/lib/glance/images/
+      volumes:
+        - name: etc-glance
+          configMap:
+            name: etc-glance
+            defaultMode: 0640
+        - name: etc-glance-secret
+          secret:
+            secretName: etc-glance-secret
+            defaultMode: 0640
+        - name: var-lib-glance-images
+          emptyDir:
+            sizeLimit: 1G

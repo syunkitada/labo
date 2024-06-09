@@ -1,0 +1,12 @@
+hv_az1:
+  vars:
+    consul_datacenter: region1-az1
+    consul_retry_join: "{{ consul_az1_retry_join }}"
+  children:
+    hv_rack1:
+
+hv_rack1:
+  hosts:
+    az1-hv01:
+    az1-hv02:
+    az1-hv03:

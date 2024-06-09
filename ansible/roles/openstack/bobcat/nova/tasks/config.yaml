@@ -1,5 +1,0 @@
-- name: Put nova.conf
-  template:
-    src: nova.conf.j2
-    dest: "/etc/nova/nova.conf"
-  register: nova_conf

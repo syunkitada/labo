@@ -1,0 +1,4 @@
+- name: Restart keystone-public
+  ansible.builtin.service:
+    name: keystone-public
+    state: restarted

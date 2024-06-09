@@ -1,0 +1,44 @@
+- name: Set fact inventory
+  vars:
+    inventory: |
+      all:
+        hosts:
+          localhost:
+            inventory_hostname: localhost
+            inventory_hostname_short: localhost
+            ansible_user: ansible-root
+            ansible_ssh_private_key_file: /home/ansible-root/.ssh/ssh.pem
+            ansible_host_key_checking: False
+      {% for name in group_names %}
+      {{ name }}:
+        hosts:
+          localhost:
+      {% endfor %}
+  ansible.builtin.set_fact:
+    inventory: "{{ inventory | from_yaml }}"
+
+- name: Put local_ansible.env
+  ansible.builtin.copy:
+    content: |
+      IMAGE_TAG={{ lansible_image_tag }}
+      PLAYBOOK={{ lansible_playbook }}
+    dest: "/etc/ansible/local_ansible.env"
+    owner: ansible-nonroot
+    group: ansible-nonroot
+    mode: "0600"
+
+- name: Put /etc/ansible/hosts
+  ansible.builtin.copy:
+    content: "{{ inventory | to_nice_yaml }}"
+    dest: "/etc/ansible/hosts"
+    owner: ansible-nonroot
+    group: ansible-nonroot
+    mode: "0600"
+
+- name: Put /etc/ansible/group_vars/all/localhost.yml
+  ansible.builtin.copy:
+    content: "{{ hostvars[inventory_hostname] | to_nice_yaml }}"
+    dest: "/etc/ansible/group_vars/all/localhost.yml"
+    owner: ansible-nonroot
+    group: ansible-nonroot
+    mode: "0600"

@@ -1,0 +1,21 @@
+# prettier-ignore
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nova-api
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: {{ required "required" .Values.region_nova_host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nova-api
+                port:
+                  number: 8774

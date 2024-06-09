@@ -1,0 +1,19 @@
+- name: Set helm_release_values
+  vars:
+    self_values: "{{ hostvars[inventory_hostname] }}"
+    extra_values:
+      glance_api_conf: "{{ lookup('template', './glance-api.conf.j2') }}"
+      glance_api_paste_ini: "{{ lookup('template', './glance-api-paste.ini.j2') }}"
+      secret_glance_api_conf: "{{ lookup('template', './secret/glance-api.conf.j2') }}"
+  ansible.builtin.set_fact:
+    helm_release_values: "{{ self_values | combine(extra_values) }}"
+
+- name: Deploy glance
+  kubernetes.core.helm:
+    name: glance
+    release_namespace: glance
+    chart_ref: /etc/ansible/collections/ansible_collections/labo/openstack_bobcat/charts/glance
+    release_values: "{{ helm_release_values }}"
+    create_namespace: true
+    atomic: true
+    timeout: 1m

@@ -1,0 +1,9 @@
+- name: Setup mysql
+  hosts: mysql
+  become: true
+  gather_facts: false
+  roles:
+    - role: docker
+      tags: docker
+    - role: mysql
+      tags: mysql

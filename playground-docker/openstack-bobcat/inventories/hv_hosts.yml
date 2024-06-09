@@ -1,0 +1,26 @@
+# workstation:
+#   hosts:
+#     ansible:
+
+nova_compute:
+  children:
+    hv:
+
+neutron_openvswitch_agent:
+  children:
+    hv:
+
+consul:
+  vars:
+    consul_server: false
+  children:
+    hv:
+
+hv:
+  vars:
+    local_ansible_playbook: labo.openstack_bobcat.hv
+    local_ansible_image_tag: latest
+  children:
+    hv_az1:
+    hv_az2:
+    hv_az3:

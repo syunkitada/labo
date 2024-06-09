@@ -1,0 +1,34 @@
+- name: Put api-paste.ini
+  ansible.builtin.template:
+    src: "api-paste.ini.j2"
+    dest: "/etc/nova/api-paste.ini"
+    mode: "0644"
+  notify:
+    - Restart nova-services
+
+- name: Put nova.conf
+  ansible.builtin.template:
+    src: nova.conf.j2
+    dest: "/etc/nova/nova.conf"
+    mode: "0644"
+  notify:
+    - Restart nova-services
+
+- name: Sync DB
+  shell: |
+    set -e
+
+    {{ nova_venv }}/bin/nova-manage api_db sync
+    {{ nova_venv }}/bin/nova-manage cell_v2 map_cell0
+    {{ nova_venv }}/bin/nova-manage cell_v2 list_cells | grep ' cell1 ' || {{ nova_venv }}/bin/nova-manage cell_v2 create_cell --name=cell1 --verbose
+    {{ nova_venv }}/bin/nova-manage db sync
+
+- name: Start nova services
+  loop:
+    - nova-api
+    - nova-conductor
+    - nova-scheduler
+    - nova-novncproxy
+  service:
+    name: "{{ item }}"
+    state: started

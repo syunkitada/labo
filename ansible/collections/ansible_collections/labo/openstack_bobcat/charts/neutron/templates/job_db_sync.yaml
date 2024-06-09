@@ -1,0 +1,43 @@
+# prettier-ignore
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-sync
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: db-sync
+          image: "{{ .Values.neutron_image }}"
+          command:
+            - /opt/neutron/bin/neutron-db-manage
+            - --config-file
+            - /etc/neutron/neutron.conf
+            - --config-file
+            - /etc/neutron/secret/neutron.conf
+            - --config-file
+            - /etc/neutron/plugins/ml2/ml2_conf.ini
+            - upgrade
+            - head
+          volumeMounts:
+            - name: etc-neutron
+              mountPath: /etc/neutron
+            - name: etc-neutron-secret
+              mountPath: /etc/neutron/secret
+            - name: etc-neutron-plugins-ml2
+              mountPath: /etc/neutron/plugins/ml2
+      volumes:
+        - name: etc-neutron
+          configMap:
+            name: etc-neutron
+        - name: etc-neutron-secret
+          secret:
+            secretName: etc-neutron-secret
+        - name: etc-neutron-plugins-ml2
+          configMap:
+            name: etc-neutron-plugins-ml2
+      restartPolicy: OnFailure
+  backoffLimit: 2

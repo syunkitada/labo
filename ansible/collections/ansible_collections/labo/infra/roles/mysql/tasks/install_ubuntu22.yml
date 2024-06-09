@@ -1,0 +1,5 @@
+- name: Install packages
+  ansible.builtin.apt:
+    name:
+      - mysql-client
+      - python3-pymysql

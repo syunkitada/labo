@@ -1,0 +1,14 @@
+- name: Setup group
+  with_dict: "{{ common_groups }}"
+  ansible.builtin.group:
+    gid: "{{ item.value.gid }}"
+    name: "{{ item.key }}"
+    state: present
+
+- name: Setup user
+  with_dict: "{{ common_users }}"
+  ansible.builtin.user:
+    uid: "{{ item.value.uid }}"
+    name: "{{ item.key }}"
+    groups: "{{ item.value.groups }}"
+    create_home: false

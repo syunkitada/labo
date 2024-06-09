@@ -1,0 +1,10 @@
+rabbitmq_vhosts:
+  - name: /
+
+rabbitmq_users:
+  - user: admin
+    password: adminpass
+    vhost: /
+    configure_priv: .*
+    read_priv: .*
+    write_priv: .*

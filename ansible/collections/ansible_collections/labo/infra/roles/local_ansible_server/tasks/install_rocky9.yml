@@ -1,0 +1,129 @@
+- name: Install requirement packages
+  ansible.builtin.yum:
+    name:
+      - podman
+      - podman-docker
+
+- name: Put /etc/containers/registries.conf
+  ansible.builtin.template:
+    src: registries.conf
+    dest: /etc/containers/registries.conf
+
+- name: Install venv
+  ansible.builtin.shell: |
+    python3 -m venv /opt/ansible-nonroot --system-site-packages
+    /opt/ansible-nonroot/bin/pip install pip --upgrade
+
+- name: Put /opt/ansible-nonroot/bin/lansible-playbook
+  ansible.builtin.copy:
+    src: files/lansible-playbook
+    dest: "/opt/ansible-nonroot/bin/lansible-playbook"
+    mode: "0755"
+
+- name: Put /opt/ansible-nonroot/bin/_lansible-playbook
+  ansible.builtin.copy:
+    src: files/_lansible-playbook
+    dest: "/opt/ansible-nonroot/bin/_lansible-playbook"
+    mode: "0755"
+
+- name: Put requirements.txt
+  ansible.builtin.copy:
+    src: files/requirements.txt
+    dest: "/opt/ansible-nonroot/requirements.txt"
+
+- name: Install keystone
+  ansible.builtin.command: /opt/ansible-nonroot/bin/pip install -r /opt/ansible-nonroot/requirements.txt
+
+- name: Add the group 'ansible-nonroot'
+  ansible.builtin.group:
+    name: ansible-nonroot
+    gid: 11101
+
+- name: Add the user 'ansible-nonroot'
+  ansible.builtin.user:
+    name: ansible-nonroot
+    uid: 11101
+    group: ansible-nonroot
+    home: /home/ansible-nonroot
+    shell: /bin/bash
+
+- name: Add the group 'ansible-root'
+  ansible.builtin.group:
+    name: ansible-root
+    gid: 11102
+
+- name: Add the user 'ansible-root'
+  ansible.builtin.user:
+    name: ansible-root
+    uid: 11102
+    group: ansible-root
+    home: /home/ansible-root
+    shell: /bin/bash
+
+- name: Allow the user 'ansible-root' to sudo ALL
+  community.general.sudoers:
+    name: ansible-root
+    state: present
+    user: ansible-root
+    commands: ALL
+    nopassword: true
+
+- name: Create directories
+  loop:
+    - /home/ansible-root/.ssh
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: ansible-root
+    group: ansible-root
+    mode: 0700
+
+- name: Create ssh key
+  ansible.builtin.shell: |
+    set -e
+    test -e /home/ansible-root/.ssh/ssh.pem || ssh-keygen -t ed25519 -N '' -f /home/ansible-root/.ssh/ssh.pem
+    if ! test -e /home/ansible-root/.ssh/authorized_keys; then
+      cp /home/ansible-root/.ssh/ssh.pem.pub /home/ansible-root/.ssh/authorized_keys
+      sed -i '1s/^/from="127.0.0.1,::1" /' /home/ansible-root/.ssh/authorized_keys
+      chmod 600 /home/ansible-root/.ssh/authorized_keys
+    fi
+    chown -R ansible-root:ansible-root /home/ansible-root/.ssh
+
+- name: Put ansible-rootwrap
+  ansible.builtin.copy:
+    src: files/ansible-rootwrap.py
+    dest: /opt/ansible-nonroot/bin/ansible-rootwrap
+    mode: 0755
+
+- name: Put service
+  ansible.builtin.copy:
+    src: files/ansible-rootwrap-daemon.service
+    dest: /etc/systemd/system/ansible-rootwrap-daemon.service
+
+- name: Put service
+  ansible.builtin.copy:
+    src: files/lansible-playbook.service
+    dest: /etc/systemd/system/lansible-playbook.service
+
+- name: Create directories
+  loop:
+    - /etc/ansible
+    - /etc/ansible/rootwrap.d
+    - /etc/ansible/group_vars/all/
+    - /etc/ansible/host_vars
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: ansible-nonroot
+    group: ansible-nonroot
+    mode: 0755
+
+- name: Put file
+  ansible.builtin.copy:
+    src: files/rootwrap.conf
+    dest: /etc/ansible/rootwrap.conf
+
+- name: Put file
+  ansible.builtin.copy:
+    src: files/ansible.filters
+    dest: /etc/ansible/rootwrap.d/ansible.filters
