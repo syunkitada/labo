@@ -10,7 +10,8 @@
     state: directory
     mode: "0755"
 
-- ansible.builtin.setup:
+- name: Gather subset
+  ansible.builtin.setup:
     gather_subset:
       - system
 
@@ -46,8 +47,6 @@
     mode: "644"
   notify:
     - Restart container-consul
-
-- shell: rm -rf /consul/config/admin-token.json
 
 - name: Create server configuration
   when: consul_server
