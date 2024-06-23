@@ -1,0 +1,7 @@
+ansible
+ansible-lint
+black
+isort
+flake8
+ruff
+pytest
