@@ -1,5 +1,5 @@
 - name: Install requirement packages
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name:
       - yum-utils
       - epel-release
@@ -9,7 +9,7 @@
   changed_when: false
 
 - name: Install docker packages
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name:
       - docker-ce
       - docker-ce-cli

@@ -1,5 +1,5 @@
 - name: Install yum-utils
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name: yum-utils
 
 - name: Add repo
@@ -7,7 +7,7 @@
   changed_when: false
 
 - name: Install
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     name:
       - docker-ce-3:24.0.8-1.el8
       - docker-ce-cli-1:24.0.8-1.el8
