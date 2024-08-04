@@ -1,0 +1,22 @@
+# APM(Application Performance Management)
+
+- Grafana
+  - https://grafana.com/
+  - github: https://github.com/grafana/grafana
+  - License: AGPL v3(v8.0.0~)
+    - v7.5.17: Apache License 2.0
+      - https://github.com/grafana/grafana/tree/v7.5.17
+- Grafana Loki
+  - Log検索、収集ができるOSSツール
+  - github: https://github.com/grafana/loki
+  - License: AGPL v3
+    - https://github.com/grafana/loki/blob/main/LICENSE
+- Plutono
+  - grafana 7.5.17(Apache License 2.0)のフォーク
+    - 機能拡張はなく、セキュリティの更新のみが行われている
+  - License: Apache License 2.0
+  - github: https://github.com/credativ/plutono
+- Groundwork Grafana
+  - Groundwork Grafana is built off the latest stable 5.4.x
+  - github: https://github.com/gwos/grafana
+  - License: Apache License 2.0
