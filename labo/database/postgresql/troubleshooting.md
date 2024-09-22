@@ -60,15 +60,47 @@ Docker上ではpostgresが動くことが確認できた。
 $ docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres docker.io/library/postgres
 ```
 
+hugepageが有効になっている場合は、勝手に利用される。
+
+```
+$ cat /proc/meminfo
+HugePages_Total:       2
+HugePages_Free:        1
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:    1048576 kB
+
+$ sudo grep "KernelPageSize:.*1048576*" /proc/[[:digit:]]*/smaps | awk {'print $1'} | cut -d "/" -f3 | sort | uniq
+1722326
+1722407
+1722408
+1722410
+1722411
+1722412
+
+$ ps ax | grep 1722326
+1722326 ?        Ss     0:00 postgres
+```
+
 kindのworker上で直接以下を実行できることも確認できた。(k8sを通すとダメそう)
 
 ```
-$ ctr run --rm --env POSTGRES_PASSWORD=postgres docker.io/library/postgres:latest postgres-test
+$ ctr image pull docker.io/library/postgres:13
+$ ctr run --rm --env POSTGRES_PASSWORD=postgres docker.io/library/postgres:13 postgres-test
 ```
 
 以下によると、hugepageが利用できないにもかかわらず、k8s上で稼働しようとするとhugepageを利用しようとしてしまいエラーとなる。
 
-これはpostgresのhugepageの利用を無効化するか、k8sでhugepageを利用できるようにすることで回避ができる。
-
 - https://www.enterprisedb.com/docs/postgres_for_kubernetes/latest/troubleshooting/#error-while-bootstrapping-the-data-directory
 - https://github.com/docker-library/postgres/issues/451#issuecomment-447472044
+
+これは、HOST上のhugepagesを無効化することで回避できた。
+
+```
+$ sudo sh -c 'echo "0" > /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages'
+
+$ cat /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
+0
+```
+
+また、postgresのhugepageの利用を無効化するか、k8sでhugepageを利用できるようにすることで回避ができる。
