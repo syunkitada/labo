@@ -1,0 +1,118 @@
+version: "3"
+services:
+  az1-node01:
+    container_name: "${NAMESPACE}-az1-node01"
+    hostname: az1-node01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-node02:
+    container_name: "${NAMESPACE}-az1-node02"
+    hostname: az1-node02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az1-node03:
+    container_name: "${NAMESPACE}-az1-node03"
+    hostname: az1-node03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-node01:
+    container_name: "${NAMESPACE}-az2-node01"
+    hostname: az2-node01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-node02:
+    container_name: "${NAMESPACE}-az2-node02"
+    hostname: az2-node02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az2-node03:
+    container_name: "${NAMESPACE}-az2-node03"
+    hostname: az2-node03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-node01:
+    container_name: "${NAMESPACE}-az3-node01"
+    hostname: az3-node01
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-node02:
+    container_name: "${NAMESPACE}-az3-node02"
+    hostname: az3-node02
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+  az3-node03:
+    container_name: "${NAMESPACE}-az3-node03"
+    hostname: az3-node03
+    image: local/rocky9-base
+    volumes:
+      - "${HOME}:${HOME}:ro"
+    privileged: true
+    cgroup_parent: docker.slice
+    networks:
+      - default
+      - kind
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+  kind:
+    name: kind
+    external: true

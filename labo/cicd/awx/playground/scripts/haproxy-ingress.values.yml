@@ -1,0 +1,9 @@
+controller:
+  kind: DaemonSet
+
+  daemonset:
+    useHostNetwork: true
+    useHostPort: true
+
+  nodeSelector:
+    kubernetes.io/hostname: kind-awx-worker
