@@ -6,17 +6,17 @@
       rm ./kind
     fi
   changed_when: false
-
-- name: Put kind.yml
-  ansible.builtin.template:
-    src: kind.yml.j2
-    dest: /etc/ansible/kind.yml
-    mode: "0644"
-
-- name: Create cluster
-  ansible.builtin.shell: kind get clusters | grep kind || kind create cluster --config /etc/ansible/kind.yml
-  changed_when: false
-
-- name: Put kubeconfig
-  ansible.builtin.shell: |
-    kind export -n kind kubeconfig
+#
+# - name: Put kind.yml
+#   ansible.builtin.template:
+#     src: kind.yml.j2
+#     dest: /etc/ansible/kind.yml
+#     mode: "0644"
+#
+# - name: Create cluster
+#   ansible.builtin.shell: kind get clusters | grep kind || kind create cluster --config /etc/ansible/kind.yml
+#   changed_when: false
+#
+# - name: Put kubeconfig
+#   ansible.builtin.shell: |
+#     kind export -n kind kubeconfig

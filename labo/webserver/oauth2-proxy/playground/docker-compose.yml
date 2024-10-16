@@ -1,0 +1,20 @@
+services:
+  oauth2-proxy-nginx:
+    container_name: oauth2-proxy-nginx
+    hostname: oauth2-proxy-nginx
+    image: nginx:latest
+    network_mode: host
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/conf.d/oauth2-proxy.conf:/etc/nginx/conf.d/oauth2-proxy.conf
+      - /etc/labo/tls-assets/localhost.test/server-key.pem:/etc/nginx/ssl/server-key.pem
+      - /etc/labo/tls-assets/localhost.test/server.pem:/etc/nginx/ssl/server.pem
+  oauth2-proxy:
+    container_name: oauth2-proxy
+    hostname: oauth2-proxy
+    image: quay.io/oauth2-proxy/oauth2-proxy:latest
+    command: --config=/etc/oauth2_proxy/oauth2_proxy.cfg
+    network_mode: host
+    volumes:
+      - ./oauth2_proxy/oauth2_proxy.cfg:/etc/oauth2_proxy/oauth2_proxy.cfg

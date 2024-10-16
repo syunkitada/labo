@@ -1,6 +1,7 @@
 # nginx
 
 ## uwsgi
+
 ```
 uwsgi --socket 127.0.0.1:8080 --process 4 --wsgi-file wsgi.py &>/dev/null &
 ```
@@ -8,8 +9,9 @@ uwsgi --socket 127.0.0.1:8080 --process 4 --wsgi-file wsgi.py &>/dev/null &
 wsig.py
 ``
 def application(env, start_response):
-    start_response('200 OK', [('Content-Type','text/html')])
-    return ["Hello World"]
+start_response('200 OK', [('Content-Type','text/html')])
+return ["Hello World"]
+
 ```
 
 
@@ -24,8 +26,9 @@ listen.group = nobody
 
 php-fpm
 ```
+
 server {
-    listen       6080;
+listen 6080;
 
     root   /usr/share/nginx/html;
     index index.php index.html index.htm;
@@ -46,6 +49,7 @@ server {
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
     }
+
 }
 
 ```
@@ -60,3 +64,4 @@ curl localhost:6080/info.php
 
 ## チューニング
 http://qiita.com/sion_cojp/items/c02b5b5586b48eaaa469
+```

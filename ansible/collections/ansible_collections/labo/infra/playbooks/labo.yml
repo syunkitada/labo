@@ -11,26 +11,30 @@
       tags: docker
     - name: kind
       tags: kind
-    - name: docker_registry
-      tags: docker_registry
-      vars:
-        docker_registry_network_name: kind
-    - name: haproxy_ingress
-      tags: haproxy_ingress
+    # - name: docker_registry
+    #   tags: docker_registry
+    #   vars:
+    #     docker_registry_network_name: kind
+    # - name: haproxy_ingress
+    #   tags: haproxy_ingress
     - name: libvirt
       tags: libvirt
     - name: mysql
       tags: mysql
       vars:
         mysql_container_engine: docker
-    - name: postgres
-      tags: postgres
+    # - name: postgres
+    #   tags: postgres
     - name: pdns
       tags: pdns
       vars:
         pdns_domains:
           - test
         pdns_records:
+          - domain: test
+            name: "*.localhost.test"
+            type: a
+            content: "{{ local_ipaddr }}"
           - domain: test
             name: docker-registry.test
             type: a
