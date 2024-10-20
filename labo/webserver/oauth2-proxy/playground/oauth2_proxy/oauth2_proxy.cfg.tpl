@@ -13,7 +13,7 @@ email_domains = "*"
 set_xauthrequest = true
 
 # cookie_secret = `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
-cookie_secret = "UQiXfW3qmiLc_RakxAZwFTypRthfJxzKf8AwRfIg2Mk="
+cookie_secret = ""
 
 # https://github.com/settings/applications/new
 client_id = "XXX"
