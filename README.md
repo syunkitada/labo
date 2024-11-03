@@ -15,5 +15,6 @@
 
 ```
 $ git clone https://github.com/syunkitada/labo.git
-$ make env
+$ cd labo
+$ make
 ```

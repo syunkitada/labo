@@ -12,8 +12,8 @@ email_domains = "*"
 
 set_xauthrequest = true
 
-# cookie_secret = `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
-cookie_secret = ""
+# Generate cookie_secret by `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
+cookie_secret = "XXX"
 
 # https://github.com/settings/applications/new
 client_id = "XXX"
