@@ -18,4 +18,4 @@ setup:
 
 clean:
 	rm -rf .venv
-	sudo docker compose down
+	sudo docker compose down --rmi all --volumes --remove-orphans
