@@ -1,18 +1,33 @@
 [project]
-name = "labo"
+name = "mylabo"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "fabric > 1, < 3",
-    "pytest",
     "pyyaml",
+    "pymysql",
     "tabulate",
     "ansible",
-    "ansible-lint",
     "requests",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ansible-lint",
+]
+
+[project.scripts]
+mylabo = "mylabo.main.mylabo.main:main"
+mylabo-vm-image = "mylabo.main.labo_vm_image.main:main"
+
 [tool.black]
 line-length = 120
+
+[tool.setuptools.packages.find]
+where = ["src"]  # list of folders that contain the packages (["."] by default)
+include = ["mylabo*"]  # package names should match these glob patterns (["*"] by default)
+exclude = ["mylabo.tests*"]  # exclude packages matching these glob patterns (empty by default)
+namespaces = false  # to disable scanning PEP 420 namespaces (true by default)

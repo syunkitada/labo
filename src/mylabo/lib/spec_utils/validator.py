@@ -1,8 +1,10 @@
-import os
-import yaml
 import json
+import os
 from collections import OrderedDict
-from lib.runtime import runtime_context
+
+import yaml
+
+from mylabo.lib.runtime import runtime_context
 
 
 def check_requrements(c, node_ctxs):
@@ -13,7 +15,9 @@ def check_image_requirements(c, node_ctxs):
     c = runtime_context.new({})
 
     def get_docker_image_map(c):
-        result = c.sudo('docker images --format=\'{"Repository":"{{ .Repository }}","Tag":"{{ .Tag }}"}\'', hide=True).stdout
+        result = c.sudo(
+            'docker images --format=\'{"Repository":"{{ .Repository }}","Tag":"{{ .Tag }}"}\'', hide=True
+        ).stdout
         docker_images_json = "[" + ",".join(result.splitlines()) + "]"
         docker_images = json.loads(docker_images_json)
         docker_image_map = {}
@@ -22,9 +26,8 @@ def check_image_requirements(c, node_ctxs):
 
         return docker_image_map
 
-
     def get_vm_image_map(c):
-        result = c.run('labo-vm-image list', hide=True).stdout
+        result = c.run("labo-vm-image list", hide=True).stdout
         vm_image_map = {}
         for line in result.splitlines():
             vm_image_map[line] = {}
@@ -68,7 +71,7 @@ def check_image_requirements(c, node_ctxs):
             with open(image_yaml_path) as f:
                 spec = yaml.safe_load(f.read())
                 if vm_image_map.get(image) is None:
-                    from_dependencies = _get_vm_local_dependencies(spec['from'])
+                    from_dependencies = _get_vm_local_dependencies(spec["from"])
                     dependencies.append([image, from_dependencies])
         else:
             raise Exception(f"{image} image.yaml({image_yaml_path}) is not exists")

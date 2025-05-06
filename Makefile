@@ -4,6 +4,10 @@ all:
 	cd labo/tls; make
 	sudo ansible-playbook labo.infra.labo
 
+.PHONY: clean
+clean:
+	rm -rf .venv
+
 .PHONY: test
 test:
 	pytest -x -vv fabfile_tests

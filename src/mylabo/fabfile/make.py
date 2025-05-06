@@ -3,13 +3,14 @@ import re
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 
+import fabric
 import yaml
 from invoke import context as invoke
-import fabric
-from lib import colors, node_utils, os_utils, spec_utils, task_utils
-from node import node_context, node_manager
-from lib.runtime import runtime_context
 from tabulate import tabulate
+
+from mylabo.fabfile.node import node_context, node_manager
+from mylabo.lib import colors, node_utils, os_utils, spec_utils, task_utils
+from mylabo.lib.runtime import runtime_context
 
 
 @fabric.task
@@ -65,12 +66,11 @@ def make(c, file, target="", cmd="make", debug=False, Dryrun=False, parallel_poo
 
     results = OrderedDict()
     node_ctxs = []
+
     def init_node_ctx(rspec):
         if not task_utils.target.is_target(rspec, re_targets):
             return
-        node_ctxs.append(
-            node_context.NodeContext(cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun)
-        )
+        node_ctxs.append(node_context.NodeContext(cmd=cmd, spec=spec, rspec=rspec, debug=debug, dryrun=Dryrun))
         results[rspec["name"]] = []
 
         for child in rspec.get("childs", []):
@@ -255,7 +255,7 @@ def _dump_vm(spec):
 #     dst_node = spec["_node_map"][dsts[0]]
 #     src_ip = None
 #     dst_ip = None
-# 
+#
 #     for link in src_node.get("links", []):
 #         for ip in link.get("ips", []):
 #             src_ip = ip
@@ -269,7 +269,7 @@ def _dump_vm(spec):
 #                 break
 #             if src_ip is not None:
 #                 break
-# 
+#
 #     for link in dst_node.get("links", []):
 #         for ip in link.get("ips", []):
 #             dst_ip = ip
@@ -283,7 +283,7 @@ def _dump_vm(spec):
 #                 break
 #             if dst_ip is not None:
 #                 break
-# 
+#
 #     task = NodeContext(context_config=context_config, cmd=None, spec=spec, rspec=src_node, debug=debug, dryrun=False, ctx_data=ctx_data)
 #     src = {
 #         "node": src_node,

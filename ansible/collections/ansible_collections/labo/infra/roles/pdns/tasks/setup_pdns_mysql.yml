@@ -15,13 +15,3 @@
       PDNS_gmysql_dbname: "pdns"
       PDNS_log_dns_queries: "yes"
       PDNS_loglevel: "9"
-
-- name: Create domains
-  loop: "{{ pdns_domains }}"
-  ansible.builtin.command: labo-domain-ctl create {{ item }} {{ local_ipaddr }}
-  changed_when: false
-
-- name: Create records
-  loop: "{{ pdns_records }}"
-  ansible.builtin.command: labo-record-ctl create {{ item.domain }} {{ item.name }} {{ item.type }} {{ item.content }}
-  changed_when: false

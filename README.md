@@ -16,5 +16,12 @@
 ```
 $ git clone https://github.com/syunkitada/labo.git
 $ cd labo
-$ make
+$ uv sync --extra dev
+$ uv pip install -e .
+```
+
+```
+$ source .venv/bin/activate
+$ sudo .venv/bin/ansible-playbook labo.infra.labo
+$ sudo .venv/bin/mylabo apply manifests/dns_record.yml
 ```

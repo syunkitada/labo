@@ -2,7 +2,7 @@ import copy
 import ipaddress
 import os
 
-from lib.spec_utils import ipam
+from mylabo.lib.spec_utils import ipam
 
 MAC_OUI = [0x00, 0x16, 0x3E]
 
@@ -69,7 +69,6 @@ def complete_spec(spec):
     for rspec in spec.get("nodes", []):
         _init_node(rspec)
 
-
     def _complete_node(i, rspec):
         _complete_links(i, spec, rspec, rspec.get("links", []))
 
@@ -87,7 +86,7 @@ def complete_spec(spec):
             _complete_ips(rspec["l3admin"].get("ips", []), spec, rspec)
 
         if rspec["kind"] == "vm":
-            rspec["_hostname"] = rspec["name"].replace('_', '-') + "." + spec["conf"]["domain"]
+            rspec["_hostname"] = rspec["name"].replace("_", "-") + "." + spec["conf"]["domain"]
 
         elif rspec["kind"] == "container":
             rspec["_hostname"] = f"{spec['common']['namespace']}-{rspec['name']}"
@@ -154,7 +153,6 @@ def complete_spec(spec):
             if "vpcgw" in rspec:
                 rspec["_vpcgw"] = vpcgw_map[rspec["vpcgw"]]
 
-
         for route in rspec.get("routes", []):
             route["dst"] = _complete_value(route["dst"], spec, rspec)
             route["via"] = _complete_value(route["via"], spec, rspec)
@@ -181,42 +179,53 @@ def complete_spec(spec):
             _complete_node_at_last(childi, child)
 
         if "ansible" in rspec:
-            if 'frr' in rspec['ansible']['roles']:
+            if "frr" in rspec["ansible"]["roles"]:
                 frr_interfaces = []
                 for link in rspec.get("links", []):
                     if "bgp_peer_group" in link:
-                        frr_interfaces += [{
-                            "name": link['link_name'],
-                            "bgp_peer_group": link['bgp_peer_group'],
-                        }]
+                        frr_interfaces += [
+                            {
+                                "name": link["link_name"],
+                                "bgp_peer_group": link["bgp_peer_group"],
+                            }
+                        ]
                     for vlan_id, vlan in link.get("vlan_map", {}).items():
                         if "bgp_peer_group" in vlan:
-                            frr_interfaces += [{
-                                "name": f"{link['link_name']}.{vlan_id}",
-                                "bgp_peer_group": vlan['bgp_peer_group'],
-                            }]
+                            frr_interfaces += [
+                                {
+                                    "name": f"{link['link_name']}.{vlan_id}",
+                                    "bgp_peer_group": vlan["bgp_peer_group"],
+                                }
+                            ]
                 for link in rspec.get("_links", []):
                     if "bgp_peer_group" in link:
-                        frr_interfaces += [{
-                            "name": link['peer_name'],
-                            "bgp_peer_group": link['bgp_peer_group'],
-                        }]
+                        frr_interfaces += [
+                            {
+                                "name": link["peer_name"],
+                                "bgp_peer_group": link["bgp_peer_group"],
+                            }
+                        ]
                     for vlan_id, vlan in link.get("vlan_map", {}).items():
                         if "bgp_peer_group" in vlan:
                             if "peer_ovs" in vlan:
-                                frr_interfaces += [{
-                                    "name": vlan['peer_ovs']['peer_name'],
-                                    "bgp_peer_group": vlan['bgp_peer_group'],
-                                }]
+                                frr_interfaces += [
+                                    {
+                                        "name": vlan["peer_ovs"]["peer_name"],
+                                        "bgp_peer_group": vlan["bgp_peer_group"],
+                                    }
+                                ]
                             else:
-                                frr_interfaces += [{
-                                    "name": f"{link['peer_name']}.{vlan_id}",
-                                    "bgp_peer_group": vlan['bgp_peer_group'],
-                                }]
+                                frr_interfaces += [
+                                    {
+                                        "name": f"{link['peer_name']}.{vlan_id}",
+                                        "bgp_peer_group": vlan["bgp_peer_group"],
+                                    }
+                                ]
 
-                rspec['ansible']['vars']['frr_interfaces'] = frr_interfaces
+                rspec["ansible"]["vars"]["frr_interfaces"] = frr_interfaces
 
-            if "vars" in rspec['ansible']:
+            if "vars" in rspec["ansible"]:
+
                 def _complete_dict(data):
                     if isinstance(data, list):
                         for i, value in enumerate(data):
@@ -235,7 +244,7 @@ def complete_spec(spec):
                             if isinstance(value, list):
                                 _complete_dict(value)
 
-                _complete_dict(rspec['ansible']['vars'])
+                _complete_dict(rspec["ansible"]["vars"])
 
         if "ovs" in rspec:
             ovs = rspec["ovs"]
@@ -297,6 +306,27 @@ def complete_spec(spec):
             _complete_ip(rspec["evip"], spec, rspec)
         for member in rspec.get("members", []):
             member["_node"] = _node_map[member["name"]]
+
+    def _compute(spec):
+        for key, value in spec.items():
+            print(key)
+            if isinstance(value, dict):
+                _compute(value)
+            elif isinstance(value, list):
+                for i, item in enumerate(value):
+                    if isinstance(item, dict):
+                        _compute(item)
+                    elif isinstance(item, str):
+                        value[i] = _complete_value(item, spec, spec)
+            elif isinstance(value, str):
+                if key == "ns":
+                    print("MYDEBUG")
+                    print(value)
+                spec[key] = _complete_value(value, spec, spec)
+
+    _compute(spec)
+    print("DEBUG spec")
+    print(spec)
 
     return
 
@@ -373,7 +403,7 @@ def _complete_links(i, spec, rspec, links):
         _complete_ips(link.get("peer_ips", []), spec, rspec)
         if "mtu" not in link:
             link["mtu"] = rspec.get("mtu", 1500)
-        if spec['_node_map'][link['peer']]['kind'] == 'vm':
+        if spec["_node_map"][link["peer"]]["kind"] == "vm":
             link["kind"] = "tap"
         else:
             link["kind"] = "veth"

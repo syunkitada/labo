@@ -1,7 +1,9 @@
 import os
 
 import yaml
-from lib.spec_utils.complete import complete_spec, update_dict
+
+from mylabo.lib.spec_utils2.complete import complete_spec, update_dict
+
 from .validator import *
 
 
@@ -38,12 +40,12 @@ def _load_conf(spec, file):
         spec["common"] = {}
 
     if "namespace" not in spec["common"]:
-        namespace = file.rsplit("/", 1)[1].split(".", 1)[0].replace('_', '-')
+        namespace = file.rsplit("/", 1)[1].split(".", 1)[0].replace("_", "-")
         spec["_meta"] = {"spec_file": file}
         spec["common"]["namespace"] = namespace
 
-    if "nfs_path" not in  spec["common"]:
-        spec["common"]["nfs_path"]  = "/mnt/nfs"
+    if "nfs_path" not in spec["common"]:
+        spec["common"]["nfs_path"] = "/mnt/nfs"
 
     conf = {
         "domain": f"{spec['common']['namespace']}.example.com",

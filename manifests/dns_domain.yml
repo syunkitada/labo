@@ -1,0 +1,39 @@
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+
+kind: DNSDomain
+metadata:
+  name: test
+spec:
+  ns: <%=local_ipaddr%>
+
+---
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+
+kind: DNSDomain
+metadata:
+  name: pm.local.test
+spec:
+  ns: <%=local_ipaddr%>
+
+---
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+
+kind: DNSDomain
+metadata:
+  name: vm.local.test
+spec:
+  name: vm.local.test
+  ns: <%=local_ipaddr%>
+
+---
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+
+kind: DNSDomain
+metadata:
+  name: svc.local.test
+spec:
+  ns: <%=local_ipaddr%>
