@@ -1,11 +1,13 @@
 from .dns_domain import dns_domain
 from .dns_record import dns_record
+from .infra import infra
 from .vm_image import vm_image
 
 resource_class_map = {
     "DNSDomain": dns_domain.DNSDomain,
     "DNSRecord": dns_record.DNSRecord,
     "VMImage": vm_image.VMImage,
+    "Infra": infra.Infra,
 }
 
 

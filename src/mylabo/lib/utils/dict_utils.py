@@ -1,3 +1,6 @@
+from mylabo.lib import spec_helper
+
+
 def update_dict(d: dict, u: dict):
     for k, v in u.items():
         if isinstance(v, dict):
@@ -39,6 +42,8 @@ def complete_value(root_data: dict, value: str):
             arg = _value[funci + 1 : funcri]  # noqa
             if funci == -1 or funcri == -1:
                 _value = reference_value(root_data, _value)
+            else:
+                spec_helper.handle(func, root_data, arg)
             # elif func == "assign_inet4":
             #     value = ipam.assign_inet4(arg, spec)
             # elif func == "assign_ip4":
@@ -55,8 +60,8 @@ def complete_value(root_data: dict, value: str):
             #     value = ipam.ipv4_to_asn(_complete_value(arg, spec, node, True))
             # elif func == "asn_to_sid":
             #     value = ipam.asn_to_sid(_complete_value(arg, spec, node, True))
-            else:
-                raise Exception(f"unexpected func: {func}")
+            # else:
+            #     raise Exception(f"unexpected func: {func}")
 
             return complete_value(root_data, value_prefix + str(_value) + value_suffix)
 
