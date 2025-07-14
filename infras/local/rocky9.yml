@@ -1,21 +1,10 @@
 kind: Infra
-name: rocky9
-spec:
-  ipam:
-    gw_network1:
-      subnet: 10.11.1.0/24
-      kind: l2
-
-  common:
-    nfs:
-      path: /mnt/nfs
-      target: 192.168.10.121
-    resolvers:
-      - 192.168.10.121
-
-  template_map:
-    node:
-      kind: container
+metadata:
+  name: rocky9
+template_map:
+  node:
+    kind: container
+    spec:
       image: local/rocky8-nwnode:latest
       mtu: 9000
       sysctl_map:
@@ -29,8 +18,9 @@ spec:
         net.ipv4.conf.all.rp_filter: 0
         net.ipv4.conf.default.forwarding: 1
         net.ipv4.conf.all.forwarding: 1
-    vm:
-      kind: vm
+  vm:
+    kind: vm
+    spec:
       image: local/rocky9_custom
       vcpus: 4
       ram: 4096
@@ -42,37 +32,51 @@ spec:
         name: admin
         password: admin
         group: admin
-
+spec:
+  ipam:
+    gw_network1:
+      subnet: 10.11.1.0/24
+      kind: l2
+  common:
+    nfs:
+      path: /mnt/nfs
+      target: 192.168.10.121
+    resolvers:
+      - 192.168.10.121
   nodes:
-    - name: GW1
-      network: labo-net
-      templates:
+    - templates:
         - node
-      bridges:
-        - name: l2-br
-          ips:
-            - inet: <%=gateway_inet4(gw_network1)%>
-      local_routes:
-        - dst: 10.11.1.0/24
-          via: self
-      routes:
-        - dst: 10.11.0.0/16
-          via: 10.11.1.2 dev l2-br
-      links:
-        - peer: VM1
-          bridge: l2-br
-          peer_ips:
-            - inet: <%=assign_inet4(gw_network1)%>
-      cmds:
-        - iptables -t nat -L | grep 'MASQUERADE.*all.*10.11.0.0/16' || iptables -t nat -A POSTROUTING -p all -s 10.11.0.0/16 -j MASQUERADE
-    - name: VM1
-      templates:
+      metadata:
+        name: GW1
+      spec:
+        network: labo-net
+        bridges:
+          - name: l2-br
+            ips:
+              - inet: <%=gateway_inet4(gw_network1)%>
+        local_routes:
+          - dst: 10.11.1.0/24
+            via: self
+        routes:
+          - dst: 10.11.0.0/16
+            via: 10.11.1.2 dev l2-br
+        links:
+          - peer: VM1
+            bridge: l2-br
+            peer_ips:
+              - inet: <%=assign_inet4(gw_network1)%>
+        cmds:
+          - iptables -t nat -L | grep 'MASQUERADE.*all.*10.11.0.0/16' || iptables -t nat -A POSTROUTING -p all -s 10.11.0.0/16 -j MASQUERADE
+    - templates:
         - vm
-      cmds:
-        - modprobe openvswitch
-        - modprobe vxlan
-      ansible:
-        vars:
-          docker_insecure_registries: [docker-registry.example.com:5050]
-        roles:
-          - docker
+      metadata:
+        name: VM1
+      spec:
+        cmds:
+          - modprobe openvswitch
+          - modprobe vxlan
+        ansible:
+          vars:
+            docker_insecure_registries: [docker-registry.example.com:5050]
+          roles:
+            - docker

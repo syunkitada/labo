@@ -24,9 +24,19 @@ ASN_IP_NETWORKS = [ipaddress.ip_network(net) for net in ASN_NETWORKS]
 #         break
 
 
+def init_network_if_needed(network):
+    if "next_ip" in network:
+        return
+    if network["kind"] == "l2":
+        network.update({"_next_ip": 2})
+    elif network["kind"] == "l3":
+        network.update({"_next_ip": 2})
+
+
 def assign_inet4(data, network_name):
     _spec = data["spec"]
     network = _spec["ipam"][network_name]
+    init_network_if_needed(network)
     ip_network = ipaddress.ip_network(network["subnet"])
     if network["kind"] == "l2":
         inet = str(ip_network[network["_next_ip"]]) + "/" + str(ip_network.prefixlen)

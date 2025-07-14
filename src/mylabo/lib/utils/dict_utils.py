@@ -1,3 +1,5 @@
+import copy
+
 from mylabo.lib import spec_helper
 
 
@@ -10,17 +12,56 @@ def update_dict(d: dict, u: dict):
     return d
 
 
-def complete_data(root_data: dict, data: dict | list):
+def apply_template(root_data: dict, data: dict):
+    if "templates" not in data:
+        return data
+    if "template_map" not in root_data:
+        raise Exception("template_map is not found in root_data")
+
+    template_map = root_data["template_map"]
+    tmp_data = {}
+    for template in data["templates"]:
+        if template not in template_map:
+            raise Exception(f"template {template} is not found in template_map")
+        template = copy.deepcopy(template_map[template])
+        update_dict(tmp_data, template)
+        data.update(tmp_data)
+
+
+def complete_template(spec: dict):
+    return _complete_template(spec, spec)
+
+
+def _complete_template(root_data: dict, data: dict | list):
+    if isinstance(data, dict):
+        apply_template(root_data, data)
+
+        for k, v in data.items():
+            if isinstance(v, dict) or isinstance(v, list):
+                data[k] = _complete_template(root_data, v)
+    elif isinstance(data, list):
+        for i, v in enumerate(data):
+            if isinstance(v, dict) or isinstance(v, list):
+                data[i] = _complete_template(root_data, v)
+
+    return data
+
+
+def complete_data(spec: dict):
+    return _complete_data(spec, spec)
+
+
+def _complete_data(root_data: dict, data: dict | list):
     if isinstance(data, dict):
         for k, v in data.items():
             if isinstance(v, dict) or isinstance(v, list):
-                data[k] = complete_data(root_data, v)
+                data[k] = _complete_data(root_data, v)
             elif isinstance(v, str):
                 data[k] = complete_value(root_data, v)
     elif isinstance(data, list):
         for i, v in enumerate(data):
             if isinstance(v, dict) or isinstance(v, list):
-                data[i] = complete_data(root_data, v)
+                data[i] = _complete_data(root_data, v)
             elif isinstance(v, str):
                 data[i] = complete_value(root_data, v)
 
