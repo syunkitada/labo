@@ -17,6 +17,7 @@ def load_specs(file) -> list[dict]:
 
 def _load_file(file) -> list[dict]:
     specs = []
+    namespace = file.rsplit("/", 1)[1].split(".", 1)[0].replace("_", "-")
 
     spec_filepath = abspath(file)
     spec_dirpath = dirname(spec_filepath)
@@ -34,8 +35,11 @@ def _load_file(file) -> list[dict]:
                 dict_utils.update_dict(spec, imported_spec)
 
         spec.update(_spec)
+        if "namespace" not in spec:
+            spec["namespace"] = namespace
         spec["_spec_filepath"] = spec_filepath
         spec["_spec_dirpath"] = spec_dirpath
+        spec["_script_dir"] = "/tmp/mylabo/namespace/"  # TODO make this configurable
         specs.append(spec)
 
     return specs

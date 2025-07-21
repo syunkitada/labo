@@ -11,6 +11,6 @@ resource_class_map = {
 }
 
 
-def load(kind: str):
-    if kind in resource_class_map:
-        return resource_class_map[kind]()
+def load(spec):
+    if spec["kind"] in resource_class_map:
+        return resource_class_map[spec["kind"]](spec)

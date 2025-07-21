@@ -27,6 +27,7 @@ def new(spec):
 
     return _new_runtime_context(context_config, spec)
 
+
 def _new_runtime_context(context_config, spec):
     """
     new_runtime_contextは、ローカルでの実行の場合はinvokeのContextを返し、リモートでの実行の場合はfabricのConnectionを返します。

@@ -2,7 +2,7 @@ import fabric
 
 from mylabo.lib import resource_controller
 from mylabo.lib.logger import logger
-from mylabo.lib.utils import runtime, spec_utils
+from mylabo.lib.utils import spec_utils
 
 
 @fabric.task
@@ -23,7 +23,5 @@ def apply(c, file, debug=False, Dryrun=False):
 
 
 def apply_spec(spec):
-    ctx = runtime.new(spec)
-
-    rc = resource_controller.load(spec["kind"])
-    rc.apply(ctx, spec)
+    rc = resource_controller.load(spec)
+    rc.apply()

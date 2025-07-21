@@ -1,6 +1,5 @@
 kind: Infra
-metadata:
-  name: rocky9
+name: rocky9
 template_map:
   node:
     kind: container
@@ -33,6 +32,7 @@ template_map:
         password: admin
         group: admin
 spec:
+  domain: mylabo.test
   ipam:
     gw_network1:
       subnet: 10.11.1.0/24
@@ -46,8 +46,7 @@ spec:
   nodes:
     - templates:
         - node
-      metadata:
-        name: GW1
+      name: GW1
       spec:
         network: labo-net
         bridges:
@@ -69,8 +68,7 @@ spec:
           - iptables -t nat -L | grep 'MASQUERADE.*all.*10.11.0.0/16' || iptables -t nat -A POSTROUTING -p all -s 10.11.0.0/16 -j MASQUERADE
     - templates:
         - vm
-      metadata:
-        name: VM1
+      name: VM1
       spec:
         cmds:
           - modprobe openvswitch
