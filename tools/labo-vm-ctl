@@ -8,20 +8,29 @@ import argparse
 from lib import command
 
 p = argparse.ArgumentParser()
-p.add_argument('action', choices=[
-    'start', 'recreate', 'stop',
-    'console', 'console-log', 'monitor',
-    'list', 'delete',
-], help='action')
-p.add_argument('vm_name', help='vm name', nargs='*', default=[])
+p.add_argument(
+    "action",
+    choices=[
+        "start",
+        "recreate",
+        "stop",
+        "console",
+        "console-log",
+        "monitor",
+        "list",
+        "delete",
+    ],
+    help="action",
+)
+p.add_argument("vm_name", help="vm name", nargs="*", default=[])
 args = p.parse_args()
 
 if args.action == "start" or args.action == "stop" or args.action == "delete":
     if len(args.vm_name) == 0:
         p.error("start, delete action require image_name")
 
-IMAGE_ROOT = '/mnt/nfs/vm_images/'
-VM_ROOT = '/mnt/nfs/vms/'
+IMAGE_ROOT = "/mnt/nfs/mylabo/vm_images/"
+VM_ROOT = "/mnt/nfs/mylabo/vms/"
 
 
 def main():
@@ -38,24 +47,25 @@ def main():
     elif args.action == "console-log":
         console_log()
 
+
 def list():
     vms = OrderedDict()
     vm_dirs = os.listdir(VM_ROOT)
     for vm_dir in vm_dirs:
         vms[vm_dir] = {
-            'status': 'stopped',
+            "status": "stopped",
         }
 
     result = command.must_run(["bash", "-c", "ps ax | grep '[q]emu-system'"], capture_output=True)
     for line in result.stdout.splitlines():
-        line = line.decode('utf-8') 
-        bootdisk = re.findall('-drive id=bootdisk1,file=(.*),if=none ', line)
+        line = line.decode("utf-8")
+        bootdisk = re.findall("-drive id=bootdisk1,file=(.*),if=none ", line)
         if len(bootdisk) != 1:
             continue
         splited_bootdisk = bootdisk[0].split("/")
         vm_name = splited_bootdisk[-2]
         if vm_name in vms:
-            vms[vm_name]['status'] = 'active'
+            vms[vm_name]["status"] = "active"
 
     for name, vm in vms.items():
         print(name, vm)
@@ -76,12 +86,12 @@ def stop():
 def start():
     for name in args.vm_name:
         vm_dir = os.path.join(VM_ROOT, name)
-        vm_yaml = os.path.join(vm_dir, 'vm.yaml')
+        vm_yaml = os.path.join(vm_dir, "vm.yaml")
         if os.path.exists(vm_yaml):
             spec = None
             with open(vm_yaml) as f:
                 spec = yaml.safe_load(f)
-            spec['_name'] = name
+            spec["_name"] = name
             spec["_image_path"] = os.path.join(vm_dir, "img")
             spec["_monitor_socket_path"] = os.path.join(vm_dir, "monitor.sock")
             spec["_serial_socket_path"] = os.path.join(vm_dir, "serial.sock")
@@ -94,7 +104,9 @@ def start():
 
 
 def check_vm_exists(spec):
-    result = command.run(["bash", "-c", f"ps -ax | grep -v sudo | grep [q]emu-system-x86_64 | grep '/{spec['_name']}/'"])
+    result = command.run(
+        ["bash", "-c", f"ps -ax | grep -v sudo | grep [q]emu-system-x86_64 | grep '/{spec['_name']}/'"]
+    )
     if result.returncode == 1:
         return False
     return True
@@ -104,9 +116,9 @@ def start_vm(spec):
     print("start_vm")
     print(spec)
     if not os.path.exists(spec["_image_path"]):
-        src_image = os.path.join(IMAGE_ROOT, spec["image"].split('local/')[1])
-        command.must_run(["cp", src_image, spec['_image_path']])
-        command.must_run(["qemu-img", "resize", "--shrink", spec['_image_path'], f"{spec['disk']}G"])
+        src_image = os.path.join(IMAGE_ROOT, spec["image"].split("local/")[1])
+        command.must_run(["cp", src_image, spec["_image_path"]])
+        command.must_run(["qemu-img", "resize", "--shrink", spec["_image_path"], f"{spec['disk']}G"])
     if check_vm_exists(spec):
         print("vm exists")
         return
@@ -116,30 +128,44 @@ def start_vm(spec):
     qemu_cmd = ["qemu-system-x86_64"]
     qemu_cmd += [
         "-enable-kvm",
-        "-machine", "q35,accel=kvm",
-        "-cpu", "host",
-        "-smp", f"cores={spec['vcpus']}",
-        "-m", f"{spec['ram']}M,slots=64,maxmem=1024G",
-        "-object", f"memory-backend-file,id=mem1,size={spec['ram']}M,mem-path=/dev/hugepages/{spec['_name']},host-nodes=0,policy=bind",
-        "-numa", "node,nodeid=0,memdev=mem1",
-        "-drive", f"id=bootdisk1,file={spec['_image_path']},if=none",
-        "-device", "virtio-blk-pci,scsi=off,drive=bootdisk1,bootindex=1",
-        "-drive", f"file={spec['_config_image_path']},format=raw,if=none,id=drive-ide0-1-0,readonly=on",
-        "-device", "amd-iommu",
-        "-device", "ide-cd,bus=ide.1,unit=0,drive=drive-ide0-1-0,id=ide0-1-0",
-        "-monitor", f"unix:{spec['_monitor_socket_path']},server,nowait",
-        "-serial", f"unix:{spec['_serial_socket_path']},server,nowait,logfile={spec['_serial_log_path']}",
+        "-machine",
+        "q35,accel=kvm",
+        "-cpu",
+        "host",
+        "-smp",
+        f"cores={spec['vcpus']}",
+        "-m",
+        f"{spec['ram']}M,slots=64,maxmem=1024G",
+        "-object",
+        f"memory-backend-file,id=mem1,size={spec['ram']}M,mem-path=/dev/hugepages/{spec['_name']},host-nodes=0,policy=bind",
+        "-numa",
+        "node,nodeid=0,memdev=mem1",
+        "-drive",
+        f"id=bootdisk1,file={spec['_image_path']},if=none",
+        "-device",
+        "virtio-blk-pci,scsi=off,drive=bootdisk1,bootindex=1",
+        "-drive",
+        f"file={spec['_config_image_path']},format=raw,if=none,id=drive-ide0-1-0,readonly=on",
+        "-device",
+        "amd-iommu",
+        "-device",
+        "ide-cd,bus=ide.1,unit=0,drive=drive-ide0-1-0,id=ide0-1-0",
+        "-monitor",
+        f"unix:{spec['_monitor_socket_path']},server,nowait",
+        "-serial",
+        f"unix:{spec['_serial_socket_path']},server,nowait,logfile={spec['_serial_log_path']}",
         "-nographic",
     ]
     nic_options = []
     for _, link in enumerate(spec.get("links", [])):
         nic_options += [
-            "-nic", f"tap,ifname={link['name']},model=virtio-net-pci,mac={link['mac']},script=no,script=no,downscript=no"
+            "-nic",
+            f"tap,ifname={link['name']},model=virtio-net-pci,mac={link['mac']},script=no,script=no,downscript=no",
         ]
 
     qemu_cmd += nic_options
-    command.run(["systemctl", "reset-failed", spec['_name']])
-    cmds = ["systemd-run", "--unit", spec['_name'], '--'] + qemu_cmd
+    command.run(["systemctl", "reset-failed", spec["_name"]])
+    cmds = ["systemd-run", "--unit", spec["_name"], "--"] + qemu_cmd
     print(cmds)
     command.must_run(cmds)
     register_record(spec)
@@ -163,6 +189,7 @@ def console():
     spec["_serial_socket_path"] = os.path.join(vm_dir, "serial.sock")
     command.must_run(["minicom", "-D", f"unix#{spec['_serial_socket_path']}"], capture_output=False)
 
+
 def console_log():
     name = args.vm_name[0]
     vm_dir = os.path.join(VM_ROOT, name)
@@ -171,8 +198,10 @@ def console_log():
     with open(spec["_serial_log_path"]) as f:
         print(f.read())
 
+
 def monitor(spec):
     command.must_run(["minicom", "-D", f"unix#{spec['_monitor_socket_path']}"])
+
 
 def make_config_drive(spec):
     print("configdrive")
@@ -211,7 +240,7 @@ def make_config_drive(spec):
     for route in spec.get("routes", []):
         userdata += [f"ip route add {route['dst']} via {route['via']}"]
 
-    if 'resolvers' in spec:
+    if "resolvers" in spec:
         userdata += [f"/opt/labo/bin/init-resolver {' '.join(spec['resolvers'])}"]
 
     nfs = spec.get("nfs")
@@ -224,7 +253,19 @@ def make_config_drive(spec):
     with open(spec["_userdata_path"], "w") as f:
         f.write("\n".join(userdata))
 
-    command.must_run(["genisoimage", "-o", spec['_config_image_path'], "-V", "cidata", "-r", "-J", spec['_metadata_path'], spec['_userdata_path']])
+    command.must_run(
+        [
+            "genisoimage",
+            "-o",
+            spec["_config_image_path"],
+            "-V",
+            "cidata",
+            "-r",
+            "-J",
+            spec["_metadata_path"],
+            spec["_userdata_path"],
+        ]
+    )
 
 
 if __name__ == "__main__":

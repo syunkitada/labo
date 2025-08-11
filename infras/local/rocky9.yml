@@ -1,10 +1,13 @@
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+
 kind: Infra
 name: rocky9
 template_map:
   node:
     kind: container
     spec:
-      image: local/rocky8-nwnode:latest
+      image: local/rocky9-nwnode:latest
       mtu: 9000
       sysctl_map:
         net.ipv6.conf.default.disable_ipv6: 0
@@ -20,7 +23,7 @@ template_map:
   vm:
     kind: vm
     spec:
-      image: local/rocky9_custom
+      image: local/rocky9-custom
       vcpus: 4
       ram: 4096
       disk: 40

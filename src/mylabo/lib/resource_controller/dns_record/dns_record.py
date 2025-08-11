@@ -3,10 +3,10 @@ from mylabo.lib.utils import mysql_utils
 
 
 class DNSRecord(resource.Resource):
-    def __init__(self):
-        pass
+    def __init__(self, spec):
+        self.spec = spec
 
-    def get(self, ctx, spec):
+    def get(self):
         conn = mysql_utils.get_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
@@ -15,11 +15,11 @@ class DNSRecord(resource.Resource):
                 result = cursor.fetchall()
                 print(f"Domain: {result}")
 
-    def apply(self, ctx, spec: dict):
-        record_name = spec["metadata"]["name"]
-        domain_name = spec["spec"]["domain_name"]
-        record_type = spec["spec"]["type"].upper()
-        record_content = spec["spec"]["content"]
+    def apply(self):
+        record_name = self.spec["metadata"]["name"]
+        domain_name = self.spec["spec"]["domain_name"]
+        record_type = self.spec["spec"]["type"].upper()
+        record_content = self.spec["spec"]["content"]
 
         select_domain = "SELECT * FROM domains WHERE name = %s"
         conn = mysql_utils.get_mysql_connection()
@@ -69,9 +69,9 @@ class DNSRecord(resource.Resource):
 
             conn.commit()
 
-    def delete(self, ctx, spec):
-        record_name = spec["metadata"]["name"]
-        record_type = spec["spec"]["type"]
+    def delete(self):
+        record_name = self.spec["metadata"]["name"]
+        record_type = self.spec["spec"]["type"]
 
         conn = mysql_utils.get_mysql_connection()
         with conn:

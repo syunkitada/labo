@@ -22,6 +22,14 @@ $ uv pip install -e .
 
 ```
 $ source .venv/bin/activate
+```
+
+```
+$ cd labo/tls; make
 $ sudo .venv/bin/ansible-playbook labo.infra.labo
 $ sudo .venv/bin/mylabo apply manifests/dns_record.yml
+```
+
+```
+
 ```

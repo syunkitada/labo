@@ -21,20 +21,27 @@ class Infra(resource.Resource):
         self.next = 0
         self.parallel_pool_size = 1  # TODO : Make this configurable
 
-    def get(self):
-        print("get")
+    def get(self, labels: dict):
+        results = []
+        for node_spec in self.spec["spec"].get("nodes", []):
+            node_spec["_root_spec"] = self.spec
+            if node_spec["kind"] == "vm":
+                node = vm.VM(node_spec)
+            elif node_spec["kind"] == "container":
+                node = container.Container(node_spec)
+            else:
+                raise ValueError(f"Unsupported node kind: {node_spec['kind']}")
 
-    def apply(self):
-        print("apply", self.spec)
-        spec = self.spec["spec"]
+            results.append(node.get(labels))
 
-        os.makedirs(self.spec["_script_dir"], exist_ok=True)
+        return results
 
+    def _init_nodes(self, spec):
         results = OrderedDict()
         nodes = []
 
-        def init_nodes(spec):
-            for node_spec in spec.get("nodes", []):
+        def _init(spec):
+            for node_spec in spec["spec"].get("nodes", []):
                 node_spec["_root_spec"] = self.spec
                 if node_spec["kind"] == "vm":
                     node = vm.VM(node_spec)
@@ -46,10 +53,18 @@ class Infra(resource.Resource):
                 results[node_spec["name"]] = []
                 nodes.append(node)
 
-                init_nodes(node_spec)
+                _init(node_spec)
 
-        init_nodes(spec)
+        _init(spec)
 
+        return nodes, results
+
+    def apply(self, labels: dict):
+        print("apply", self.spec)
+
+        nodes, results = self._init_nodes(self.spec)
+
+        os.makedirs(self.spec["_script_dir"], exist_ok=True)
         while True:
             with ThreadPoolExecutor(max_workers=self.parallel_pool_size) as pool:
                 tmp_results = pool.map(_apply, nodes)
@@ -68,8 +83,27 @@ class Infra(resource.Resource):
         _print_results(results)
         _dump_scripts(self.spec, "apply", nodes)
 
-    def delete(self):
-        print("delete")
+    def delete(self, labels: dict):
+        nodes, results = self._init_nodes(self.spec)
+
+        os.makedirs(self.spec["_script_dir"], exist_ok=True)
+        while True:
+            with ThreadPoolExecutor(max_workers=self.parallel_pool_size) as pool:
+                tmp_results = pool.map(_delete, nodes)
+            for result in tmp_results:
+                results[result["name"]].append(result["result"])
+
+            next_node_ctxs = []
+            for t in nodes:
+                # nextがインクリメントされたnode_ctxsのみ次のタスクを実行します
+                if t.next > 0:
+                    next_node_ctxs.append(t)
+            if len(next_node_ctxs) == 0:
+                break
+            nodes = next_node_ctxs
+
+        _print_results(results)
+        _dump_scripts(self.spec, "apply", nodes)
 
 
 def _apply(node, cmd=""):
@@ -77,6 +111,30 @@ def _apply(node, cmd=""):
     result = None
     try:
         result = node.apply()
+    except Exception as e:
+        result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
+        node.next = -1
+
+    if node.next > 0:
+        print(f"{cmd} node {node.spec['name']}: next {node.next}")
+    else:
+        print(f"{cmd} node {node.spec['name']}: completed")
+
+        # fabricのConnectionの場合は、使い終わったら閉じる
+        if type(node.c) is Connection:
+            node.c.close()
+
+    return {
+        "name": node.spec["name"],
+        "result": result,
+    }
+
+
+def _delete(node, cmd=""):
+    print(f"{cmd} node {node.spec['name']}: start {node.next}")
+    result = None
+    try:
+        result = node.delete()
     except Exception as e:
         result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
         node.next = -1

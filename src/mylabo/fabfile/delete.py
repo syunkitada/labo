@@ -1,11 +1,12 @@
 import fabric
 
 from mylabo.lib import resource_controller
-from mylabo.lib.utils import runtime, spec_utils
+from mylabo.lib.logger import logger
+from mylabo.lib.utils import spec_utils, cmd_utils
 
 
 @fabric.task
-def delete(c, file, debug=False, Dryrun=False):
+def delete(c, file, debug=False, Dryrun=False, label=""):
     """apply [file] -d -D
 
     # target (default=node)
@@ -14,13 +15,14 @@ def delete(c, file, debug=False, Dryrun=False):
     [kind]の後ろに、:[name_regex]を指定することで、正規表現により実行対象の名前で限定します。
     """
 
+    labels = cmd_utils.parse_labels(label)
+    logger.init(debug)
+
     specs = spec_utils.load_specs(file)
     for spec in specs:
-        delete_spec(spec)
+        delete_spec(spec, labels)
 
 
-def delete_spec(spec):
-    ctx = runtime.new(spec)
-
-    rc = resource_controller.load(spec["kind"])
-    rc.delete(ctx, spec)
+def delete_spec(spec, labels: dict):
+    rc = resource_controller.load(spec)
+    rc.delete(labels)

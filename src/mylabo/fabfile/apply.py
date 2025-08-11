@@ -2,11 +2,11 @@ import fabric
 
 from mylabo.lib import resource_controller
 from mylabo.lib.logger import logger
-from mylabo.lib.utils import spec_utils
+from mylabo.lib.utils import spec_utils, cmd_utils
 
 
 @fabric.task
-def apply(c, file, debug=False, Dryrun=False):
+def apply(c, file="", debug=False, Dryrun=False, label=""):
     """apply [file] -d -D
 
     # target (default=node)
@@ -16,12 +16,13 @@ def apply(c, file, debug=False, Dryrun=False):
     """
 
     logger.init(debug)
+    labels = cmd_utils.parse_labels(label)
 
     specs = spec_utils.load_specs(file)
     for spec in specs:
-        apply_spec(spec)
+        apply_spec(spec, labels)
 
 
-def apply_spec(spec):
+def apply_spec(spec, labels: dict):
     rc = resource_controller.load(spec)
-    rc.apply()
+    rc.apply(labels)

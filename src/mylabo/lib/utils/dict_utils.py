@@ -19,12 +19,14 @@ def apply_template(root_data: dict, data: dict):
         raise Exception("template_map is not found in root_data")
 
     template_map = root_data["template_map"]
+
     tmp_data = {}
     for template in data["templates"]:
         if template not in template_map:
             raise Exception(f"template {template} is not found in template_map")
         template = copy.deepcopy(template_map[template])
         update_dict(tmp_data, template)
+        update_dict(tmp_data, data)
         data.update(tmp_data)
 
 
@@ -129,3 +131,56 @@ def reference_value(data: dict | list, reference_key: str):
         return reference_value(tmp_data, ".".join(splited_src[1:]))
     else:
         return tmp_data
+
+
+def complete_nodes(spec: dict):
+    if "nodes" not in spec["spec"]:
+        return
+
+    node_map = {}
+    for node in spec["spec"]["nodes"]:
+        node["spec"]["_links"] = []
+        node_map[node["name"]] = node
+    spec["_node_map"] = node_map
+
+    _complete_links(spec, node_map)
+
+
+def _complete_links(spec: dict, node_map: dict):
+    for node_index, node in enumerate(spec["spec"]["nodes"]):
+        if "links" not in node["spec"]:
+            continue
+
+        for link_index, link in enumerate(node["spec"]["links"]):
+            if "peer" not in link:
+                raise Exception(f"peer is not found in link: {link}")
+
+            peer_node = node_map.get(link["peer"])
+            if peer_node is None:
+                raise Exception(f"peer node {link['peer']} is not found in node_map")
+
+            _complete_link(node_index, node, link_index, link)
+            peer_node["spec"]["_links"].append(link)
+
+
+MAC_OUI = [0x00, 0x16, 0x3E]
+
+
+def _complete_link(node_index: int, node: dict, link_index: int, link: dict):
+    if "mtu" not in link:
+        link["mtu"] = 1500
+
+    if node["kind"] == "vm":
+        link["kind"] = "tap"
+    elif node["kind"] == "container":
+        link["kind"] = "veth"
+    else:
+        raise Exception(f"unexpected node kind: {node['kind']}")
+
+    link["src_name"] = node["name"]
+    link["link_name"] = f"{node['name']}_{link_index}_{link['peer']}"
+    link["peer_name"] = f"{link['peer']}_{link_index}_{node['name']}"
+    if "link_mac" not in link:
+        link["link_mac"] = ":".join(map(lambda x: "%02x" % x, MAC_OUI + [node_index, link_index, 0]))
+    if "peer_mac" not in link:
+        link["peer_mac"] = ":".join(map(lambda x: "%02x" % x, MAC_OUI + [node_index, link_index, 1]))

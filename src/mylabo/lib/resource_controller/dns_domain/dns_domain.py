@@ -5,13 +5,13 @@ from mylabo.lib.utils import mysql_utils
 
 
 class DNSDomain(resource.Resource):
-    def __init__(self):
-        pass
+    def __init__(self, spec):
+        self.spec = spec
 
-    def apply(self, ctx, spec):
+    def apply(self):
         print("DEBUG apply")
-        domain_name = spec["metadata"]["name"]
-        domain_ns = spec["spec"]["ns"]
+        domain_name = self.spec["metadata"]["name"]
+        domain_ns = self.spec["spec"]["ns"]
 
         now = datetime.datetime.now()
         soa_content = "ns1.example.com admin.example.com " + now.strftime("%Y%m%d%H") + " 10800 1800 604800 86400"
@@ -61,8 +61,8 @@ class DNSDomain(resource.Resource):
 
             conn.commit()
 
-    def delete(self, ctx, spec):
-        domain_name = spec["metadata"]["name"]
+    def delete(self):
+        domain_name = self.spec["metadata"]["name"]
 
         conn = mysql_utils.get_mysql_connection()
         with conn:
@@ -75,7 +75,7 @@ class DNSDomain(resource.Resource):
 
             conn.commit()
 
-    def get(self, ctx, spec):
+    def get(self):
         conn = mysql_utils.get_mysql_connection()
         with conn:
             with conn.cursor() as cursor:

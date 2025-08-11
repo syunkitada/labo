@@ -11,6 +11,7 @@ def load_specs(file) -> list[dict]:
     for spec in specs:
         dict_utils.complete_template(spec)
         dict_utils.complete_data(spec)
+        dict_utils.complete_nodes(spec)
 
     return specs
 

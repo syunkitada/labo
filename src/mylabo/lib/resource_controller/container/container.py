@@ -1,5 +1,5 @@
-import os
 import logging
+import json
 
 from mylabo.domain import resource
 from mylabo.lib.runtime import node_context
@@ -14,8 +14,16 @@ class Container(resource.Resource):
         self.next = 0
         spec["_hostname"] = f"{spec['_root_spec']['namespace']}-{spec['name']}"
 
-    def get(self):
-        print("get")
+    def get(self, labels: dict):
+        cmd = f"docker inspect {self.spec['_hostname']}"
+        result = self.c.exec_without_log(cmd, is_local=True, hide=True)
+        containers = json.loads(result.stdout)
+        container = containers[0]
+        return {
+            "name": self.spec["name"],
+            "id": container["Name"],
+            "status": container.get("State", {}).get("Status", "unknown"),
+        }
 
     def apply(self):
         print("apply container\n\n", self.spec)
@@ -27,21 +35,23 @@ class Container(resource.Resource):
             self.next = -1
 
     def delete(self):
-        print("delete container\n\n", self.spec)
+        self.c.c.sudo(f"docker kill {self.spec['_hostname']}", hide=True, warn=True)
+        self.c.c.sudo(f"rm -rf /var/run/netns/{self.spec['_hostname']}", hide=True)
+
+        for link in self.spec["spec"].get("_links", []):
+            self.c.c.sudo(f"ip link del {link['link_name']}", warn=True)
 
     def _apply_prepare(self):
-        spec = self.spec["spec"]
-
         lcmds = []
-        for link in spec.get("links", []):
+        for link in self.spec["spec"].get("links", []):
             self.c.append_local_cmds_add_link(lcmds, link)
-        for link in spec.get("child_links", []):
+        for link in self.spec["spec"].get("child_links", []):
             self.c.append_local_cmds_add_link(lcmds, link)
         self.c.exec(lcmds, title="prepare-links", is_local=True)
 
         # メモ: (負荷が高いと？)dockerでsystemdが起動できないことがある
         docker_options = [
-            f"-d  --rm --network {spec.get('network', 'none')} --privileged --name {self.spec['_hostname']}",
+            f"-d  --rm --network {self.spec['spec'].get('network', 'none')} --privileged --name {self.spec['_hostname']}",
             "-v /mnt/nfs:/mnt/nfs:ro",
             f"-v {self.c.script_dir}:{self.c.script_dir}",
         ]
@@ -65,7 +75,7 @@ class Container(resource.Resource):
 
         lcmds = [
             f"if ! docker inspect {self.spec['_hostname']}; then",
-            f"docker run {' '.join(docker_options)} {spec['image']}",
+            f"docker run {' '.join(docker_options)} {self.spec['spec']['image']}",
             f"pid=`docker inspect {self.spec['_hostname']}" + " --format '{{.State.Pid}}'`",
             "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{self.spec['_hostname']}",
             "fi",
@@ -73,7 +83,7 @@ class Container(resource.Resource):
         self.c.exec(lcmds, title="prepare-docker", is_local=True)
 
         lcmds = []
-        for route in spec.get("local_routes", []):
+        for route in self.spec["spec"].get("local_routes", []):
             lcmds += [
                 "ipaddr=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "
                 + self.spec["_hostname"]
@@ -83,16 +93,14 @@ class Container(resource.Resource):
         self.c.exec(lcmds, title="local_routes", is_local=True)
 
     def _apply(self):
-        spec = self.spec["spec"]
-
         skipped = False
 
         lcmds = []
         dcmds = []
         dcmds += [f"hostname {self.spec['_hostname']}"]
-        for key, value in spec.get("sysctl_map", {}).items():
+        for key, value in self.spec["spec"].get("sysctl_map", {}).items():
             dcmds += [f"sysctl -w {key}={value}"]
-        for bridge in spec.get("bridges", []):
+        for bridge in self.spec["spec"].get("bridges", []):
             dcmds += [
                 f"if ! ip addr show {bridge['name']}; then",
                 f"ip link add {bridge['name']} type bridge",
@@ -104,50 +112,50 @@ class Container(resource.Resource):
                 self.c.append_cmds_ip_addr_add(dcmds, ip, bridge["name"])
         self.c.exec(dcmds, title="init-docker")
 
-        for link in spec.get("links", []):
+        for link in self.spec["spec"].get("links", []):
             self.c.append_local_cmds_set_link(lcmds, link)
-        for link in spec.get("_links", []):
+        for link in self.spec["spec"].get("_links", []):
             self.c.append_local_cmds_set_peer(lcmds, link)
-        for link in spec.get("child_links", []):
+        for link in self.spec["spec"].get("child_links", []):
             self.c.append_local_cmds_set_link(lcmds, link)
         self.c.exec(lcmds, title="prepare-links", is_local=True)
 
-        for link in spec.get("links", []):
+        for link in self.spec["spec"].get("links", []):
             for vlan_id, _ in link.get("vlan_map", {}).items():
                 self.c.append_cmds_add_vlan(dcmds, link["link_name"], vlan_id)
             if "bridge" in link:
                 dcmds += [
                     f"ip link set dev {link['link_name']} master {link['bridge']}",
                 ]
-        for link in spec.get("_links", []):
+        for link in self.spec["spec"].get("_links", []):
             for vlan_id, _ in link.get("vlan_map", {}).items():
                 self.c.append_cmds_add_vlan(dcmds, link["peer_name"], vlan_id)
 
-        for ip in spec.get("lo_ips", []):
+        for ip in self.spec["spec"].get("lo_ips", []):
             self.c.append_cmds_ip_addr_add(dcmds, ip, "lo")
-        for link in spec.get("links", []):
+        for link in self.spec["spec"].get("links", []):
             for ip in link.get("ips", []):
                 self.c.append_cmds_ip_addr_add(dcmds, ip, link["link_name"])
-        for link in spec.get("_links", []):
+        for link in self.spec["spec"].get("_links", []):
             for ip in link.get("peer_ips", []):
                 self.c.append_cmds_ip_addr_add(dcmds, ip, link["peer_name"])
-        if "sid" in spec:
-            self.c.append_cmds_ip_addr_add(dcmds, spec["sid"], spec["sid"]["dev"])
+        if "sid" in self.spec["spec"]:
+            self.c.append_cmds_ip_addr_add(dcmds, self.spec["spec"]["sid"], self.spec["spec"]["sid"]["dev"])
 
-        for iprule in spec.get("ip_rules", []):
+        for iprule in self.spec["spec"].get("ip_rules", []):
             dcmds += self.c.wrap_if_exist_iprule(
                 iprule["rule"], [f"ip rule add {iprule['rule']} prio {iprule['prio']}"]
             )
 
-        for route in spec.get("routes", []):
+        for route in self.spec["spec"].get("routes", []):
             self.c.append_cmds_ip_route_add(dcmds, route["dst"], route["via"])
-        for route in spec.get("routes6", []):
+        for route in self.spec["spec"].get("routes6", []):
             skipped = self.c.exist_route6(route)
             dcmds += [(f"ip -6 route add {route['dst']} via {route['via']}", skipped)]
 
         self.c.exec(dcmds, title="setup-networks")
 
-        l3admin = spec.get("l3admin")
+        l3admin = self.spec["spec"].get("l3admin")
         if l3admin is not None:
             dcmds += self.c.wrap_if_exist_netdev(
                 "l3admin",
@@ -164,7 +172,7 @@ class Container(resource.Resource):
                 self.c.append_cmds_ip_addr_add(dcmds, ip, "l3admin")
 
             routes = []
-            for link in spec.get("_links", []):
+            for link in self.spec["spec"].get("_links", []):
                 for vlan_id, vlan in link.get("vlan_map", {}).items():
                     if vlan.get("bgp_peer_group", "") == "ADMIN":
                         dcmds += [
@@ -181,8 +189,8 @@ class Container(resource.Resource):
                         dcmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
             self.c.exec(dcmds, title="setup-l3admin")
 
-        if "cmds" in spec:
-            self.c.exec(spec.get("cmds", []), title="cmds")
+        if "cmds" in self.spec["spec"]:
+            self.c.exec(self.spec["spec"].get("cmds", []), title="cmds")
 
-        if "ansible" in spec:
-            self.c.ansible(spec["ansible"])
+        if "ansible" in self.spec["spec"]:
+            self.c.ansible(self.spec["spec"]["ansible"])

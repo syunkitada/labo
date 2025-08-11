@@ -3,13 +3,13 @@ from abc import ABC, abstractmethod
 
 class Resource(ABC):
     @abstractmethod
-    def get(self):
+    def get(self, labels: dict):
         pass
 
     @abstractmethod
-    def apply(self):
+    def apply(self, labels: dict):
         pass
 
     @abstractmethod
-    def delete(self):
+    def delete(self, labels: dict):
         pass

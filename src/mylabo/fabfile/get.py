@@ -1,12 +1,13 @@
 import fabric
 
 from mylabo.lib import resource_controller
-from mylabo.lib.utils import runtime, spec_utils
+from mylabo.lib.logger import logger
+from mylabo.lib.utils import spec_utils, cmd_utils
 
 
 @fabric.task
-def get(c, kind, debug=False, Dryrun=False):
-    """get [kind] -d -D
+def get(c, kind, name, file="", debug=False, Dryrun=False, namespace=""):
+    """get [kind] [name] -d -D
 
     # target (default=node)
     コマンドの実行対象を限定するために使用します。
@@ -14,8 +15,21 @@ def get(c, kind, debug=False, Dryrun=False):
     [kind]の後ろに、:[name_regex]を指定することで、正規表現により実行対象の名前で限定します。
     """
 
-    ctx = {}
-    spec = {}
+    # labels = cmd_utils.parse_labels(label)
+    # logger.init(debug)
 
-    rc = resource_controller.load(kind)
-    rc.get(ctx, spec)
+    specs = spec_utils.load_specs(file)
+    for spec in specs:
+        get_spec(spec, labels)
+
+
+def get_spec(spec, labels: dict):
+    rc = resource_controller.load(spec)
+    results = rc.get(labels)
+    for result in results:
+        if isinstance(result, dict):
+            print(
+                f"{result.get('name', 'unknown')}: {result.get('id', 'id:unknown')}: {result.get('status', 'unknown')}"
+            )
+        else:
+            print(result)

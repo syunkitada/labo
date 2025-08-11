@@ -33,7 +33,7 @@ class NodeContext:
             return f"ssh -i /root/.ssh/labo.pem admin@{self.spec['_hostname']} sudo {cmd}"
         return cmd
 
-    def exec_without_log(self, cmd, *args, is_local=False, **kwargs):
+    def exec_without_log(self, cmd: str, *args, is_local=False, **kwargs):
         tmp_cmd = ""
         if is_local:
             tmp_cmd = f"PATH={os.environ['PATH']} {cmd}"
@@ -41,6 +41,10 @@ class NodeContext:
             tmp_cmd = f"docker exec {self.spec['_hostname']} {cmd}"
         elif self.spec["kind"] == "vm":
             tmp_cmd = f"ssh -i /root/.ssh/labo.pem admin@{self.spec['_hostname']} sudo {cmd}"
+
+        # Remove unsupported parameters for invoke library
+        kwargs.pop("title", None)
+
         return self.c.sudo(tmp_cmd, *args, **kwargs)
 
     def exec(self, cmds, title=None, skipped=False, is_local=False):

@@ -1,8 +1,8 @@
 .PHONY: all
 all:
-	tools/make-env.sh
 	cd labo/tls; make
-	sudo ansible-playbook labo.infra.labo
+	sudo .venv/bin/ansible-playbook labo.infra.labo
+	sudo .venv/bin/mylabo apply manifests/dns_record.yml
 
 .PHONY: clean
 clean:
