@@ -153,16 +153,23 @@ class NodeContext:
     def append_cmds_ip_route_add(self, cmds, dst, via):
         cmds += [
             "set +e",
-            f"exists_route=$(ip route | grep {dst})",
+            f'exists_routes=$(ip route | grep {dst} | awk \'{{print $1" "$2" "$3}}\')',
             "set -e",
             f'expected_route="{dst} via {via}"',
-            'if [ "${exists_route}" != "" ]; then',
-            'if [ "${exists_route}" != "${expected_route}" ]; then',
-            "ip route del $exists_route",
-            f"ip route add {dst} via {via}",
-            "fi",
-            "else",
-            f"ip route add {dst} via {via}",
+            "exists_expected_route=0",
+            "IFS='\n'",
+            "for exists_route in $exists_routes; do",
+            '  if [ "${exists_route}" != "" ]; then',
+            '    if [ "${exists_route}" != "${expected_route}" ]; then',
+            '      sh -c "ip route del $exists_route"',
+            "    fi",
+            '    if [ "${exists_route}" == "${expected_route}" ]; then',
+            "      exists_expected_route=1",
+            "    fi",
+            "  fi",
+            "done",
+            "if [ $exists_expected_route -eq 0 ]; then",
+            f"  ip route add {dst} via {via}",
             "fi",
         ]
 
@@ -183,10 +190,13 @@ class NodeContext:
     def append_local_cmds_add_link(self, cmds, link):
         if link["kind"] != "veth":
             return
+
         cmds += self.wrap_if_exist_netdev_netns(
             link["link_name"],
             [
+                f"if ! ip link show dev {link['link_name']}; then",
                 f"ip link add {link['link_name']} type veth peer name {link['peer_name']}",
+                "fi",
             ],
         )
 

@@ -70,7 +70,7 @@ class Container(resource.Resource):
                 "--cgroupns private",
             ]
 
-        for port in spec.get("ports", []):
+        for port in self.spec["spec"].get("ports", []):
             docker_options += [f"-p {port}"]
 
         lcmds = [

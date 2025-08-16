@@ -16,21 +16,20 @@ class VM(resource.Resource):
         self.root_spec = spec["_root_spec"]
         self.c = node_context.NodeContext(spec)
         self.next = 0
+        self.complete_spec()
 
-        spec["_hostname"] = spec["name"].replace("_", "-") + "." + self.root_spec["spec"]["domain"]
-        self.spec["spec"]["_vm_dir"] = os.path.join(self.root_spec["local_vms_dir"], spec["_hostname"])
-        self.spec["spec"]["_image_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "img")
-        self.spec["spec"]["_domain_xml_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "domain.xml")
-        self.spec["spec"]["_monitor_socket_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "monitor.sock")
-        self.spec["spec"]["_serial_socket_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "serial.sock")
-        self.spec["spec"]["_serial_log_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "serial.log")
-        self.spec["spec"]["_config_image_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "config.img")
-        self.spec["spec"]["_metadata_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "meta-data")
-        self.spec["spec"]["_userdata_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "user-data")
-
-        self.prepare_image()
-        self.prepare_config_drive()
-        self.prepare_domain_xml()
+    def complete_spec(self):
+        spec = self.spec
+        spec["_hostname"] = self.spec["name"].replace("_", "-") + "." + self.root_spec["spec"]["domain"]
+        spec["spec"]["_vm_dir"] = os.path.join(self.root_spec["local_vms_dir"], spec["_hostname"])
+        spec["spec"]["_image_path"] = os.path.join(spec["spec"]["_vm_dir"], "img")
+        spec["spec"]["_domain_xml_path"] = os.path.join(spec["spec"]["_vm_dir"], "domain.xml")
+        spec["spec"]["_monitor_socket_path"] = os.path.join(spec["spec"]["_vm_dir"], "monitor.sock")
+        spec["spec"]["_serial_socket_path"] = os.path.join(spec["spec"]["_vm_dir"], "serial.sock")
+        spec["spec"]["_serial_log_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "serial.log")
+        spec["spec"]["_config_image_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "config.img")
+        spec["spec"]["_metadata_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "meta-data")
+        spec["spec"]["_userdata_path"] = os.path.join(self.spec["spec"]["_vm_dir"], "user-data")
 
     def prepare_image(self):
         image = self.spec["spec"]["image"]
@@ -82,8 +81,9 @@ class VM(resource.Resource):
                 f"dev{i}=`grep {link['peer_mac']} /sys/class/net/*/address -l | awk -F '/' '{{print $5}}'`",
                 f"ip link set $dev{i} up",
             ]
-            for inet in link.get("inets", []):
-                userdata += [f"ip addr add {inet} dev $dev{i}"]
+
+            for inet in link.get("peer_ips", []):
+                userdata += [f"ip addr add {inet['inet']} dev $dev{i}"]
 
         for route in self.spec["spec"].get("routes", []):
             userdata += [f"ip route add {route['dst']} via {route['via']}"]
@@ -91,12 +91,12 @@ class VM(resource.Resource):
         if "resolvers" in self.spec["spec"]:
             userdata += [f"/opt/labo/bin/init-resolver {' '.join(self.spec['common']['resolvers'])}"]
 
-        nfs = self.root_spec["spec"]["common"].get("nfs")
-        if nfs is not None:
-            userdata += [
-                f"mkdir -p {nfs['path']}",
-                f"until mount -t nfs {nfs['target']}:/ {nfs['path']}; do echo 'waiting for mount nfs'; sleep 2; done",
-            ]
+        # nfs = self.root_spec["spec"]["common"].get("nfs")
+        # if nfs is not None:
+        #     userdata += [
+        #         f"mkdir -p {nfs['path']}",
+        #         f"until mount -t nfs {nfs['target']}:/ {nfs['path']}; do echo 'waiting for mount nfs'; sleep 2; done",
+        #     ]
 
         with open(self.spec["spec"]["_userdata_path"], "w") as f:
             f.write("\n".join(userdata))
@@ -140,13 +140,46 @@ class VM(resource.Resource):
         devices = ET.SubElement(domain, "devices")
         ET.SubElement(devices, "emulator").text = "/usr/bin/qemu-system-x86_64"
 
-        #     <disk type='file' device='disk'>
-        #       <source file='/var/lib/libvirt/images/demo2.img'/>
-        #       <target dev='hda'/>
-        #     </disk>
-        disk = ET.SubElement(devices, "disk", type="file", device="disk")
-        ET.SubElement(disk, "source", file=self.spec["spec"]["_image_path"])
-        ET.SubElement(disk, "target", dev="vda")
+        # <disk type='file' device='disk'>
+        #   <driver name='qemu' type='qcow2' cache='none'/>
+        #   <source file='/var/lib/nova/instances/88043986-97f8-416f-ada9-6eee22081a3d/disk' index='2'/>
+        #   <backingStore type='file' index='3'>
+        #     <format type='raw'/>
+        #     <source file='/var/lib/nova/instances/_base/19fe8a7a85738170b42956bdd2cb36887a939353'/>
+        #     <backingStore/>
+        #   </backingStore>
+        #   <target dev='vda' bus='virtio'/>
+        #   <alias name='virtio-disk0'/>
+        #   <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+        # </disk>
+        root_disk = ET.SubElement(devices, "disk", type="file", device="disk")
+        ET.SubElement(root_disk, "driver", name="qemu", type="qcow2", cache="none")
+        ET.SubElement(root_disk, "source", file=self.spec["spec"]["_image_path"], index="2")
+        # backing_store = ET.SubElement(root_disk, "backingStore", type="file", index="3")
+        # ET.SubElement(backing_store, "format", type="raw")
+        # ET.SubElement(backing_store, "source", file=self.spec["spec"]["_base_image_path"])
+        # ET.SubElement(backing_store, "backingStore")
+        ET.SubElement(root_disk, "target", dev="vda", bus="virtio")
+        ET.SubElement(root_disk, "alias", name="virtio-disk0")
+        ET.SubElement(root_disk, "address", type="pci", domain="0x0000", bus="0x00", slot="0x04", function="0x0")
+
+        # <disk type='file' device='cdrom'>
+        #   <driver name='qemu' type='raw' cache='none'/>
+        #   <source file='/var/lib/nova/instances/88043986-97f8-416f-ada9-6eee22081a3d/disk.config' index='1'/>
+        #   <backingStore/>
+        #   <target dev='hda' bus='ide'/>
+        #   <readonly/>
+        #   <alias name='ide0-0-0'/>
+        #   <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+        # </disk>
+        config_drive = ET.SubElement(devices, "disk", type="file", device="cdrom")
+        ET.SubElement(config_drive, "driver", name="qemu", type="raw", cache="none")
+        ET.SubElement(config_drive, "source", file=self.spec["spec"]["_config_image_path"], index="1")
+        ET.SubElement(config_drive, "backingStore")
+        ET.SubElement(config_drive, "target", dev="hda", bus="ide")
+        ET.SubElement(config_drive, "readonly")
+        ET.SubElement(config_drive, "alias", name="ide0-0-0")
+        ET.SubElement(config_drive, "address", type="drive", controller="0", bus="0", target="0", unit="0")
 
         #     <interface type='ethernet'>
         #       <target dev='default'/>
@@ -171,29 +204,47 @@ class VM(resource.Resource):
                 tx_queue_size="256",
             )
 
+        # <serial type='pty'>
+        #   <source path='/dev/pts/1'/>
+        #   <log file='/var/lib/nova/instances/b3166191-f34e-46b2-af27-8155734d82b3/console.log' append='off'/>
+        #   <target type='isa-serial' port='0'>
+        #     <model name='isa-serial'/>
+        #   </target>
+        #   <alias name='serial0'/>
+        # </serial>
+        serial = ET.SubElement(devices, "serial", type="pty")
+        ET.SubElement(serial, "source")
+        ET.SubElement(serial, "log", file=self.spec["spec"]["_serial_log_path"], append="off")
+        serial_target = ET.SubElement(serial, "target", type="isa-serial", port="0")
+        ET.SubElement(serial_target, "model", name="isa-serial")
+        ET.SubElement(serial, "alias", name="serial0")
+
+        # <console type='pty' tty='/dev/pts/1'>
+        #   <source path='/dev/pts/1'/>
+        #   <log file='/var/lib/nova/instances/b3166191-f34e-46b2-af27-8155734d82b3/console.log' append='off'/>
+        #   <target type='serial' port='0'/>
+        #   <alias name='serial0'/>
+        # </console>
+        console = ET.SubElement(devices, "console", type="pty")
+        ET.SubElement(console, "source")
+        ET.SubElement(console, "log", file=self.spec["spec"]["_serial_log_path"], append="off")
+        ET.SubElement(console, "target", type="serial", port="0")
+        ET.SubElement(console, "alias", name="serial0")
+
         # <qemu:commandline>
         #     <qemu:arg value='-device'/>
         #     <qemu:arg value='amd-iommu'/>
         # </qemu:commandline>
-        commandline = ET.SubElement(domain, "qemu:commandline")
-        ET.SubElement(commandline, "qemu:arg", value="-device")
-        ET.SubElement(commandline, "qemu:arg", value="amd-iommu")
+        # commandline = ET.SubElement(domain, "qemu:commandline")
+        # ET.SubElement(commandline, "qemu:arg", value="-device")
+        # ET.SubElement(commandline, "qemu:arg", value="amd-iommu")
 
         #   </devices>
 
+        ET.SubElement(domain, "audio", type="none")
+
         tree = ET.ElementTree(domain)
         tree.write(self.spec["spec"]["_domain_xml_path"], encoding="utf-8")
-
-        self.c.exec(
-            [
-                f"virsh undefine {self.spec['_hostname']}",
-                f"virsh define {self.spec['spec']['_domain_xml_path']}",
-            ],
-            title="prepare-vm",
-            is_local=True,
-        )
-
-        os._exit(0)
 
     def get(self, labels: dict = None):
         return {
@@ -219,42 +270,18 @@ class VM(resource.Resource):
 
     def _apply_prepare(self):
         print("Preparing VM...")
+        self.prepare_image()
+        self.prepare_config_drive()
+        self.prepare_domain_xml()
 
-        # lcmds = [
-        #     f"mkdir -p /mnt/nfs/mylabo/vms/{self.spec['_hostname']}",
-        # ]
-        # self.c.exec(lcmds, title="prepare-vm", is_local=True)
-
-        # links = []
-        # for link in self.spec["spec"]["_links"]:
-        #     inets = []
-        #     for peer_ip in link.get("peer_ips", []):
-        #         inets.append(peer_ip["inet"])
-        #     links.append(
-        #         {
-        #             "name": link["link_name"],
-        #             "inets": inets,
-        #             "mac": link["peer_mac"],
-        #         }
-        #     )
-
-        # vm_yaml = {
-        #     "image": self.spec["spec"]["image"],
-        #     "vcpus": self.spec["spec"]["vcpus"],
-        #     "ram": self.spec["spec"]["ram"],
-        #     "disk": self.spec["spec"]["disk"],
-        #     "links": links,
-        #     "routes": self.spec["spec"].get("routes", []),
-        #     "user": self.spec["spec"]["user"],
-        #     "nfs": self.root_spec["spec"]["common"]["nfs"],
-        #     "resolvers": self.root_spec["spec"]["common"].get("resolvers", []),
-        # }
-        # self.c.write(f"/mnt/nfs/vms/{self.spec['_hostname']}/vm.yaml", yaml=vm_yaml, is_local=True)
-
-        # lcmds = [
-        #     f"labo-vm-ctl start {self.spec['_hostname']}",
-        # ]
-        # self.c.exec(lcmds, title="prepare-vm", is_local=True)
+        self.c.exec(
+            [
+                # f"virsh undefine {self.spec['_hostname']}",
+                f"virsh define {self.spec['spec']['_domain_xml_path']}",
+            ],
+            title="prepare-vm",
+            is_local=True,
+        )
 
     def _wait_for_active(self):
         print("Waiting for VM to become active...")

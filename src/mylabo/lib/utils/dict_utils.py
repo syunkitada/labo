@@ -1,4 +1,5 @@
 import copy
+import ipaddress
 
 from mylabo.lib import spec_helper
 
@@ -60,6 +61,8 @@ def _complete_data(root_data: dict, data: dict | list):
                 data[k] = _complete_data(root_data, v)
             elif isinstance(v, str):
                 data[k] = complete_value(root_data, v)
+        if "inet" in data:
+            complete_inet_data(data)
     elif isinstance(data, list):
         for i, v in enumerate(data):
             if isinstance(v, dict) or isinstance(v, list):
@@ -68,6 +71,18 @@ def _complete_data(root_data: dict, data: dict | list):
                 data[i] = complete_value(root_data, v)
 
     return data
+
+
+def complete_inet_data(inet_data: dict):
+    ip_interface = ipaddress.ip_interface(inet_data["inet"])
+    inet_data["inet_compressed"] = ip_interface.compressed
+    inet_data["inet_exploded"] = ip_interface.exploded
+    inet_data["ip"] = str(ip_interface.ip)
+    inet_data["version"] = ip_interface.version
+    inet_data["network"] = str(ip_interface.network)
+    ip_network = ipaddress.ip_network(inet_data["network"])
+    if ip_network.version == 4 and ip_network.prefixlen < 32:
+        inet_data["gateway_ip"] = str(ip_network[1])
 
 
 def complete_value(root_data: dict, value: str):
@@ -86,7 +101,8 @@ def complete_value(root_data: dict, value: str):
             if funci == -1 or funcri == -1:
                 _value = reference_value(root_data, _value)
             else:
-                spec_helper.handle(func, root_data, arg)
+                _value = spec_helper.handle(func, root_data, arg)
+            # TODO
             # elif func == "assign_inet4":
             #     value = ipam.assign_inet4(arg, spec)
             # elif func == "assign_ip4":

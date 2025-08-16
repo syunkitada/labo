@@ -54,6 +54,7 @@ spec:
         network: labo-net
         bridges:
           - name: l2-br
+            mtu: 1500
             ips:
               - inet: <%=gateway_inet4(gw_network1)%>
         local_routes:

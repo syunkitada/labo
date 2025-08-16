@@ -20,7 +20,7 @@ systemctl status neutron-openvswitch-agent ||
 systemctl restart neutron-openvswitch-agent
 
 # nova-compute
-dnf install -y qemu-kvm libvirt python3-libvirt
+dnf install -y qemu-kvm libvirt python3-libvirt genisoimage
 systemctl start libvirtd
 
 cp /opt/openstack/nova/nova-compute.conf /etc/nova/nova-compute.conf
