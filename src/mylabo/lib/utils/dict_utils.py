@@ -175,18 +175,18 @@ def _complete_links(spec: dict, node_map: dict):
             if peer_node is None:
                 raise Exception(f"peer node {link['peer']} is not found in node_map")
 
-            _complete_link(node_index, node, link_index, link)
+            _complete_link(node_index, node, peer_node, link_index, link)
             peer_node["spec"]["_links"].append(link)
 
 
 MAC_OUI = [0x00, 0x16, 0x3E]
 
 
-def _complete_link(node_index: int, node: dict, link_index: int, link: dict):
+def _complete_link(node_index: int, node: dict, peer_node, link_index: int, link: dict):
     if "mtu" not in link:
         link["mtu"] = 1500
 
-    if node["kind"] == "vm":
+    if node["kind"] == "vm" or peer_node["kind"] == "vm":
         link["kind"] = "tap"
     elif node["kind"] == "container":
         link["kind"] = "veth"

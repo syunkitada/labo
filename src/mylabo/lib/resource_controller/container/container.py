@@ -103,9 +103,9 @@ class Container(resource.Resource):
         for bridge in self.spec["spec"].get("bridges", []):
             dcmds += [
                 f"if ! ip addr show {bridge['name']}; then",
-                f"ip link add {bridge['name']} type bridge",
-                f"ip link set {bridge['name']} up",
-                f"ip link set dev {bridge['name']} mtu {bridge['mtu']}",
+                f"  ip link add {bridge['name']} type bridge",
+                f"  ip link set {bridge['name']} up",
+                f"  ip link set dev {bridge['name']} mtu {bridge['mtu']}",
                 "fi",
             ]
             for ip in bridge.get("ips", []):
@@ -113,20 +113,29 @@ class Container(resource.Resource):
         self.c.exec(dcmds, title="init-docker")
 
         for link in self.spec["spec"].get("links", []):
-            self.c.append_local_cmds_set_link(lcmds, link)
+            if link["kind"] == "veth":
+                self.c.append_local_cmds_set_link(lcmds, link)
+            elif link["kind"] == "tap":
+                self.c.append_local_cmds_set_peer(lcmds, link)
         for link in self.spec["spec"].get("_links", []):
             self.c.append_local_cmds_set_peer(lcmds, link)
-        for link in self.spec["spec"].get("child_links", []):
-            self.c.append_local_cmds_set_link(lcmds, link)
+        # NOTE Is this necessary?
+        # for link in self.spec["spec"].get("child_links", []):
+        #     self.c.append_local_cmds_set_link(lcmds, link)
         self.c.exec(lcmds, title="prepare-links", is_local=True)
 
         for link in self.spec["spec"].get("links", []):
             for vlan_id, _ in link.get("vlan_map", {}).items():
                 self.c.append_cmds_add_vlan(dcmds, link["link_name"], vlan_id)
             if "bridge" in link:
-                dcmds += [
-                    f"ip link set dev {link['link_name']} master {link['bridge']}",
-                ]
+                if link["kind"] == "veth":
+                    dcmds += [
+                        f"ip link set dev {link['link_name']} master {link['bridge']}",
+                    ]
+                elif link["kind"] == "tap":
+                    dcmds += [
+                        f"ip link set dev {link['peer_name']} master {link['bridge']}",
+                    ]
         for link in self.spec["spec"].get("_links", []):
             for vlan_id, _ in link.get("vlan_map", {}).items():
                 self.c.append_cmds_add_vlan(dcmds, link["peer_name"], vlan_id)

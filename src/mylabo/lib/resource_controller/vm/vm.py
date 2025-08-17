@@ -189,7 +189,7 @@ class VM(resource.Resource):
         #     </interface>
         for link in self.spec["spec"].get("_links", []):
             interface = ET.SubElement(devices, "interface", type="ethernet")
-            ET.SubElement(interface, "target", dev=link["peer_name"] + "-tap")
+            ET.SubElement(interface, "target", dev=link["peer_name"])
             ET.SubElement(interface, "mac", address=link["peer_mac"])
             ET.SubElement(interface, "model", type="virtio")
             ET.SubElement(
@@ -265,8 +265,23 @@ class VM(resource.Resource):
             self._prepare()
             self.next = -1
 
+    def stop(self):
+        print("stop vm\n\n", self.spec)
+
     def delete(self):
-        print("delete vm\n\n", self.spec)
+        self.c.exec(
+            [
+                f"if virsh list | grep {self.spec['_hostname']}; then",
+                f"  virsh destroy {self.spec['_hostname']}",
+                "fi",
+                f"if virsh list --all | grep {self.spec['_hostname']}; then",
+                f"  virsh undefine {self.spec['_hostname']}",
+                "fi",
+                f"rm -rf {self.spec['spec']['_vm_dir']}",
+            ],
+            title="delete-vm",
+            is_local=True,
+        )
 
     def _apply_prepare(self):
         print("Preparing VM...")
@@ -276,8 +291,14 @@ class VM(resource.Resource):
 
         self.c.exec(
             [
-                # f"virsh undefine {self.spec['_hostname']}",
+                f"if virsh list | grep {self.spec['_hostname']}; then",
+                f"  virsh destroy {self.spec['_hostname']}",
+                "fi",
+                f"if virsh list --all | grep {self.spec['_hostname']}; then",
+                f"  virsh undefine {self.spec['_hostname']}",
+                "fi",
                 f"virsh define {self.spec['spec']['_domain_xml_path']}",
+                f"virsh start {self.spec['_hostname']}",
             ],
             title="prepare-vm",
             is_local=True,
