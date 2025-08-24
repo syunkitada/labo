@@ -1,7 +1,15 @@
+import os
 import copy
 import ipaddress
 
 from mylabo.lib import spec_helper
+
+
+def init_spec(spec: dict, file: str):
+    namespace = file.rsplit("/", 1)[1].split(".", 1)[0].replace("_", "-")
+    if "namespace" not in spec:
+        spec["namespace"] = namespace
+    spec["_script_dir"] = os.path.join(spec["local_namespaces_dir"], spec["kind"].lower(), spec["namespace"])
 
 
 def update_dict(d: dict, u: dict):
@@ -50,25 +58,29 @@ def _complete_template(root_data: dict, data: dict | list):
     return data
 
 
+def must_complete_data(spec: dict):
+    return _complete_data(spec, spec, must_complete=True)
+
+
 def complete_data(spec: dict):
     return _complete_data(spec, spec)
 
 
-def _complete_data(root_data: dict, data: dict | list):
+def _complete_data(root_data: dict, data: dict | list, must_complete: bool = False):
     if isinstance(data, dict):
         for k, v in data.items():
             if isinstance(v, dict) or isinstance(v, list):
-                data[k] = _complete_data(root_data, v)
+                data[k] = _complete_data(root_data, v, must_complete)
             elif isinstance(v, str):
-                data[k] = complete_value(root_data, v)
+                data[k] = complete_value(root_data, v, must_complete)
         if "inet" in data:
             complete_inet_data(data)
     elif isinstance(data, list):
         for i, v in enumerate(data):
             if isinstance(v, dict) or isinstance(v, list):
-                data[i] = _complete_data(root_data, v)
+                data[i] = _complete_data(root_data, v, must_complete)
             elif isinstance(v, str):
-                data[i] = complete_value(root_data, v)
+                data[i] = complete_value(root_data, v, must_complete)
 
     return data
 
@@ -85,7 +97,7 @@ def complete_inet_data(inet_data: dict):
         inet_data["gateway_ip"] = str(ip_network[1])
 
 
-def complete_value(root_data: dict, value: str):
+def complete_value(root_data: dict, value: str, must_complete: bool = False):
     try:
         compi = value.find("<%=")
         compri = value.find("%>", compi)
@@ -98,10 +110,14 @@ def complete_value(root_data: dict, value: str):
             funcri = _value.rfind(")")
             func = _value[:funci]
             arg = _value[funci + 1 : funcri]  # noqa
-            if funci == -1 or funcri == -1:
+            if funci != -1 and funcri != -1:
+                _value = spec_helper.handle(func, root_data, arg)
+            elif compi >= 0 and compri > 1:
+                _value = value[compi + 3 : compri]  # noqa
+                _value = _value.strip()
                 _value = reference_value(root_data, _value)
             else:
-                _value = spec_helper.handle(func, root_data, arg)
+                return value
             # TODO
             # elif func == "assign_inet4":
             #     value = ipam.assign_inet4(arg, spec)
@@ -128,11 +144,13 @@ def complete_value(root_data: dict, value: str):
             return value
 
     except Exception as e:
-        print(f"value={value}")
-        raise (e)
+        print(f"value={value}, exception={e}")
+        if must_complete:
+            raise
+        return value
 
 
-def reference_value(data: dict | list, reference_key: str):
+def reference_value(data: dict | list, reference_key: str, must_complete: bool = False):
     splited_src = reference_key.split(".")
 
     tmp_data = None
@@ -157,7 +175,7 @@ def complete_nodes(spec: dict):
     for node in spec["spec"]["nodes"]:
         node["spec"]["_links"] = []
         node_map[node["name"]] = node
-    spec["_node_map"] = node_map
+    spec["spec"]["_node_map"] = node_map
 
     _complete_links(spec, node_map)
 

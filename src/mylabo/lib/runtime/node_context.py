@@ -18,7 +18,7 @@ class NodeContext:
         self.full_cmds = []
         self.childs = []
 
-        self.script_dir = spec["_root_spec"]["_script_dir"]
+        self.script_dir = os.path.join(spec["_root_spec"]["_script_dir"], spec["name"])
         self.script_index = 0
         os.makedirs(self.script_dir, exist_ok=True)
 

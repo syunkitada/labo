@@ -65,7 +65,7 @@ def gateway_ip(data, network):
     return inet
 
 
-def inet_to_ip(inet):
+def inet_to_ip(data, inet):
     return inet.split("/")[0]
 
 
