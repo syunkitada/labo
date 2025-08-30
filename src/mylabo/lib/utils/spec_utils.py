@@ -9,10 +9,11 @@ def load_specs(file) -> list[dict]:
     specs = _load_file(file)
 
     for spec in specs:
+        spec["_referer"] = {}
         dict_utils.init_spec(spec, file)
         dict_utils.complete_template(spec)
-        dict_utils.complete_data(spec)
         dict_utils.complete_nodes(spec)
+        dict_utils.complete_data(spec)
         dict_utils.must_complete_data(spec)
 
     return specs

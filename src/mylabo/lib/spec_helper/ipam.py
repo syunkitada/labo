@@ -69,7 +69,7 @@ def inet_to_ip(data, inet):
     return inet.split("/")[0]
 
 
-def ipv4_to_asn(ipv4):
+def ipv4_to_asn(data, ipv4):
     ip_address = ipaddress.ip_address(ipv4)
     asn = PRIVATE_ASN_START
     for ip_network in ASN_IP_NETWORKS:
@@ -84,7 +84,7 @@ def ipv4_to_asn(ipv4):
     return asn
 
 
-def asn_to_ipv4(asn):
+def asn_to_ipv4(data, asn):
     ipi = asn - PRIVATE_ASN_START
     for ip_network in ASN_IP_NETWORKS:
         if ipi <= ip_network.num_addresses:
@@ -95,7 +95,7 @@ def asn_to_ipv4(asn):
     raise Exception(f"Invalid asn: asn={asn}")
 
 
-def asn_to_sid(asn):
+def asn_to_sid(data, asn):
     ipi = int(asn) - PRIVATE_ASN_START
     suffix = "{:08x}".format(ipi)
     sid = f"fc06:0000:{suffix[:4]}:{suffix[4:]}::1/64"
@@ -103,7 +103,7 @@ def asn_to_sid(asn):
     return ip_interface.exploded
 
 
-def inet4_to_inet6(inet):
+def inet4_to_inet6(data, inet):
     inets = inet.split("/")
     ip = inets[0]
     ipv6 = "fc00:0000:0000:0000:" + ip.replace(".", ":")

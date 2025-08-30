@@ -20,7 +20,6 @@ class VM(resource.Resource):
 
     def complete_spec(self):
         spec = self.spec
-        spec["_hostname"] = self.spec["name"].replace("_", "-") + "." + self.root_spec["spec"]["domain"]
         spec["spec"]["_vm_dir"] = os.path.join(self.root_spec["local_vms_dir"], spec["_hostname"])
         spec["spec"]["_image_path"] = os.path.join(spec["spec"]["_vm_dir"], "img")
         spec["spec"]["_domain_xml_path"] = os.path.join(spec["spec"]["_vm_dir"], "domain.xml")

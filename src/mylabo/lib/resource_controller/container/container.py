@@ -12,7 +12,6 @@ class Container(resource.Resource):
         self.spec = spec
         self.c = node_context.NodeContext(spec)
         self.next = 0
-        spec["_hostname"] = f"{spec['_root_spec']['namespace']}-{spec['name']}"
 
     def get(self, labels: dict):
         cmd = f"docker inspect {self.spec['_hostname']}"
@@ -198,8 +197,8 @@ class Container(resource.Resource):
                         dcmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
             self.c.exec(dcmds, title="setup-l3admin")
 
-        if "cmds" in self.spec["spec"]:
-            self.c.exec(self.spec["spec"].get("cmds", []), title="cmds")
-
-        if "ansible" in self.spec["spec"]:
-            self.c.ansible(self.spec["spec"]["ansible"])
+        for step in self.spec["spec"].get("steps", []):
+            if "cmds" in step:
+                self.c.exec(step["cmds"], title=step.get("title", "cmds"))
+            if "template" in step:
+                self.c.template(step["template"], title=step.get("title", "template"))

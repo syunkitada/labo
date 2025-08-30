@@ -1,6 +1,7 @@
 import os
 import re
 import yaml as pyyaml
+from jinja2 import Template
 
 from mylabo.lib.runtime import runtime_context
 from mylabo.lib import colors
@@ -232,33 +233,51 @@ class NodeContext:
             ],
         )
 
-    def ansible(self, ansible):
-        self.write("/etc/ansible/host_vars/localhost.yaml", pyyaml.dump(ansible.get("vars", {})))
-        roles = []
-        for role in ansible.get("roles", []):
-            roles.append(
-                {
-                    "name": role,
-                    "tags": [role],
-                }
-            )
+    # def ansible(self, ansible):
+    #     self.write("/etc/ansible/host_vars/localhost.yaml", pyyaml.dump(ansible.get("vars", {})))
+    #     roles = []
+    #     for role in ansible.get("roles", []):
+    #         roles.append(
+    #             {
+    #                 "name": role,
+    #                 "tags": [role],
+    #             }
+    #         )
 
-        playbook_yaml = [
-            {
-                "hosts": "localhost",
-                "roles": roles,
-            }
-        ]
-        self.write("/etc/ansible/playbook.yaml", pyyaml.dump(playbook_yaml))
+    #     playbook_yaml = [
+    #         {
+    #             "hosts": "localhost",
+    #             "roles": roles,
+    #         }
+    #     ]
+    #     self.write("/etc/ansible/playbook.yaml", pyyaml.dump(playbook_yaml))
+
+    #     cmds = [
+    #         "export PATH=$PATH:/usr/local/bin",
+    #         "export LANG=C.UTF-8",
+    #         "export LC_ALL=C.UTF-8",
+    #         "test -L /etc/ansible/roles || ln -s /mnt/nfs/labo/ansible/roles /etc/ansible/roles",
+    #         "ansible-playbook /etc/ansible/playbook.yaml",
+    #     ]
+    #     self.exec(cmds, title="ansible-playbook")
+
+    def template(self, template: dict, title: str):
+        template_file = os.path.join(self.spec["_root_spec"]["_spec_dir"], template["src"])
+        with open(template_file) as f:
+            content = f.read()
+            t = Template(content)
+            rendered = t.render(spec=self.spec, node=self.spec, ctx=self)
+
+        dst_file = os.path.join(self.script_dir, template["src"])
+        dst_dir = os.path.dirname(os.path.realpath(dst_file))
+        os.makedirs(dst_dir, exist_ok=True)
+        with open(dst_file, "w") as f:
+            f.write(rendered)
 
         cmds = [
-            "export PATH=$PATH:/usr/local/bin",
-            "export LANG=C.UTF-8",
-            "export LC_ALL=C.UTF-8",
-            "test -L /etc/ansible/roles || ln -s /mnt/nfs/labo/ansible/roles /etc/ansible/roles",
-            "ansible-playbook /etc/ansible/playbook.yaml",
+            f"cp {dst_file} {template['dst']}",
         ]
-        self.exec(cmds, title="ansible-playbook")
+        self.exec(cmds, title=title)
 
     def test(self):
         def _ping(target):
