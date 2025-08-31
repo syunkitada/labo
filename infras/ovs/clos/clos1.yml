@@ -24,27 +24,21 @@ template_map:
     spec:
       lo_ips:
         - inet: <%=assign_inet4("spine_network")%>
-      # ansible:
-      #   roles:
-      #     - frr
-      #   vars:
-      #     frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
-      #     frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
-      #     frr_bgp_peer_groups:
-      #       - name: ADMIN
+      vars:
+        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
+        frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
+        frr_bgp_peer_groups:
+          - name: ADMIN
   leaf:
     spec:
       lo_ips:
         - inet: <%=assign_inet4("leaf_network")%>
-      # ansible:
-      #   roles:
-      #     - frr
-      #   vars:
-      #     frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
-      #     frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
-      #     frr_bgp_peer_groups:
-      #       - name: ADMIN
-      #       - name: VM
+      vars:
+        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
+        frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
+        frr_bgp_peer_groups:
+          - name: ADMIN
+          - name: VM
   hv:
     spec:
       routes:
@@ -84,30 +78,27 @@ spec:
           - dst: default
             via: <%=_node.spec.links.0.peer_ips.0.ip%>
         tests:
-          - kind: ping
-            targets:
-              - name: SP1
-                dst: <%=_node_map.SP1.spec.lo_ips.0.ip%>
-              - name: L11
-                dst: <%=_node_map.L11.spec.lo_ips.0.ip%>
-              - name: L11-L2
-                dst: <%=_node_map.L11.spec.bridges.0.ips.0.ip%>
-              - name: L12
-                dst: <%=_node_map.L12.spec.lo_ips.0.ip%>
-              - name: HV1-L2
-                dst: <%=_node_map.HV1.spec._links.0.peer_ips.0.ip%>
+          - shell:
+              cmds:
+                - ping -c 1 -W 1 <%=_node_map.SP1.spec.lo_ips.0.ip%>
+                - ping -c 1 -W 1 <%=_node_map.L11.spec.lo_ips.0.ip%>
+                # L11-L2
+                - ping -c 1 -W 1 <%=_node_map.L11.spec.bridges.0.ips.0.ip%>
+                # L12
+                - ping -c 1 -W 1 <%=_node_map.L12.spec.lo_ips.0.ip%>
+                # HV1-L2
+                - ping -c 1 -W 1 <%=_node_map.HV1.spec._links.0.peer_ips.0.ip%>
     - name: SP1
       templates:
         - node
         - spine
       spec:
-        # ansible:
-        #   vars:
-        #     frr_bgp_ipv4_unicast_networks:
-        #       - <%=_node_map.CL1.spec.links.0.ips.0.network%>
-        #       - <%=_node.spec.lo_ips.0.inet%>
-        #     frr_bgp_ipv6_unicast_networks:
-        #       - <%=_node_map.CL1.spec.links.0.ips.1.network%>
+        vars:
+          frr_bgp_ipv4_unicast_networks:
+            - <%=_node_map.GW1.spec.links.0.ips.0.network%>
+            - <%=_node.spec.lo_ips.0.inet%>
+          frr_bgp_ipv6_unicast_networks:
+            - <%=_node_map.GW1.spec.links.0.ips.1.network%>
         links:
           - peer: L11
             bgp_peer_group: ADMIN
@@ -120,24 +111,24 @@ spec:
           - template:
               src: frr/templates/frr.conf.j2
               dst: /etc/frr/frr.conf
-          - cmds:
-              - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
-              - systemctl restart frr
+          - shell:
+              cmds:
+                - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+                - systemctl restart frr
     - name: L11
       templates:
         - node
         - leaf
       spec:
+        vars:
+          frr_bgp_ipv4_unicast_networks:
+            - <%=_node.spec.links.0.peer_ips.0.network%>
+            - <%=_node.spec.lo_ips.0.inet%>
         bridges:
           - name: l2-br
             mtu: 1500
             ips:
               - inet: <%=gateway_inet4("leaf1_l2admin_network")%>
-        # ansible:
-        #   vars:
-        #     frr_bgp_ipv4_unicast_networks:
-        #       - <%=_node.spec.links.0.peer_ips.0.network%>
-        #       - <%=_node.spec.lo_ips.0.inet%>
         links:
           - peer: HV1
             bridge: l2-br
@@ -158,18 +149,18 @@ spec:
           - template:
               src: frr/templates/frr.conf.j2
               dst: /etc/frr/frr.conf
-          - cmds:
-              - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
-              - systemctl restart frr
+          - shell:
+              cmds:
+                - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+                - systemctl restart frr
     - name: L12
       templates:
         - node
         - leaf
       spec:
-        # ansible:
-        #   vars:
-        #     frr_bgp_ipv4_unicast_networks:
-        #       - <%=_node.spec.lo_ips.0.inet%>
+        vars:
+          frr_bgp_ipv4_unicast_networks:
+            - <%=_node.spec.lo_ips.0.inet%>
         links:
           - peer: HV1
             vlan_map:
@@ -187,9 +178,10 @@ spec:
           - template:
               src: frr/templates/frr.conf.j2
               dst: /etc/frr/frr.conf
-          - cmds:
-              - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
-              - systemctl restart frr
+          - shell:
+              cmds:
+                - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+                - systemctl restart frr
     - name: HV1
       templates:
         - node

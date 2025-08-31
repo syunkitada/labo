@@ -1,18 +1,11 @@
 imports:
-  - infras/ovs/clos/clos1.yaml
-  - infras/ovs/clos/clos1.1.yaml
-
-ipam:
-  vm_network1:
-    subnet: 10.100.0.0/24
-    kind: l2
+  - /etc/ansible/host_vars/localhost.yaml
+  - infras/ovs/clos/clos1.yml
+  - infras/ovs/clos/clos1.1.yml
 
 template_map:
   hv:
-    ansible:
-      roles:
-        - ovs
-        - frr
+    spec:
       vars:
         frr_route_map:
           VM-v4:
@@ -20,40 +13,74 @@ template_map:
             order: 5
             version: 4
             prefix_list:
-              - seq 5 permit <%=ipam.vm_network1.subnet%> le 32
+              - seq 5 permit <%=spec.ipam.vm_network1.subnet%> le 32
   vm:
-    mtu: 1500
-    routes:
-      - dst: default
-        via: <%=gateway_ip(_links.0.peer_ips.0.network)%>
+    spec:
+      mtu: 1500
+      routes:
+        - dst: default
+          via: <%=gateway_ip(_node.spec._links.0.peer_ips.0.network)%>
 
-node_map:
-  CL1:
-    tests:
-      - kind: ping
-        targets:
-          - name: vm1
-            dst: <%=_node_map.vm1._links.0.peer_ips.0.ip%>
-  HV1:
-    ansible:
-      vars:
-        frr_bgp_ipv4_unicast_networks:
-          - <%=l3admin.ips.0.inet%>
-          - <%=child_links.0.peer_ips.0.ip%>/32
-        ovs_hv_clos:
-          vm_bridge:
-            name: br-int
-            ports:
-              - name: <%=child_links.0.link_name%>
-                peer_mac: <%=child_links.0.peer_mac%>
-                ips:
-                  - ip: <%=child_links.0.peer_ips.0.ip%>
-    child_links:
-      - peer: vm1
-        peer_ips:
-          - inet: <%=assign_inet4(vm_network1)%>
-    childs:
-      - name: vm1
+spec:
+  ipam:
+    vm_network1:
+      subnet: 10.100.0.0/24
+      kind: l2
+
+spec_modifications:
+  - extend_nodes:
+      - name: VM1
         templates:
           - node
           - vm
+  - overwrite_node:
+      GW1:
+        spec:
+          tests:
+            - shell:
+                cmds:
+                  - ping -c 1 -W 1 <%=_node_map.VM1.spec._links.0.peer_ips.0.ip%>
+      HV1:
+        spec:
+          vars:
+            frr_bgp_ipv4_unicast_networks:
+              - <%=_node.spec.l3admin.ips.0.inet%>
+              - <%=_node.spec.links.0.peer_ips.0.ip%>/32
+            ovs_external_bridge:
+              name: br-ex
+              interfaces:
+                - name: <%=_node.spec._links.0.peer_name %>.200
+                  peer_mac: <%=_node.spec._links.0.link_mac %>
+                - name: <%=_node.spec._links.1.peer_name %>.200
+                  peer_mac: <%=_node.spec._links.1.link_mac %>
+            ovs_vm_bridge:
+              name: br-int
+              ports:
+                - name: <%=_node.spec.links.0.link_name%>
+                  peer_mac: <%=_node.spec.links.0.peer_mac%>
+                  ips:
+                    - ip: <%=_node.spec.links.0.peer_ips.0.ip%>
+          links:
+            - peer: VM1
+              peer_ips:
+                - inet: <%=assign_inet4("vm_network1")%>
+        steps:
+          # - template:
+          #     src: frr/templates/daemons.j2
+          #     dst: /etc/frr/daemons
+          # - template:
+          #     src: frr/templates/frr.conf.j2
+          #     dst: /etc/frr/frr.conf
+          # - shell:
+          #     cmds:
+          #       - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+          #       - systemctl restart frr
+          - template:
+              src: ovs/ovs.sh
+              dst: /tmp/ovs.sh
+          - template:
+              src: ovs/ovs.sh
+              dst: /tmp/ovs.sh
+          - shell:
+              cmds:
+                - /bin/bash -xe /tmp/ovs.sh

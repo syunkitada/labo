@@ -36,12 +36,16 @@ class Infra(resource.Resource):
 
         return results
 
-    def _init_nodes(self, spec):
+    def _init_nodes(self, spec, labels: dict):
         results = OrderedDict()
         nodes = []
 
         def _init(spec):
             for node_spec in spec["spec"].get("nodes", []):
+                label_name = labels.get("name")
+                if label_name is not None and node_spec["name"] != label_name:
+                    continue
+
                 node_spec["_root_spec"] = self.spec
                 if node_spec["kind"] == "vm":
                     node = vm.VM(node_spec)
@@ -62,7 +66,7 @@ class Infra(resource.Resource):
     def apply(self, labels: dict):
         print("apply", self.spec)
 
-        nodes, results = self._init_nodes(self.spec)
+        nodes, results = self._init_nodes(self.spec, labels)
 
         os.makedirs(self.spec["_script_dir"], exist_ok=True)
         while True:
@@ -84,7 +88,7 @@ class Infra(resource.Resource):
         _dump_scripts(self.spec, "apply", nodes)
 
     def delete(self, labels: dict):
-        nodes, results = self._init_nodes(self.spec)
+        nodes, results = self._init_nodes(self.spec, labels)
 
         os.makedirs(self.spec["_script_dir"], exist_ok=True)
         while True:
@@ -104,6 +108,54 @@ class Infra(resource.Resource):
 
         _print_results(results)
         _dump_scripts(self.spec, "apply", nodes)
+
+    def test(self, labels: dict):
+        print("test", self.spec)
+
+        nodes, results = self._init_nodes(self.spec, labels)
+
+        os.makedirs(self.spec["_script_dir"], exist_ok=True)
+        while True:
+            with ThreadPoolExecutor(max_workers=self.parallel_pool_size) as pool:
+                tmp_results = pool.map(_test, nodes)
+            for result in tmp_results:
+                results[result["name"]].append(result["result"])
+
+            next_node_ctxs = []
+            for t in nodes:
+                # nextがインクリメントされたnode_ctxsのみ次のタスクを実行します
+                if t.next > 0:
+                    next_node_ctxs.append(t)
+            if len(next_node_ctxs) == 0:
+                break
+            nodes = next_node_ctxs
+
+        _print_results(results)
+        _dump_scripts(self.spec, "test", nodes)
+
+
+def _test(node, cmd=""):
+    print(f"{cmd} node {node.spec['name']}: start {node.next}")
+    result = None
+    try:
+        result = node.test()
+    except Exception as e:
+        result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
+        node.next = -1
+
+    if node.next > 0:
+        print(f"{cmd} node {node.spec['name']}: next {node.next}")
+    else:
+        print(f"{cmd} node {node.spec['name']}: completed")
+
+        # fabricのConnectionの場合は、使い終わったら閉じる
+        if type(node.c) is Connection:
+            node.c.close()
+
+    return {
+        "name": node.spec["name"],
+        "result": result,
+    }
 
 
 def _apply(node, cmd=""):

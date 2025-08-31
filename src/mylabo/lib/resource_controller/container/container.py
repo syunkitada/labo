@@ -40,11 +40,13 @@ class Container(resource.Resource):
         for link in self.spec["spec"].get("_links", []):
             self.c.c.sudo(f"ip link del {link['link_name']}", warn=True)
 
+    def test(self):
+        for tt in self.spec["spec"].get("tests", []):
+            self.c.run_module(tt)
+
     def _apply_prepare(self):
         lcmds = []
         for link in self.spec["spec"].get("links", []):
-            self.c.append_local_cmds_add_link(lcmds, link)
-        for link in self.spec["spec"].get("child_links", []):
             self.c.append_local_cmds_add_link(lcmds, link)
         self.c.exec(lcmds, title="prepare-links", is_local=True)
 
@@ -118,9 +120,6 @@ class Container(resource.Resource):
                 self.c.append_local_cmds_set_peer(lcmds, link)
         for link in self.spec["spec"].get("_links", []):
             self.c.append_local_cmds_set_peer(lcmds, link)
-        # NOTE Is this necessary?
-        # for link in self.spec["spec"].get("child_links", []):
-        #     self.c.append_local_cmds_set_link(lcmds, link)
         self.c.exec(lcmds, title="prepare-links", is_local=True)
 
         for link in self.spec["spec"].get("links", []):
@@ -139,6 +138,7 @@ class Container(resource.Resource):
             for vlan_id, _ in link.get("vlan_map", {}).items():
                 self.c.append_cmds_add_vlan(dcmds, link["peer_name"], vlan_id)
 
+        # ip_addr_add
         for ip in self.spec["spec"].get("lo_ips", []):
             self.c.append_cmds_ip_addr_add(dcmds, ip, "lo")
         for link in self.spec["spec"].get("links", []):
@@ -198,7 +198,4 @@ class Container(resource.Resource):
             self.c.exec(dcmds, title="setup-l3admin")
 
         for step in self.spec["spec"].get("steps", []):
-            if "cmds" in step:
-                self.c.exec(step["cmds"], title=step.get("title", "cmds"))
-            if "template" in step:
-                self.c.template(step["template"], title=step.get("title", "template"))
+            self.c.run_module(step)

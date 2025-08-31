@@ -107,7 +107,7 @@ def complete_inet_data(inet_data: dict):
         inet_data["gateway_ip"] = str(ip_network[1])
 
 
-def complete_value(root_data: dict, value: str, must_complete: bool = False):
+def complete_value(root_data: dict, value: str, must_complete: bool = False) -> str:
     try:
         compi = value.find("<%=")
         compri = value.find("%>", compi)
@@ -117,7 +117,7 @@ def complete_value(root_data: dict, value: str, must_complete: bool = False):
             _value = value[compi + 3 : compri]  # noqa
             _value = _value.strip()
 
-            def _complete(txt: str):
+            def _complete(txt: str) -> str | None:
                 if txt.startswith('"') and txt.endswith('"'):
                     return txt[1:-1]
                 if txt.startswith("'") and txt.endswith("'"):
@@ -129,13 +129,17 @@ def complete_value(root_data: dict, value: str, must_complete: bool = False):
                 arg = txt[funci + 1 : funcri]  # noqa
 
                 if funci != -1 and funcri != -1:
+                    txt = _complete(arg)
+                    if txt is None:
+                        return None
                     txt = spec_helper.handle(func, root_data, _complete(arg))
-                else:
-                    txt = reference_value(root_data, root_data, txt)
+                    return txt
 
-                return txt
+                return reference_value(root_data, root_data, txt)
 
             _value = _complete(_value)
+            if _value is None:
+                return value
 
             # TODO
             # elif func == "assign_inet4":
@@ -169,7 +173,7 @@ def complete_value(root_data: dict, value: str, must_complete: bool = False):
         return value
 
 
-def reference_value(root_data: dict, data: dict | list, reference_key: str):
+def reference_value(root_data: dict, data: dict | list, reference_key: str) -> str | None:
     splited_src = reference_key.split(".")
 
     tmp_data = None
@@ -183,10 +187,30 @@ def reference_value(root_data: dict, data: dict | list, reference_key: str):
     elif isinstance(data, list):
         tmp_data = data[int(splited_src[0])]
 
-    if tmp_data is not None and isinstance(tmp_data, dict) or isinstance(tmp_data, list):
+    if tmp_data is None:
+        return None
+
+    if isinstance(tmp_data, dict) or isinstance(tmp_data, list):
         return reference_value(root_data, tmp_data, ".".join(splited_src[1:]))
-    else:
-        return tmp_data
+
+    return tmp_data
+
+
+def modify_spec(spec: dict):
+    for spec_modification in spec.get("spec_modifications", []):
+        if "overwrite_node" in spec_modification:
+            if "nodes" not in spec["spec"]:
+                raise Exception("nodes is not found in spec")
+
+            for node in spec["spec"]["nodes"]:
+                if node["name"] in spec_modification["overwrite_node"]:
+                    update_dict(node, spec_modification["overwrite_node"][node["name"]])
+
+        elif "extend_nodes" in spec_modification:
+            if "nodes" not in spec["spec"]:
+                raise Exception("nodes is not found in spec")
+
+            spec["spec"]["nodes"].extend(spec_modification["extend_nodes"])
 
 
 def complete_nodes(spec: dict):
@@ -201,6 +225,7 @@ def complete_nodes(spec: dict):
             node["_hostname"] = f"{node['name'].replace('_', '-')}.{spec['namespace']}.{spec['spec']['domain']}"
 
         node["spec"]["_links"] = []
+
         node_map[node["name"]] = node
     spec["_referer"]["_node_map"] = node_map
 
@@ -231,12 +256,13 @@ def _complete_link(node_index: int, node: dict, peer_node, link_index: int, link
     if "mtu" not in link:
         link["mtu"] = 1500
 
-    if node["kind"] == "vm" or peer_node["kind"] == "vm":
-        link["kind"] = "tap"
-    elif node["kind"] == "container":
-        link["kind"] = "veth"
-    else:
-        raise Exception(f"unexpected node kind: {node['kind']}")
+    if "kind" not in link:
+        if node["kind"] == "vm" or peer_node["kind"] == "vm":
+            link["kind"] = "tap"
+        elif node["kind"] == "container":
+            link["kind"] = "veth"
+        else:
+            raise Exception(f"unexpected node kind: {node['kind']}")
 
     link["src_name"] = node["name"]
     link["link_name"] = f"{node['name']}_{link_index}_{link['peer']}"

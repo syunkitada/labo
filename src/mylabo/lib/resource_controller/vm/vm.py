@@ -267,6 +267,9 @@ class VM(resource.Resource):
     def stop(self):
         print("stop vm\n\n", self.spec)
 
+    def test(self):
+        print("test vm\n\n", self.spec)
+
     def delete(self):
         self.c.exec(
             [

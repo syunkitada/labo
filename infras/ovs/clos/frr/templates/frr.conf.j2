@@ -8,8 +8,8 @@ ip forwarding
 ipv6 forwarding
 !
 
-{% if frr_route_map %}
-{% for name, route_map in frr_route_map.items() %}
+{% if spec.vars.frr_route_map %}
+{% for name, route_map in spec.vars.frr_route_map.items() %}
 {% for prefix in route_map['prefix_list'] %}
 ip prefix-list {{ name }} {{ prefix }}
 {% endfor %}
@@ -24,8 +24,58 @@ route-map {{ name }} {{route_map['policy']}} {{route_map['order']}}
 {% endfor %}
 {% endif %}
 
+###################################################
+# Interfaces
+###################################################
+{% set bgp_interfaces = [] %}
+{% for link in spec.links %}
 
-{% for interface in frr_interfaces %}
+{% if 'vlan_map' in link %}
+{% for vlan_id, vlan in link['vlan_map'].items() %}
+{% if 'bgp_peer_group' in vlan %}
+{{ bgp_interfaces.append({
+  "name": "{}.{}".format(link['link_name'], vlan_id),
+  "bgp_peer_group": vlan['bgp_peer_group'],
+}) }}
+{% endif %}
+{% endfor %}
+
+{% else %}
+{% if 'bgp_peer_group' in link %}
+{{ bgp_interfaces.append({
+  "name": link['link_name'],
+  "bgp_peer_group": link['bgp_peer_group'],
+}) }}
+{% endif %}
+{% endif %}
+
+{% endfor %}
+
+{% for link in spec._links %}
+
+{% if 'vlan_map' in link %}
+{% for vlan_id, vlan in link['vlan_map'].items() %}
+{% if 'bgp_peer_group' in vlan %}
+{{ bgp_interfaces.append({
+  "name": "{}.{}".format(link['peer_name'], vlan_id),
+  "bgp_peer_group": vlan['bgp_peer_group'],
+}) }}
+{% endif %}
+{% endfor %}
+
+{% else %}
+{% if 'bgp_peer_group' in link %}
+{{ bgp_interfaces.append({
+  "name": link['peer_name'],
+  "bgp_peer_group": link['bgp_peer_group'],
+}) }}
+{% endif %}
+{% endif %}
+
+{% endfor %}
+
+
+{% for interface in bgp_interfaces %}
 interface {{ interface['name'] }}
   ipv6 nd ra-interval 10
   no ipv6 nd suppress-ra
@@ -34,29 +84,32 @@ interface {{ interface['name'] }}
 {% endfor %}
 
 
-router bgp {{ frr_bgp_asn }}
+###################################################
+# BGP
+###################################################
+router bgp {{ spec.vars.frr_bgp_asn }}
   bgp router-id {{ frr_bgp_router_id }}
   bgp bestpath as-path multipath-relax
   no bgp ebgp-requires-policy
   no bgp network import-check
   no bgp default ipv4-unicast
 
-{% for peer_group in frr_bgp_peer_groups %}
+{% for peer_group in spec.vars.frr_bgp_peer_groups %}
   neighbor {{ peer_group['name'] }} peer-group
   neighbor {{ peer_group['name'] }} remote-as external
   neighbor {{ peer_group['name'] }} capability extended-nexthop
 {% endfor %}
 
-{% for interface in frr_interfaces %}
+{% for interface in bgp_interfaces %}
   neighbor {{ interface['name'] }} interface peer-group {{ interface['bgp_peer_group'] }}
 {% endfor %}
 
   address-family ipv4 unicast
-{% for network in frr_bgp_ipv4_unicast_networks %}
+{% for network in spec.vars.frr_bgp_ipv4_unicast_networks %}
     network {{ network }}
 {% endfor %}
 
-{% for peer_group in frr_bgp_peer_groups %}
+{% for peer_group in spec.vars.frr_bgp_peer_groups %}
 {% for route_map in peer_group.get('route_map_v4_ins', []) %}
     neighbor {{ peer_group['name'] }} route-map {{ route_map }} in
 {% endfor %}
@@ -68,11 +121,11 @@ router bgp {{ frr_bgp_asn }}
   exit-address-family
 
   address-family ipv6 unicast
-{% for network in frr_bgp_ipv6_unicast_networks %}
+{% for network in spec.vars.frr_bgp_ipv6_unicast_networks %}
     network {{ network }}
 {% endfor %}
 
-{% for peer_group in frr_bgp_peer_groups %}
+{% for peer_group in spec.vars.frr_bgp_peer_groups %}
 {% for route_map in peer_group.get('route_map_v6_ins', []) %}
     neighbor {{ peer_group['name'] }} route-map {{ route_map }} in
 {% endfor %}

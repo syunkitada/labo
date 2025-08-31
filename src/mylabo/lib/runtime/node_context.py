@@ -233,40 +233,21 @@ class NodeContext:
             ],
         )
 
-    # def ansible(self, ansible):
-    #     self.write("/etc/ansible/host_vars/localhost.yaml", pyyaml.dump(ansible.get("vars", {})))
-    #     roles = []
-    #     for role in ansible.get("roles", []):
-    #         roles.append(
-    #             {
-    #                 "name": role,
-    #                 "tags": [role],
-    #             }
-    #         )
+    def run_module(self, module: dict):
+        if "shell" in module:
+            self.shell(module["shell"], title=module.get("title", "shell"))
+        elif "template" in module:
+            self.template(module["template"], title=module.get("title", "template"))
 
-    #     playbook_yaml = [
-    #         {
-    #             "hosts": "localhost",
-    #             "roles": roles,
-    #         }
-    #     ]
-    #     self.write("/etc/ansible/playbook.yaml", pyyaml.dump(playbook_yaml))
-
-    #     cmds = [
-    #         "export PATH=$PATH:/usr/local/bin",
-    #         "export LANG=C.UTF-8",
-    #         "export LC_ALL=C.UTF-8",
-    #         "test -L /etc/ansible/roles || ln -s /mnt/nfs/labo/ansible/roles /etc/ansible/roles",
-    #         "ansible-playbook /etc/ansible/playbook.yaml",
-    #     ]
-    #     self.exec(cmds, title="ansible-playbook")
+    def shell(self, shell: dict, title: str):
+        self.exec(shell["cmds"], title=title)
 
     def template(self, template: dict, title: str):
         template_file = os.path.join(self.spec["_root_spec"]["_spec_dir"], template["src"])
         with open(template_file) as f:
             content = f.read()
             t = Template(content)
-            rendered = t.render(spec=self.spec, node=self.spec, ctx=self)
+            rendered = t.render(node=self.spec, spec=self.spec["spec"])
 
         dst_file = os.path.join(self.script_dir, template["src"])
         dst_dir = os.path.dirname(os.path.realpath(dst_file))
@@ -278,58 +259,3 @@ class NodeContext:
             f"cp {dst_file} {template['dst']}",
         ]
         self.exec(cmds, title=title)
-
-    def test(self):
-        def _ping(target):
-            result = self.exec_without_log(f"ping -c 1 -W 1 {target['dst']}", hide=True, warn=True)
-            msg = f"{self.spec['name']}: ping to {target['name']}(dst={target['dst']})"
-            if result.return_code == 0:
-                return msg, None
-            else:
-                return msg, result.stdout + result.stderr
-
-        def _cmd(cmd):
-            msg = f"{self.spec['name']}: {cmd}"
-            result = self.exec_without_log(cmd, hide=True, warn=True)
-            if result.return_code == 0:
-                return msg, None
-            else:
-                return msg, result.stdout + result.stderr
-
-        spec = self.spec
-        status = 0
-        msgs = []
-        ok_msgs = []
-        ng_msgs = []
-        for test in spec.get("tests", []):
-            msg = ""
-            err = None
-            if test["kind"] == "ping":
-                for target in test["targets"]:
-                    msg, err = _ping(target)
-                    if err is None:
-                        ok_msgs.append(f"{test['kind']}: {msg}")
-                    else:
-                        status += 1
-                        ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
-            elif test["kind"] == "cmd":
-                if "cmd" in test:
-                    msg, err = _cmd(test["cmd"])
-                    if err is None:
-                        ok_msgs.append(f"{test['kind']}: {msg}")
-                    else:
-                        status += 1
-                        ng_msgs.append(f"{test['kind']}: {msg}\nerr={err}")
-
-        if len(ok_msgs) > 0:
-            ok_msgs.insert(0, "ok_results")
-            msgs.append(colors.ok("\n".join(ok_msgs)))
-        if len(ng_msgs) > 0:
-            ng_msgs.insert(0, "ng_results")
-            msgs.append(colors.crit("\n".join(ng_msgs)))
-
-        msgs.append("")
-        return {
-            "status": status,
-            "msg": "\n".join(msgs),
-        }

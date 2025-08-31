@@ -1,0 +1,2 @@
+{% for interface in spec['vars']['ovs_external_interfaces'] %}
+{% endfor %}

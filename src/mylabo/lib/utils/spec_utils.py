@@ -11,6 +11,7 @@ def load_specs(file) -> list[dict]:
     for spec in specs:
         spec["_referer"] = {}
         dict_utils.init_spec(spec, file)
+        dict_utils.modify_spec(spec)
         dict_utils.complete_template(spec)
         dict_utils.complete_nodes(spec)
         dict_utils.complete_data(spec)
@@ -36,7 +37,8 @@ def _load_file(file) -> list[dict]:
             for imported_spec in imported_specs:
                 dict_utils.update_dict(spec, imported_spec)
 
-        spec.update(_spec)
+        dict_utils.update_dict(spec, _spec)
+
         specs.append(spec)
 
     return specs
