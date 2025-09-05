@@ -1,54 +1,84 @@
-# clos1
+# clos
+
+## clos1
+
+```
+$ sudo .venv/bin/mylabo apply -f infras/ovs/clos/clos1.2.yml
+
+$ sudo .venv/bin/mylabo test -f infras/ovs/clos/clos1.2.yml
+...
+# results ----------------------------------------
+GW1: success
+SP1: success
+L11: success
+L12: success
+HV1: success
+VM1: success
+HV2: success
+VM2: success
+```
 
 ## デバッグ
+
+### dump flows
+
+```
+[root@HV1 /]# ovs-ofctl dump-flows br-ex
+...
+[root@HV1 /]# ovs-ofctl dump-flows br-int
+...
+[root@HV1 /]# ovs-ofctl dump-groups br-ex
+NXST_GROUP_DESC reply (xid=0x2):
+ group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),bucket=bucket_id:0,watch_port:"HV1_0_L11.200",actions=mod_dl_dst:00:16:3e:02:00:00,output:"HV1_0_L11.200",bucket=bucket_id:1,watch_port:"HV1_0_L12.200",actions=mod_dl_dst:00:16:3e:03:00:00,output:"HV1_0_L12.200"
+```
 
 ### br-ex から入った VM 宛ての通信のトレース
 
 ```
-$ sudo docker exec clos1-HV1 ovs-appctl ofproto/trace br-ex in_port=HV1_0_L11.200,icmp,nw_dst=10.100.0.1
-Flow: icmp,in_port=1,vlan_tci=0x0000,dl_src=00:00:00:00:00:00,dl_dst=00:00:00:00:00:00,nw_src=0.0.0.0,nw_dst=10.100.0.1,nw_tos=0,nw_ecn=0,nw_ttl=0,nw_frag=no,icmp_type=0,icmp_code=0
+$ sudo docker exec HV1.clos1 ovs-appctl ofproto/trace br-ex in_port=HV1_0_L11.200,icmp,nw_dst=10.100.0.2
+Flow: icmp,in_port=2,vlan_tci=0x0000,dl_src=00:00:00:00:00:00,dl_dst=00:00:00:00:00:00,nw_src=0.0.0.0,nw_dst=10.100.0.2,nw_tos=0,nw_ecn=0,nw_ttl=0,nw_frag=no,icmp_type=0,icmp_code=0
 
 bridge("br-ex")
 ---------------
- 0. ip,in_port=1, priority 700
-    output:5
+ 0. in_port=2, priority 700
+    output:1
 
 bridge("br-int")
 ----------------
- 0. ip,in_port=2,nw_dst=10.100.0.1, priority 700
-    set_field:00:16:3e:00:00:01->eth_dst
-    output:1
+ 0. ip,nw_dst=10.100.0.2, priority 800
+    set_field:00:16:3e:04:00:01->eth_dst
+    output:2
 
 Final flow: unchanged
-Megaflow: recirc_id=0,eth,ip,in_port=1,dl_dst=00:00:00:00:00:00,nw_dst=10.100.0.1,nw_frag=no
-Datapath actions: set(eth(dst=00:16:3e:00:00:01)),7
+Megaflow: recirc_id=0,eth,ip,in_port=2,dl_dst=00:00:00:00:00:00,nw_dst=10.100.0.2,nw_frag=no
+Datapath actions: set(eth(dst=00:16:3e:04:00:01)),7
 ```
 
 ### br-int の VM からの通信のトレース
 
 ```
-$ sudo docker exec clos1-HV1 ovs-appctl ofproto/trace br-int in_port=HV1_0_vm1,icmp,nw_src=10.100.0.2
-Flow: icmp,in_port=1,vlan_tci=0x0000,dl_src=00:00:00:00:00:00,dl_dst=00:00:00:00:00:00,nw_src=10.100.0.1,nw_dst=0.0.0.0,nw_tos=0,nw_ecn=0,nw_ttl=0,nw_frag=no,icmp_type=0,icmp_code=0
+$ sudo docker exec HV1.clos1 ovs-appctl ofproto/trace br-int in_port=HV1_0_VM1,icmp,nw_src=10.100.0.2
+Flow: icmp,in_port=2,vlan_tci=0x0000,dl_src=00:00:00:00:00:00,dl_dst=00:00:00:00:00:00,nw_src=10.100.0.2,nw_dst=0.0.0.0,nw_tos=0,nw_ecn=0,nw_ttl=0,nw_frag=no,icmp_type=0,icmp_code=0
 
 bridge("br-int")
 ----------------
- 0. ip,in_port=1,nw_src=10.100.0.1, priority 700
-    output:2
+ 0. ip,nw_src=10.100.0.2, priority 800
+    output:1
 
 bridge("br-ex")
 ---------------
- 0. ip,in_port=5, priority 700
+ 0. in_port=1, priority 700
     group:1
-     -> bucket 0: score 44846
-     -> bucket 1: score 60326
-     -> using bucket 1
-    bucket 1
-            set_field:00:16:3e:03:00:00->eth_dst
-            output:3
+     -> bucket 0: score 64575
+     -> bucket 1: score 61832
+     -> using bucket 0
+    bucket 0
+            set_field:00:16:3e:02:00:00->eth_dst
+            output:2
 
 Final flow: unchanged
-Megaflow: recirc_id=0,eth,ip,in_port=1,dl_dst=00:00:00:00:00:00,nw_src=10.100.0.1,nw_dst=0.0.0.0,nw_frag=no
-Datapath actions: set(eth(dst=00:16:3e:03:00:00)),4
+Megaflow: recirc_id=0,eth,ip,in_port=2,dl_dst=00:00:00:00:00:00,nw_src=10.100.0.2,nw_dst=0.0.0.0,nw_frag=no
+Datapath actions: set(eth(dst=00:16:3e:02:00:00)),3
 ```
 
 ### br-int の VM からの ARP のトレース

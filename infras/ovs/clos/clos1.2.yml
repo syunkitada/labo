@@ -3,56 +3,21 @@ imports:
   - infras/ovs/clos/clos1.yml
   - infras/ovs/clos/clos1.1.yml
 
-template_map:
-  hv:
-    spec:
-      vars:
-        frr_route_map:
-          VM-v4:
-            policy: permit
-            order: 5
-            version: 4
-            prefix_list:
-              - seq 5 permit <%=spec.ipam.vm_network1.subnet%> le 32
-  vm:
-    spec:
-      mtu: 1500
-      routes:
-        - dst: default
-          via: <%=gateway_ip(_node.spec._links.0.peer_ips.0.network)%>
-
-spec:
-  ipam:
-    vm_network1:
-      subnet: 10.100.0.0/24
-      kind: l2
-
-spec_modifications:
+extend_spec_modifications:
   - extend_nodes:
-      - name: VM1
+      - name: HV2
         templates:
           - node
-          - vm
-  - overwrite_node:
-      GW1:
+          - hv
         spec:
-          tests:
-            - shell:
-                cmds:
-                  - ping -c 1 -W 1 <%=_node_map.VM1.spec._links.0.peer_ips.0.ip%>
-      HV1:
-        spec:
+          links:
+            - peer: VM2
+              peer_ips:
+                - inet: <%=assign_inet4("vm_network1")%>
           vars:
             frr_bgp_ipv4_unicast_networks:
               - <%=_node.spec.l3admin.ips.0.inet%>
               - <%=_node.spec.links.0.peer_ips.0.ip%>/32
-            ovs_external_bridge:
-              name: br-ex
-              interfaces:
-                - name: <%=_node.spec._links.0.peer_name %>.200
-                  peer_mac: <%=_node.spec._links.0.link_mac %>
-                - name: <%=_node.spec._links.1.peer_name %>.200
-                  peer_mac: <%=_node.spec._links.1.link_mac %>
             ovs_vm_bridge:
               name: br-int
               ports:
@@ -60,27 +25,66 @@ spec_modifications:
                   peer_mac: <%=_node.spec.links.0.peer_mac%>
                   ips:
                     - ip: <%=_node.spec.links.0.peer_ips.0.ip%>
+      - name: VM2
+        templates:
+          - node
+          - vm
+
+  - overwrite_node:
+      GW1:
+        spec:
+          tests:
+            - shell:
+                cmds:
+                  - ping -c 1 -W 1 <%=_node_map.HV1.spec.l3admin.ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.VM1.spec._links.0.peer_ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.HV2.spec.l3admin.ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.VM2.spec._links.0.peer_ips.0.ip%>
+      VM1:
+        spec:
+          tests:
+            - shell:
+                cmds:
+                  - ping -c 1 -W 1 <%=_node_map.VM2.spec._links.0.peer_ips.0.ip%>
+
+      L11:
+        spec:
           links:
-            - peer: VM1
+            - peer: HV1
+              bridge: l2-br
               peer_ips:
-                - inet: <%=assign_inet4("vm_network1")%>
-        steps:
-          # - template:
-          #     src: frr/templates/daemons.j2
-          #     dst: /etc/frr/daemons
-          # - template:
-          #     src: frr/templates/frr.conf.j2
-          #     dst: /etc/frr/frr.conf
-          # - shell:
-          #     cmds:
-          #       - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
-          #       - systemctl restart frr
-          - template:
-              src: ovs/ovs.sh
-              dst: /tmp/ovs.sh
-          - template:
-              src: ovs/ovs.sh
-              dst: /tmp/ovs.sh
-          - shell:
-              cmds:
-                - /bin/bash -xe /tmp/ovs.sh
+                - inet: <%=assign_inet4("leaf1_l2admin_network")%>
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp0
+            - peer: HV2
+              bridge: l2-br
+              peer_ips:
+                - inet: <%=assign_inet4("leaf1_l2admin_network")%>
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp0
+
+      L12:
+        spec:
+          links:
+            - peer: HV1
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp1
+            - peer: HV2
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp1

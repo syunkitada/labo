@@ -33,19 +33,19 @@ route-map {{ name }} {{route_map['policy']}} {{route_map['order']}}
 {% if 'vlan_map' in link %}
 {% for vlan_id, vlan in link['vlan_map'].items() %}
 {% if 'bgp_peer_group' in vlan %}
-{{ bgp_interfaces.append({
+{% set bgp_interfaces = bgp_interfaces.append({
   "name": "{}.{}".format(link['link_name'], vlan_id),
   "bgp_peer_group": vlan['bgp_peer_group'],
-}) }}
+}) %}
 {% endif %}
 {% endfor %}
 
 {% else %}
 {% if 'bgp_peer_group' in link %}
-{{ bgp_interfaces.append({
+{% set bgp_interfaces = bgp_interfaces.append({
   "name": link['link_name'],
   "bgp_peer_group": link['bgp_peer_group'],
-}) }}
+}) %}
 {% endif %}
 {% endif %}
 
@@ -56,19 +56,20 @@ route-map {{ name }} {{route_map['policy']}} {{route_map['order']}}
 {% if 'vlan_map' in link %}
 {% for vlan_id, vlan in link['vlan_map'].items() %}
 {% if 'bgp_peer_group' in vlan %}
-{{ bgp_interfaces.append({
-  "name": "{}.{}".format(link['peer_name'], vlan_id),
+
+{% set bgp_interfaces = bgp_interfaces.append({
+  "name": vlan.get("peer_bgp_interface", "{}.{}".format(link['peer_name'], vlan_id)),
   "bgp_peer_group": vlan['bgp_peer_group'],
-}) }}
+}) %}
 {% endif %}
 {% endfor %}
 
 {% else %}
 {% if 'bgp_peer_group' in link %}
-{{ bgp_interfaces.append({
+{% set bgp_interfaces = bgp_interfaces.append({
   "name": link['peer_name'],
   "bgp_peer_group": link['bgp_peer_group'],
-}) }}
+}) %}
 {% endif %}
 {% endif %}
 

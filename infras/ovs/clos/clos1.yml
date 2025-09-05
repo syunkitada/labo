@@ -106,10 +106,10 @@ spec:
             bgp_peer_group: ADMIN
         steps:
           - template:
-              src: frr/templates/daemons.j2
+              src: frr/daemons.j2
               dst: /etc/frr/daemons
           - template:
-              src: frr/templates/frr.conf.j2
+              src: frr/frr.conf.j2
               dst: /etc/frr/frr.conf
           - shell:
               cmds:
@@ -139,15 +139,13 @@ spec:
                 bgp_peer_group: ADMIN
               200:
                 bgp_peer_group: VM
-                peer_ovs:
-                  peer: br-ex
-                  peer_name: bgp0
+                peer_bgp_interface: bgp0
         steps:
           - template:
-              src: frr/templates/daemons.j2
+              src: frr/daemons.j2
               dst: /etc/frr/daemons
           - template:
-              src: frr/templates/frr.conf.j2
+              src: frr/frr.conf.j2
               dst: /etc/frr/frr.conf
           - shell:
               cmds:
@@ -168,15 +166,13 @@ spec:
                 bgp_peer_group: ADMIN
               200:
                 bgp_peer_group: VM
-                peer_ovs:
-                  peer: br-ex
-                  peer_name: bgp1
+                peer_bgp_interface: bgp1
         steps:
           - template:
-              src: frr/templates/daemons.j2
+              src: frr/daemons.j2
               dst: /etc/frr/daemons
           - template:
-              src: frr/templates/frr.conf.j2
+              src: frr/frr.conf.j2
               dst: /etc/frr/frr.conf
           - shell:
               cmds:

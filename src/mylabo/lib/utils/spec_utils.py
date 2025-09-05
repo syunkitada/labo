@@ -38,6 +38,11 @@ def _load_file(file) -> list[dict]:
                 dict_utils.update_dict(spec, imported_spec)
 
         dict_utils.update_dict(spec, _spec)
+        if "extend_spec_modifications" in spec:
+            if "spec_modifications" not in spec:
+                spec["spec_modifications"] = []
+            spec["spec_modifications"].extend(spec["extend_spec_modifications"])
+            del spec["extend_spec_modifications"]
 
         specs.append(spec)
 

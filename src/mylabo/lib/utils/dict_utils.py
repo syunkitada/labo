@@ -37,8 +37,9 @@ def apply_template(root_data: dict, data: dict):
             raise Exception(f"template {template} is not found in template_map")
         template = copy.deepcopy(template_map[template])
         update_dict(tmp_data, template)
-        update_dict(tmp_data, data)
-        data.update(tmp_data)
+
+    update_dict(tmp_data, data)
+    data.update(tmp_data)
 
 
 def complete_template(spec: dict):
@@ -87,6 +88,7 @@ def _complete_data(root_data: dict, key: str, data: dict | list, must_complete: 
         for i, v in enumerate(data):
             if isinstance(v, dict) or isinstance(v, list):
                 if is_node:
+                    print(f"Complete node: {v['name']}")
                     root_data["_referer"]["_node"] = v
                 data[i] = _complete_data(root_data, str(i), v, must_complete)
             elif isinstance(v, str):
