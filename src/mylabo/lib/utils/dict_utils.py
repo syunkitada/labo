@@ -206,7 +206,11 @@ def modify_spec(spec: dict):
 
             for node in spec["spec"]["nodes"]:
                 if node["name"] in spec_modification["overwrite_node"]:
-                    update_dict(node, spec_modification["overwrite_node"][node["name"]])
+                    node_modification = spec_modification["overwrite_node"][node["name"]]
+                    if "extend_steps" in node_modification:
+                        node["spec"]["steps"].extend(node_modification["extend_steps"])
+                        del node_modification["extend_steps"]
+                    update_dict(node, node_modification)
 
         elif "extend_nodes" in spec_modification:
             if "nodes" not in spec["spec"]:

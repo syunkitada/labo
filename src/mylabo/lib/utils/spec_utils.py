@@ -24,9 +24,18 @@ def _load_file(file) -> list[dict]:
     specs = []
 
     spec_filepath = abspath(file)
+    splited_txt = []
     with open(spec_filepath) as f:
-        readed = f.read()
-        splited_txt = readed.split("---")
+        tmp_lines = []
+        for line in f.readlines():
+            if line.strip().startswith("#"):
+                continue
+            if line.strip() == "---":
+                splited_txt.append("".join(tmp_lines))
+                tmp_lines = []
+                continue
+            tmp_lines.append(line)
+        splited_txt.append("".join(tmp_lines))
 
     for txt in splited_txt:
         spec = {}

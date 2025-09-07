@@ -1,21 +1,21 @@
-{%- set ex_to_int = "{}_{}".format(spec['vars']['ovs_external_bridge']['name'], spec['vars']['ovs_vm_bridge']['name']) %}
+{%- set ex_to_int = "{}_{}".format(spec.vars.ovs_external_bridge.name, spec.vars.ovs_vm_bridge.name) %}
 
-{%- for interface in spec['vars']['ovs_external_bridge']['interfaces'] %}
+{%- for interface in spec.vars.ovs_external_bridge.interfaces %}
 
 
 {%- set bgp_interface = "bgp{}".format(loop.index0) %}
-{%- set interface_name = "{}-{}".format(spec['vars']['ovs_external_bridge']['name'], bgp_interface) %}
+{%- set interface_name = "{}-{}".format(spec.vars.ovs_external_bridge.name, bgp_interface) %}
 
 {#- linklocalのbgp用の通信のingress #}
-priority=800,ipv6,in_port={{ interface['name'] }},ipv6_src=fe80::/10,ipv6_dst=fe80::/10 actions=output:{{ interface_name }}
-priority=800,ipv6,in_port={{ interface['name'] }},ipv6_dst=ff02::/16 actions=output:{{ interface_name }}
+priority=800,ipv6,in_port={{ interface.name }},ipv6_src=fe80::/10,ipv6_dst=fe80::/10 actions=output:{{ interface_name }}
+priority=800,ipv6,in_port={{ interface.name }},ipv6_dst=ff02::/16 actions=output:{{ interface_name }}
 
 {#- linklocalのbgp用の通信のegress #}
-priority=800,ipv6,in_port={{ interface_name }},ipv6_src=fe80::/10,ipv6_dst=fe80::/10 actions=output:{{ interface['name'] }}
-priority=800,ipv6,in_port={{ interface_name }},ipv6_dst=ff02::/16 actions=output:{{ interface['name'] }}
+priority=800,ipv6,in_port={{ interface_name }},ipv6_src=fe80::/10,ipv6_dst=fe80::/10 actions=output:{{ interface.name }}
+priority=800,ipv6,in_port={{ interface_name }},ipv6_dst=ff02::/16 actions=output:{{ interface.name }}
 
 {#- ingress to int #}
-priority=700,in_port={{ interface['name'] }} actions=output:{{ ex_to_int }}
+priority=700,in_port={{ interface.name }} actions=output:{{ ex_to_int }}
 
 {%- endfor %}
 
