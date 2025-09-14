@@ -43,7 +43,8 @@ def apply_template(root_data: dict, data: dict):
 
 
 def complete_template(spec: dict):
-    return _complete_template(spec, spec)
+    _complete_template(spec, spec)
+    del spec["template_map"]
 
 
 def _complete_template(root_data: dict, data: dict | list):
@@ -137,7 +138,16 @@ def complete_value(root_data: dict, value: str, must_complete: bool = False) -> 
                     txt = spec_helper.handle(func, root_data, _complete(arg))
                     return txt
 
-                return reference_value(root_data, root_data, txt)
+                tmp_value = reference_value(root_data, root_data, txt)
+                if not isinstance(tmp_value, str):
+                    return tmp_value
+                else:
+                    _compi = tmp_value.find("<%=")
+                    _compri = tmp_value.find("%>", _compi)
+                    if _compi >= 0 and _compri > 1:
+                        return None
+                    else:
+                        return tmp_value
 
             _value = _complete(_value)
             if _value is None:
@@ -217,6 +227,9 @@ def modify_spec(spec: dict):
                 raise Exception("nodes is not found in spec")
 
             spec["spec"]["nodes"].extend(spec_modification["extend_nodes"])
+
+    if "spec_modifications" in spec:
+        del spec["spec_modifications"]
 
 
 def complete_nodes(spec: dict):

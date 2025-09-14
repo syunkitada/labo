@@ -1,3 +1,4 @@
+# clos構成でvxlan
 imports:
   - /etc/ansible/host_vars/localhost.yaml
 
@@ -154,9 +155,7 @@ spec:
                 bgp_peer_group: ADMIN
               200:
                 bgp_peer_group: VM
-                peer_ovs:
-                  peer: br-ex
-                  peer_name: bgp0
+                peer_bgp_interface: bgp0
           - peer: HV2
             bridge: l2-br
             peer_ips:
@@ -166,9 +165,7 @@ spec:
                 bgp_peer_group: ADMIN
               200:
                 bgp_peer_group: VM
-                peer_ovs:
-                  peer: br-ex
-                  peer_name: bgp0
+                peer_bgp_interface: bgp0
     - name: L12
       templates:
         - node
@@ -184,18 +181,14 @@ spec:
                 bgp_peer_group: ADMIN
               200:
                 bgp_peer_group: VM
-                peer_ovs:
-                  peer: br-ex
-                  peer_name: bgp1
+                peer_bgp_interface: bgp1
           - peer: HV2
             vlan_map:
               100:
                 bgp_peer_group: ADMIN
               200:
                 bgp_peer_group: VM
-                peer_ovs:
-                  peer: br-ex
-                  peer_name: bgp1
+                peer_bgp_interface: bgp1
     - name: HV1
       templates:
         - node

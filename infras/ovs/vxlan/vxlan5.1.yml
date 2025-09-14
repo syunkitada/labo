@@ -10,8 +10,8 @@ template_map:
           - inet: <%=assign_inet4("l3admin_network1")%>
       vars:
         ovs_admin_ip: <%=assign_ip4("ovsadmin_network1")%>
-        frr_router_id: "<%=_node.spec.l3admin.ips.0.ip%>"
-        frr_asn: "<%=ipv4_to_asn(_node.spec.l3admin.ips.0.ip)%>"
+        frr_bgp_router_id: "<%=_node.spec.l3admin.ips.0.ip%>"
+        frr_bgp_asn: "<%=ipv4_to_asn(_node.spec.l3admin.ips.0.ip)%>"
         frr_route_map:
           DENY-ANY-v4:
             policy: deny
@@ -41,15 +41,14 @@ template_map:
         frr_bgp_ipv4_unicast_networks:
           - <%=_node.spec.l3admin.ips.0.inet%>
           - <%=_node.spec.vars.ovs_admin_ip%>/32
-        ovs_hv_vxlan:
-          external_bridge:
-            name: br-ex
-            local_ip: <%=_node.spec.vars.ovs_admin_ip%>
-            interfaces:
-              - name: <%=_node.spec._links.0.peer_name %>.200
-                peer_mac: <%=_node.spec._links.0.link_mac %>
-              - name: <%=_node.spec._links.1.peer_name %>.200
-                peer_mac: <%=_node.spec._links.1.link_mac %>
+        ovs_external_bridge:
+          name: br-ex
+          local_ip: <%=_node.spec.vars.ovs_admin_ip%>
+          interfaces:
+            - name: <%=_node.spec._links.0.peer_name %>.200
+              peer_mac: <%=_node.spec._links.0.link_mac %>
+            - name: <%=_node.spec._links.1.peer_name %>.200
+              peer_mac: <%=_node.spec._links.1.link_mac %>
       steps:
         - template:
             src: frr/daemons.j2
@@ -67,9 +66,6 @@ template_map:
         - template:
             src: ovs/br-ex.flows.j2
             dst: /tmp/br-ex.flows
-        - template:
-            src: ovs/br-int.flows.j2
-            dst: /tmp/br-int.flows
         - shell:
             cmds:
               - /bin/bash -xe /tmp/ovs.sh

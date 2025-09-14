@@ -25,7 +25,7 @@ ASN_IP_NETWORKS = [ipaddress.ip_network(net) for net in ASN_NETWORKS]
 
 
 def init_network_if_needed(network):
-    if "next_ip" in network:
+    if "_next_ip" in network:
         return
     if network["kind"] == "l2":
         network.update({"_next_ip": 2})
@@ -47,6 +47,11 @@ def assign_inet4(data, network_name):
             inet = str(ip_network[network["_next_ip"]]) + "/128"
     network["_next_ip"] += 1
     return inet
+
+
+def assign_ip4(data, network_name):
+    inet4 = assign_inet4(data, network_name)
+    return inet_to_ip(data, inet4)
 
 
 def gateway_inet4(data, network_name):
