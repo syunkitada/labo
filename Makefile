@@ -1,12 +1,6 @@
-.PHONY: all
-all:
-	tools/make-env.sh
-	cd labo/tls; make
-	sudo ansible-playbook labo.infra.labo
-
 .PHONY: test
 test:
-	pytest -x -vv fabfile_tests
+	uv run pytest --cov --cov-report=term-missing
 
 .PHONY: bash
 bash:
@@ -15,7 +9,9 @@ bash:
 .PHONY: format
 format:
 	prettier -w **/*.md
+	uv run ruff format
 
 .PHONY: lint
 lint:
 	prettier -c **/*.md
+	uv run ruff check

@@ -1,0 +1,90 @@
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+  - manifests/infras/ovs/clos/clos1.yml
+  - manifests/infras/ovs/clos/clos1.1.yml
+
+extend_spec_modifications:
+  - extend_nodes:
+      - name: HV2
+        templates:
+          - node
+          - hv
+        spec:
+          links:
+            - peer: VM2
+              peer_ips:
+                - inet: <%=assign_inet4("vm_network1")%>
+          vars:
+            frr_bgp_ipv4_unicast_networks:
+              - <%=_node.spec.l3admin.ips.0.inet%>
+              - <%=_node.spec.links.0.peer_ips.0.ip%>/32
+            ovs_vm_bridge:
+              name: br-int
+              ports:
+                - name: <%=_node.spec.links.0.link_name%>
+                  peer_mac: <%=_node.spec.links.0.peer_mac%>
+                  ips:
+                    - ip: <%=_node.spec.links.0.peer_ips.0.ip%>
+      - name: VM2
+        templates:
+          - node
+          - vm
+
+  - overwrite_node:
+      GW1:
+        spec:
+          tests:
+            - shell:
+                cmds:
+                  - ping -c 1 -W 1 <%=_node_map.HV1.spec.l3admin.ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.VM1.spec._links.0.peer_ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.HV2.spec.l3admin.ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.VM2.spec._links.0.peer_ips.0.ip%>
+      VM1:
+        spec:
+          tests:
+            - shell:
+                cmds:
+                  - ping -c 1 -W 1 <%=_node_map.VM2.spec._links.0.peer_ips.0.ip%>
+
+      L11:
+        spec:
+          links:
+            - peer: HV1
+              bridge: l2-br
+              peer_ips:
+                - inet: <%=assign_inet4("leaf1_l2admin_network")%>
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp0
+            - peer: HV2
+              bridge: l2-br
+              peer_ips:
+                - inet: <%=assign_inet4("leaf1_l2admin_network")%>
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp0
+
+      L12:
+        spec:
+          links:
+            - peer: HV1
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp1
+            - peer: HV2
+              vlan_map:
+                100:
+                  bgp_peer_group: ADMIN
+                200:
+                  bgp_peer_group: VM
+                  peer_bgp_interface: bgp1

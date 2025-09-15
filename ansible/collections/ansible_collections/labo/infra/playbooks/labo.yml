@@ -27,21 +27,5 @@
     #   tags: postgres
     - name: pdns
       tags: pdns
-      vars:
-        pdns_domains:
-          - test
-        pdns_records:
-          - domain: test
-            name: "*.localhost.test"
-            type: a
-            content: "{{ local_ipaddr }}"
-          - domain: test
-            name: docker-registry.test
-            type: a
-            content: "{{ local_ipaddr }}"
-          - domain: test
-            name: postgresql.test
-            type: a
-            content: "{{ local_ipaddr }}"
     - name: keycloak
       tags: keycloak

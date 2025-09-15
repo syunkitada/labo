@@ -1,0 +1,41 @@
+{%- set int_to_ex = "{}_{}".format(spec.vars.ovs_vm_bridge.name, spec.vars.ovs_external_bridge.name) %}
+
+{%- for port in spec.vars.ovs_vm_bridge.ports %}
+{%- for ip in port.get("ips", []) %}
+
+{%- set port_peer_mac = "0x{}".format(port.peer_mac.replace(':', '')) %}
+
+{#- ingress #}
+{#- 宛先のmacをVMのmacに書き換える(VMにはL2通信してるように思わせる) #}
+priority=800,ip,nw_dst={{ ip.ip }} actions=load:{{ port_peer_mac }}->NXM_OF_ETH_DST[],output:{{ port.name }}
+
+{#- egress #}
+priority=800,ip,nw_src={{ ip.ip }} actions=output:{{ int_to_ex }}
+
+{#-
+# in_portからARP要求(arp_op=1)が飛んできたときに、ARP_DUMMY_MACを返却します
+# arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
+# NXM_OF_ETH_SRC = Ethernet Source address
+# NXM_OF_ETH_DST = Ethernet Destination address
+# NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
+# NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
+# NXM_OF_ARP_SPA = ARP Source IP Address
+# NXM_OF_ARP_TPA = ARP Target IP Address
+#}
+{%- set ARP_DUMMY_MAC = "0x00163e000001" %}
+{%- set tmpflow = "priority=800,in_port={},arp,arp_op=1 actions".format(port.name) %}
+{#- NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする #}
+{%- set tmpflow = tmpflow + "=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{}->NXM_OF_ETH_SRC[]".format(ARP_DUMMY_MAC) %}
+{# NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする #}
+{%- set tmpflow = tmpflow + ",move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{}->NXM_NX_ARP_SHA[]".format(ARP_DUMMY_MAC) %}
+{#- NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える #}
+{%- set tmpflow = tmpflow + ",push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[]" %}
+{#- Opcodeを2にセットする(ARPのリプライであることを示すフラグ) #}
+{%- set tmpflow = tmpflow + ",load:0x2->NXM_OF_ARP_OP[]" %}
+{#- IN_PORTにそのまま返す #}
+{%- set tmpflow = tmpflow + ",IN_PORT" %}
+{{- tmpflow }}
+{%- endfor %}
+{%- endfor %}
+
+priority=0,actions=drop

@@ -1,0 +1,62 @@
+#!/bin/bash -xe
+
+systemctl start openvswitch
+ 
+# Add bridge for external bridge
+ovs-vsctl --may-exist add-br {{ spec.vars.ovs_external_bridge.name }}
+# Add bridge for VM bridge
+ovs-vsctl --may-exist add-br {{ spec.vars.ovs_vm_bridge.name }}
+
+{%- set ex_to_int = "{}_{}".format(spec.vars.ovs_external_bridge.name, spec.vars.ovs_vm_bridge.name) %}
+{%- set int_to_ex = "{}_{}".format(spec.vars.ovs_vm_bridge.name, spec.vars.ovs_external_bridge.name) %}
+
+# Add patch ports between external bridge and VM bridge
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_external_bridge.name }} {{ ex_to_int }} \
+    -- set interface {{ ex_to_int }} type=patch options:peer={{ int_to_ex }}
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_vm_bridge.name }} {{ int_to_ex }} \
+    -- set interface {{ int_to_ex }} type=patch options:peer={{ ex_to_int }}
+
+# Setup interfaces
+{%- set buckets = [] %}
+{%- for interface in spec.vars.ovs_external_bridge.interfaces %}
+{%- set bgp_interface = "bgp{}".format(loop.index0) %}
+{%- set bgp_interface_peer = "{}-{}".format(spec.vars.ovs_external_bridge.name, bgp_interface) %}
+
+# Create BGP port
+if ! ip addr show dev {{ bgp_interface }}; then
+  ip link add {{ bgp_interface }} type veth peer name {{ bgp_interface_peer }}
+fi
+ip link set dev {{ bgp_interface }} up
+ethtool -K {{ bgp_interface }} tso off tx off
+ip link set dev {{ bgp_interface_peer }} mtu 9000
+ip link set {{ bgp_interface_peer }} up
+ethtool -K {{ bgp_interface_peer }} tso off tx off
+
+# Add physical port to external bridge
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_external_bridge.name }} {{ interface.name }}
+
+# Add BGP port to external bridge
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_external_bridge.name }} {{ bgp_interface_peer }}
+
+{%-
+set buckets = buckets.append(
+    "bucket=watch_port:{interface},actions=mod_dl_dst:{peer_mac},output:{interface}".format(
+    interface=interface.name,
+    peer_mac=interface.peer_mac
+))
+%}
+
+{%- endfor %}
+
+# Create group entry for load balancing on external bridge 
+ovs-ofctl -O OpenFlow15 mod-group --may-create {{ spec.vars.ovs_external_bridge.name }} \
+    "group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),{{ buckets | join(',') }}"
+
+# Add ports to VM bridge
+{%- for port in spec.vars.ovs_vm_bridge.ports %}
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_vm_bridge.name }} {{port.name}}
+{%- endfor %}
+
+# Replace flows
+ovs-ofctl -O OpenFlow15 replace-flows {{ spec.vars.ovs_external_bridge.name }} /tmp/br-ex.flows
+ovs-ofctl -O OpenFlow15 replace-flows {{ spec.vars.ovs_vm_bridge.name }} /tmp/br-int.flows

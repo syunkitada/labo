@@ -1,0 +1,117 @@
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+  - manifests/infras/ovs/clos/clos1.yml
+
+template_map:
+  hv:
+    spec:
+      l3admin:
+        ips:
+          - inet: <%=assign_inet4("l3admin_network1")%>
+      vars:
+        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.l3admin.ips.0.ip)%>
+        frr_bgp_router_id: <%=_node.spec.l3admin.ips.0.ip%>
+        frr_bgp_peer_groups:
+          - name: ADMIN
+            route_map_v4_ins: [DENY-ANY-v4]
+            route_map_v4_outs: [ADMIN-v4]
+          - name: VM
+            route_map_v4_ins: [DENY-ANY-v4]
+            route_map_v4_outs: [VM-v4]
+        frr_route_map:
+          DENY-ANY-v4:
+            policy: deny
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 deny 0.0.0.0/0
+          ADMIN-v4:
+            policy: permit
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 permit <%=_node.spec.l3admin.ips.0.network%> le 32
+          VM-v4:
+            policy: permit
+            order: 5
+            version: 4
+            prefix_list:
+              - seq 5 permit <%=spec.ipam.vm_network1.subnet%> le 32
+        ovs_external_bridge:
+          name: br-ex
+          interfaces:
+            - name: <%=_node.spec._links.0.peer_name %>.200
+              peer_mac: <%=_node.spec._links.0.link_mac %>
+            - name: <%=_node.spec._links.1.peer_name %>.200
+              peer_mac: <%=_node.spec._links.1.link_mac %>
+      steps:
+        - template:
+            src: frr/daemons.j2
+            dst: /etc/frr/daemons
+        - template:
+            src: frr/frr.conf.j2
+            dst: /etc/frr/frr.conf
+        - shell:
+            cmds:
+              - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+              - systemctl restart frr
+        - template:
+            src: ovs/ovs.sh.j2
+            dst: /tmp/ovs.sh
+        - template:
+            src: ovs/br-ex.flows.j2
+            dst: /tmp/br-ex.flows
+        - template:
+            src: ovs/br-int.flows.j2
+            dst: /tmp/br-int.flows
+        - shell:
+            cmds:
+              - /bin/bash -xe /tmp/ovs.sh
+  vm:
+    spec:
+      mtu: 1500
+      routes:
+        - dst: default
+          via: <%=gateway_ip(_node.spec._links.0.peer_ips.0.network)%>
+
+spec:
+  ipam:
+    l3admin_network1:
+      subnet: 10.10.10.0/24
+      kind: l3
+    vm_network1:
+      subnet: 10.100.0.0/24
+      kind: l2
+
+spec_modifications:
+  - extend_nodes:
+      - name: VM1
+        templates:
+          - node
+          - vm
+
+  - overwrite_node:
+      GW1:
+        spec:
+          tests:
+            - shell:
+                cmds:
+                  - ping -c 1 -W 1 <%=_node_map.HV1.spec.l3admin.ips.0.ip%>
+                  - ping -c 1 -W 1 <%=_node_map.VM1.spec._links.0.peer_ips.0.ip%>
+      HV1:
+        spec:
+          vars:
+            frr_bgp_ipv4_unicast_networks:
+              - <%=_node.spec.l3admin.ips.0.inet%>
+              - <%=_node.spec.links.0.peer_ips.0.ip%>/32
+            ovs_vm_bridge:
+              name: br-int
+              ports:
+                - name: <%=_node.spec.links.0.link_name%>
+                  peer_mac: <%=_node.spec.links.0.peer_mac%>
+                  ips:
+                    - ip: <%=_node.spec.links.0.peer_ips.0.ip%>
+          links:
+            - peer: VM1
+              peer_ips:
+                - inet: <%=assign_inet4("vm_network1")%>

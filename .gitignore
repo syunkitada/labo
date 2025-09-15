@@ -3,10 +3,14 @@ tmp*
 -copilot.log
 
 # python
-venv
-.venv
 .pytest_cache
+__pycache__
+*.egg-info
 *.pyc
+.coverage
+htmlcov
+.cache
+.venv
 
 # ansible
 galaxy_cache

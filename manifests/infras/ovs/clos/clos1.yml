@@ -1,0 +1,184 @@
+imports:
+  - /etc/ansible/host_vars/localhost.yaml
+
+kind: Infra
+name: ovsclos
+template_map:
+  node:
+    kind: container
+    spec:
+      image: local/rocky9-nwnode:latest
+      mtu: 9000
+      sysctl_map:
+        net.ipv6.conf.default.disable_ipv6: 0
+        net.ipv6.conf.all.disable_ipv6: 0
+        net.ipv6.conf.default.accept_ra: 0
+        net.ipv6.conf.all.accept_ra: 0
+        net.ipv6.conf.default.forwarding: 1
+        net.ipv6.conf.all.forwarding: 1
+        net.ipv4.conf.default.rp_filter: 0
+        net.ipv4.conf.all.rp_filter: 0
+        net.ipv4.conf.default.forwarding: 1
+        net.ipv4.conf.all.forwarding: 1
+  spine:
+    spec:
+      lo_ips:
+        - inet: <%=assign_inet4("spine_network")%>
+      vars:
+        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
+        frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
+        frr_bgp_peer_groups:
+          - name: ADMIN
+  leaf:
+    spec:
+      lo_ips:
+        - inet: <%=assign_inet4("leaf_network")%>
+      vars:
+        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
+        frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
+        frr_bgp_peer_groups:
+          - name: ADMIN
+          - name: VM
+  hv:
+    spec:
+      routes:
+        - dst: default
+          via: <%=gateway_ip(_node.spec._links.0.peer_ips.0.network)%>
+      ip_rules:
+        - prio: 20
+          rule: from <%=_node.spec._links.0.peer_ips.0.inet%> table main
+spec:
+  ipam:
+    outer_network1:
+      subnet: 10.10.0.0/24
+      kind: l2
+    spine_network:
+      subnet: 10.10.1.0/24
+      kind: l3
+    leaf_network:
+      subnet: 10.10.2.0/24
+      kind: l3
+    leaf1_l2admin_network:
+      subnet: 10.10.3.0/27
+      kind: l2
+
+  nodes:
+    - name: GW1
+      templates:
+        - node
+      spec:
+        links:
+          - peer: SP1
+            ips:
+              - inet: <%=assign_inet4("outer_network1")%>
+              - inet: <%=inet4_to_inet6(_node.spec.links.0.ips.0.inet)%>
+            peer_ips:
+              - inet: <%=gateway_inet4("outer_network1")%>
+        routes:
+          - dst: default
+            via: <%=_node.spec.links.0.peer_ips.0.ip%>
+        tests:
+          - shell:
+              cmds:
+                - ping -c 1 -W 1 <%=_node_map.SP1.spec.lo_ips.0.ip%>
+                - ping -c 1 -W 1 <%=_node_map.L11.spec.lo_ips.0.ip%>
+                # L11-L2
+                - ping -c 1 -W 1 <%=_node_map.L11.spec.bridges.0.ips.0.ip%>
+                # L12
+                - ping -c 1 -W 1 <%=_node_map.L12.spec.lo_ips.0.ip%>
+                # HV1-L2
+                - ping -c 1 -W 1 <%=_node_map.HV1.spec._links.0.peer_ips.0.ip%>
+    - name: SP1
+      templates:
+        - node
+        - spine
+      spec:
+        vars:
+          frr_bgp_ipv4_unicast_networks:
+            - <%=_node_map.GW1.spec.links.0.ips.0.network%>
+            - <%=_node.spec.lo_ips.0.inet%>
+          frr_bgp_ipv6_unicast_networks:
+            - <%=_node_map.GW1.spec.links.0.ips.1.network%>
+        links:
+          - peer: L11
+            bgp_peer_group: ADMIN
+          - peer: L12
+            bgp_peer_group: ADMIN
+        steps:
+          - template:
+              src: frr/daemons.j2
+              dst: /etc/frr/daemons
+          - template:
+              src: frr/frr.conf.j2
+              dst: /etc/frr/frr.conf
+          - shell:
+              cmds:
+                - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+                - systemctl restart frr
+    - name: L11
+      templates:
+        - node
+        - leaf
+      spec:
+        vars:
+          frr_bgp_ipv4_unicast_networks:
+            - <%=_node.spec.links.0.peer_ips.0.network%>
+            - <%=_node.spec.lo_ips.0.inet%>
+        bridges:
+          - name: l2-br
+            mtu: 1500
+            ips:
+              - inet: <%=gateway_inet4("leaf1_l2admin_network")%>
+        links:
+          - peer: HV1
+            bridge: l2-br
+            peer_ips:
+              - inet: <%=assign_inet4("leaf1_l2admin_network")%>
+            vlan_map:
+              100:
+                bgp_peer_group: ADMIN
+              200:
+                bgp_peer_group: VM
+                peer_bgp_interface: bgp0
+        steps:
+          - template:
+              src: frr/daemons.j2
+              dst: /etc/frr/daemons
+          - template:
+              src: frr/frr.conf.j2
+              dst: /etc/frr/frr.conf
+          - shell:
+              cmds:
+                - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+                - systemctl restart frr
+    - name: L12
+      templates:
+        - node
+        - leaf
+      spec:
+        vars:
+          frr_bgp_ipv4_unicast_networks:
+            - <%=_node.spec.lo_ips.0.inet%>
+        links:
+          - peer: HV1
+            vlan_map:
+              100:
+                bgp_peer_group: ADMIN
+              200:
+                bgp_peer_group: VM
+                peer_bgp_interface: bgp1
+        steps:
+          - template:
+              src: frr/daemons.j2
+              dst: /etc/frr/daemons
+          - template:
+              src: frr/frr.conf.j2
+              dst: /etc/frr/frr.conf
+          - shell:
+              cmds:
+                - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
+                - systemctl restart frr
+    - name: HV1
+      templates:
+        - node
+        - hv

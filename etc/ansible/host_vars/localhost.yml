@@ -1,6 +1,23 @@
 local_ipaddr: "{{ CHANGE_ME }}"
+local_namespaces_dir: /mnt/sda/exports/mylabo/namespaces
+local_vms_dir: /mnt/sda/exports/mylabo/vms
+local_vm_images_dir: /mnt/sda/exports/mylabo/vm_images
 
 docker_networks:
   - name: labo-net
     ipam_config:
       - subnet: 172.30.0.0/16
+
+nfs_exports:
+  - path: /mnt/sda/exports
+    owner: nobody
+    group: nogroup
+    options:
+      - 127.0.0.1/8(rw,sync,fsid=0,crossmnt,no_subtree_check,no_root_squash,insecure)
+      - 10.0.0.0/8(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+      - 172.16.0.0/12(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+      - 192.168.0.0/16(rw,sync,fsid=0,crossmnt,no_subtree_check,insecure,all_squash)
+
+nfs_mounts:
+  - path: /mnt/nfs
+    src: localhost:/
