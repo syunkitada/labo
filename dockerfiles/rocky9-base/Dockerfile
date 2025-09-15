@@ -2,7 +2,7 @@ FROM rockylinux:9
 
 ENV container docker
 
-COPY /etc/labo/tls-assets/ca/ca-certs/ca.pem /usr/share/pki/ca-trust-source/anchors/self-ca.crt
+COPY tmp-ca.pem /usr/share/pki/ca-trust-source/anchors/self-ca.crt
 
 RUN dnf install -y systemd sudo man vim findutils procps-ng \
     git wget ca-certificates openssh-server \

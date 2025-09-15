@@ -29,14 +29,14 @@ spec:
         links:
           - peer: n1
             ips:
-              - inet: <%=gateway_inet4(network1)%>
+              - inet: <%=gateway_inet4("network1")%>
             peer_ips:
-              - inet: <%=assign_inet4(network1)%>
+              - inet: <%=assign_inet4("network1")%>
           - peer: n2
             ips:
-              - inet: <%=gateway_inet4(network2)%>
+              - inet: <%=gateway_inet4("network2")%>
             peer_ips:
-              - inet: <%=assign_inet4(network2)%>
+              - inet: <%=assign_inet4("network2")%>
     - name: n1
       templates:
         - node
@@ -45,7 +45,7 @@ spec:
           - dst: default
             via: <%=spec._node_map.n1.spec._links.0.ips.0.ip%>
         var_map:
-          vlan_inet4: <%=assign_inet4(network_vlan1)%>
+          vlan_inet4: <%=assign_inet4("network_vlan1")%>
         cmds:
           - set +e
           - ip link add test-vxlan1 type vxlan id 100 remote <%=spec._node_map.n2.spec._links.0.peer_ips.0.ip%>
@@ -67,7 +67,7 @@ spec:
           - dst: default
             via: <%=spec._node_map.n2.spec._links.0.ips.0.ip%>
         var_map:
-          vlan_inet4: <%=assign_inet4(network_vlan1)%>
+          vlan_inet4: <%=assign_inet4("network_vlan1")%>
         cmds:
           - set +e
           - ip link add test-vxlan1 type vxlan id 100 remote <%=spec._node_map.n1.spec._links.0.peer_ips.0.ip%>

@@ -1,6 +1,6 @@
 FROM rockylinux:9
 
-COPY etc/tls-assets/tmp/ca.pem /usr/share/pki/ca-trust-source/anchors/self-ca.crt
+COPY tmp-ca.pem /usr/share/pki/ca-trust-source/anchors/self-ca.crt
 
 RUN dnf install -y ca-certificates systemd sudo man vim findutils procps-ng \
                     python3 python3-pip openssh-clients git
@@ -14,8 +14,8 @@ RUN curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.14.3-linux-amd64.tar.gz && 
     tar xf helm.tar.gz && \
     install -o root -g root -m 0755 linux-amd64/helm /usr/bin/helm && \
     rm -rf linux-amd64 && \
-    rm helm.tar.gz && \
-    helm plugin install https://github.com/databus23/helm-diff
+    rm helm.tar.gz
+RUN helm plugin install https://github.com/databus23/helm-diff --version v3.12.5
 
 # Install kind
 RUN curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64 && \

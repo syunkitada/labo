@@ -1,8 +1,10 @@
-name = ci-tools
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+IMAGE_NAME := $(current_dir)
 
-.PHONY: image
-image:
-	sudo docker image build -t local/$(name) .
+.PHONY: all
+all:
+	sudo docker image build -t "local/${IMAGE_NAME}" .
 
 .PHONY: lint
 lint:

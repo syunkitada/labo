@@ -1,10 +1,7 @@
 FROM local/rocky9-base
 
-ENV container docker
-ENV FRRVER="frr-stable"
-
 # frr
-RUN dnf install -y https://rpm.frrouting.org/repo/$FRRVER-repo-1-0.el9.noarch.rpm && \
+RUN dnf install -y https://rpm.frrouting.org/repo/frr-stable-repo-1-0.el9.noarch.rpm && \
     dnf install -y frr frr-pythontools
 
 # ovs
