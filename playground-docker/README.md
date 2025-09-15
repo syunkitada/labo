@@ -1,1 +1,0 @@
-# Playground on docker-compose
