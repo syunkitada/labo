@@ -4,23 +4,26 @@ import yaml as pyyaml
 from jinja2 import Template
 
 from mylabo.lib.runtime import runtime_context
-from mylabo.lib import colors
 
 re_route = re.compile("(\S+) from (\S+) dev (\S+)")
 
 
 class NodeContext:
-    def __init__(self, spec):
-        self.c = runtime_context.new(spec)
-        self.spec = spec
+    def __init__(self, manifest: dict):
+        self.c = runtime_context.new(manifest)
+        self.manifest = manifest
+        self.spec = manifest["spec"]
         self.next = 0
         self.debug = False
         self.dryrun = False
         self.full_cmds = []
         self.childs = []
 
-        self.script_dir = os.path.join(spec["_root_spec"]["_script_dir"], spec["name"])
         self.script_index = 0
+        if "_root_manifest" in manifest:
+            self.script_dir = os.path.join(manifest["_root_manifest"]["_script_dir"], manifest["name"])
+        else:
+            self.script_dir = os.path.join(manifest["_script_dir"], manifest["name"])
         os.makedirs(self.script_dir, exist_ok=True)
 
     def _cmd(self, exec_filepath, is_local=False):
@@ -28,20 +31,20 @@ class NodeContext:
 
         if is_local:
             return f"PATH={os.environ['PATH']} {cmd}"
-        elif self.spec["kind"] == "container":
-            return f"docker exec {self.spec['_hostname']} {cmd}"
-        elif self.spec["kind"] == "vm":
-            return f"ssh -i /root/.ssh/labo.pem admin@{self.spec['_hostname']} sudo {cmd}"
+        elif self.manifest["kind"] == "container":
+            return f"docker exec {self.manifest['_hostname']} {cmd}"
+        elif self.manifest["kind"] == "vm":
+            return f"ssh -i /root/.ssh/labo.pem admin@{self.manifest['_hostname']} sudo {cmd}"
         return cmd
 
     def exec_without_log(self, cmd: str, *args, is_local=False, **kwargs):
         tmp_cmd = ""
         if is_local:
             tmp_cmd = f"PATH={os.environ['PATH']} {cmd}"
-        elif self.spec["kind"] == "container":
-            tmp_cmd = f"docker exec {self.spec['_hostname']} {cmd}"
-        elif self.spec["kind"] == "vm":
-            tmp_cmd = f"ssh -i /root/.ssh/labo.pem admin@{self.spec['_hostname']} sudo {cmd}"
+        elif self.manifest["kind"] == "container":
+            tmp_cmd = f"docker exec {self.manifest['_hostname']} {cmd}"
+        elif self.manifest["kind"] == "vm":
+            tmp_cmd = f"ssh -i /root/.ssh/labo.pem admin@{self.manifest['_hostname']} sudo {cmd}"
 
         # Remove unsupported parameters for invoke library
         kwargs.pop("title", None)
@@ -95,7 +98,7 @@ class NodeContext:
 
         cmd = self._cmd(full_filepath, is_local)
         self.full_cmds += [
-            f"# {self.spec['name']}: {comment_name_prefix} {'-'*(80-len(comment_name_prefix))}",
+            f"# {self.manifest['name']}: {comment_name_prefix} {'-'*(80-len(comment_name_prefix))}",
             cmd,
             "",
         ]
@@ -125,7 +128,7 @@ class NodeContext:
             self.exec(cmds)
 
     def wrap_if_exist_netdev_netns(self, netdev, cmds):
-        cmds.insert(0, f"if ! ip netns exec {self.spec['_hostname']} ip addr show dev {netdev}; then")
+        cmds.insert(0, f"if ! ip netns exec {self.manifest['_hostname']} ip addr show dev {netdev}; then")
         cmds.append("fi")
         return cmds
 
@@ -141,14 +144,14 @@ class NodeContext:
 
     def exist_route(self, route):
         return (
-            self.spec["_hostname"] in self.netns_map
-            and route["dst"] in self.netns_map[self.spec["_hostname"]]["route_map"]
+            self.manifest["_hostname"] in self.netns_map
+            and route["dst"] in self.netns_map[self.manifest["_hostname"]]["route_map"]
         )
 
     def exist_route6(self, route):
         return (
-            self.spec["_hostname"] in self.netns_map
-            and route["dst"] in self.netns_map[self.spec["_hostname"]]["route6_map"]
+            self.manifest["_hostname"] in self.netns_map
+            and route["dst"] in self.netns_map[self.manifest["_hostname"]]["route6_map"]
         )
 
     def append_cmds_ip_route_add(self, cmds, dst, via):
@@ -208,7 +211,7 @@ class NodeContext:
                 f"ethtool -K {link['link_name']} tso off tx off",
                 f"ip link set dev {link['link_name']} mtu {link['mtu']}",
                 f"ip link set dev {link['link_name']} address {link['link_mac']}",
-                f"ip link set dev {link['link_name']} netns {self.spec['_hostname']} up",
+                f"ip link set dev {link['link_name']} netns {self.manifest['_hostname']} up",
             ],
         )
 
@@ -219,7 +222,7 @@ class NodeContext:
                 f"ethtool -K {link['peer_name']} tso off tx off",
                 f"ip link set dev {link['peer_name']} mtu {link['mtu']}",
                 f"ip link set dev {link['peer_name']} address {link['peer_mac']}",
-                f"ip link set dev {link['peer_name']} netns {self.spec['_hostname']} up",
+                f"ip link set dev {link['peer_name']} netns {self.manifest['_hostname']} up",
             ],
         )
 
@@ -243,11 +246,11 @@ class NodeContext:
         self.exec(shell["cmds"], title=title)
 
     def template(self, template: dict, title: str):
-        template_file = os.path.join(self.spec["_root_spec"]["_spec_dir"], template["src"])
+        template_file = os.path.join(self.manifest["_root_manifest"]["_manifest_dir"], template["src"])
         with open(template_file) as f:
             content = f.read()
             t = Template(content)
-            rendered = t.render(node=self.spec, spec=self.spec["spec"])
+            rendered = t.render(node=self.manifest, spec=self.spec)
 
         dst_file = os.path.join(self.script_dir, template["src"])
         dst_dir = os.path.dirname(os.path.realpath(dst_file))

@@ -1,8 +1,0 @@
-imports:
-  - /etc/ansible/host_vars/localhost.yaml
-
-kind: VMImage
-metadata:
-  name: rocky9
-spec:
-  from: https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2

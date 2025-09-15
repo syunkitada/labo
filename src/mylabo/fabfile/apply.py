@@ -1,28 +1,27 @@
 import fabric
 
-from mylabo.lib import resource_controller
+from mylabo import resource_controller
 from mylabo.lib.logger import logger
-from mylabo.lib.utils import spec_utils, cmd_utils
+from mylabo.lib.manifest import manifest_loader
+from mylabo.lib.context import context
 
 
 @fabric.task
-def apply(c, file="", debug=False, Dryrun=False, label=""):
-    """apply [file] -d -D
+def apply(c, file="", debug=False, Dryrun=False, labels=""):
+    """apply -f [file] -d -D -l [labels]
 
-    # target (default=node)
-    コマンドの実行対象を限定するために使用します。
-    kindは、infra, image, node のいずれかを指定でき、実行対象の種別を限定します。（デフォルトはnodeです）
-    [kind]の後ろに、:[name_regex]を指定することで、正規表現により実行対象の名前で限定します。
+    # labels
+    -l name=value,name!=value,...
     """
 
-    logger.init(debug)
-    labels = cmd_utils.parse_labels(label)
+    ctx = context.Context(invoke_ctx=c, debug=debug, dryrun=Dryrun, labels=labels)
+    logger.init(ctx)
 
-    specs = spec_utils.load_specs(file)
-    for spec in specs:
-        apply_spec(spec, labels)
+    manifests = manifest_loader.load_manifests(file)
+    for manifest in manifests:
+        apply_manifest(ctx, manifest)
 
 
-def apply_spec(spec, labels: dict):
-    rc = resource_controller.load(spec)
-    rc.apply(labels)
+def apply_manifest(ctx: context.Context, manifest: dict):
+    rc = resource_controller.load(ctx, manifest)
+    rc.apply()

@@ -1,14 +1,16 @@
 import fabric
 
 from mylabo import resource_controller
+from mylabo.domain import resource
 from mylabo.lib.logger import logger
 from mylabo.lib.manifest import manifest_loader
 from mylabo.lib.context import context
+from mylabo.lib.utils import cmd_utils
 
 
 @fabric.task
-def get(c, file="", debug=False, Dryrun=False, labels=""):
-    """get -f [file] -d -D -l [labels]
+def any(c, file="", debug=False, Dryrun=False, labels="", action=""):
+    """any -f [file] -d -D -l [labels], -a [action]
 
     # labels
     -l name=value,name!=value,...
@@ -17,14 +19,16 @@ def get(c, file="", debug=False, Dryrun=False, labels=""):
     ctx = context.Context(invoke_ctx=c, debug=debug, dryrun=Dryrun, labels=labels)
     logger.init(ctx)
 
+    action = cmd_utils.parse_action(action)
+
     manifests = manifest_loader.load_manifests(file)
     for manifest in manifests:
-        get_manifest(ctx, manifest)
+        any_manifest(ctx, manifest, action)
 
 
-def get_manifest(ctx: context.Context, manifest: dict):
+def any_manifest(ctx: context.Context, manifest: dict, action: resource.AnyAction):
     rc = resource_controller.load(ctx, manifest)
-    results = rc.get()
+    results = rc.any(action)
     for result in results:
         if isinstance(result, dict):
             print(

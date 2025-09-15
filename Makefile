@@ -10,7 +10,7 @@ clean:
 
 .PHONY: test
 test:
-	pytest -x -vv fabfile_tests
+	uv run pytest
 
 .PHONY: bash
 bash:

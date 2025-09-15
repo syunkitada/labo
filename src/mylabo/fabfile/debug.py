@@ -1,24 +1,24 @@
 import fabric
 
-from mylabo.lib import resource_controller
+# from mylabo import resource_controller
 from mylabo.lib.logger import logger
-from mylabo.lib.utils import spec_utils, cmd_utils
+from mylabo.lib.manifest import manifest_loader
 import yaml
+from mylabo.lib.context import context
 
 
 @fabric.task
-def debug(c, file="", debug=False, Dryrun=False, label=""):
-    """debug [file] -d -D
+def debug(c, file="", debug=False, Dryrun=False, labels=""):
+    """debug -f [file] -d -D -l [labels]
 
-    # target (default=node)
-    コマンドの実行対象を限定するために使用します。
-    kindは、infra, image, node のいずれかを指定でき、実行対象の種別を限定します。（デフォルトはnodeです）
-    [kind]の後ろに、:[name_regex]を指定することで、正規表現により実行対象の名前で限定します。
+    # labels
+    -l name=value,name!=value,...
     """
 
-    logger.init(debug)
+    ctx = context.Context(invoke_ctx=c, debug=debug, dryrun=Dryrun, labels=labels)
+    logger.init(ctx)
 
-    specs = spec_utils.load_specs(file)
-    for spec in specs:
-        yaml_str = yaml.dump(spec, allow_unicode=True)
+    manifests = manifest_loader.load_manifests(file)
+    for manifest in manifests:
+        yaml_str = yaml.dump(manifest, allow_unicode=True)
         print(yaml_str)

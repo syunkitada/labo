@@ -1,0 +1,170 @@
+#!/bin/bash -xe
+
+systemctl start openvswitch
+ 
+# Add bridge for external bridge
+ovs-vsctl --may-exist add-br {{ spec.vars.ovs_external_bridge.name }}
+ip link set up {{ spec.vars.ovs_external_bridge.name }}
+
+# Set local IP for VXLAN tunnel to external bridge
+if ! ip addr show dev {{ spec.vars.ovs_external_bridge.name }} | grep "inet {{ spec.vars.ovs_external_bridge.local_ip }}/32"; then
+  ip addr add {{ spec.vars.ovs_external_bridge.local_ip }}/32 dev {{ spec.vars.ovs_external_bridge.name }}
+fi
+if ! ip rule show table 200 | grep "from {{ spec.vars.ovs_external_bridge.local_ip }} lookup 200"; then
+  ip rule add from {{ spec.vars.ovs_external_bridge.local_ip }}/32 table 200 prio 25
+fi
+ip route replace table 200 0.0.0.0/0 dev br-ex src {{ spec.vars.ovs_external_bridge.local_ip }}
+
+# Setup external bridge interfaces
+{%- set buckets = [] %}
+{%- for interface in spec.vars.ovs_external_bridge.interfaces %}
+{%- set bgp_interface = "bgp{}".format(loop.index0) %}
+{%- set bgp_interface_peer = "{}-{}".format(spec.vars.ovs_external_bridge.name, bgp_interface) %}
+
+# Create BGP port
+if ! ip addr show dev {{ bgp_interface }}; then
+  ip link add {{ bgp_interface }} type veth peer name {{ bgp_interface_peer }}
+fi
+ip link set dev {{ bgp_interface }} up
+ethtool -K {{ bgp_interface }} tso off tx off
+ip link set dev {{ bgp_interface_peer }} mtu 9000
+ip link set {{ bgp_interface_peer }} up
+ethtool -K {{ bgp_interface_peer }} tso off tx off
+
+# Add physical port to external bridge
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_external_bridge.name }} {{ interface.name }}
+
+# Add BGP port to external bridge
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_external_bridge.name }} {{ bgp_interface_peer }}
+
+{%-
+set buckets = buckets.append(
+    "bucket=watch_port:{interface},actions=mod_dl_dst:{peer_mac},output:{interface}".format(
+    interface=interface.name,
+    peer_mac=interface.peer_mac
+))
+%}
+
+{%- endfor %}
+# End Setup external bridge interfaces
+
+# Create group entry for load balancing on external bridge 
+ovs-ofctl -O OpenFlow15 mod-group --may-create {{ spec.vars.ovs_external_bridge.name }} \
+    "group_id=1,type=select,selection_method=hash,fields(ip_src,ip_dst),{{ buckets | join(',') }}"
+
+#####
+# Setup VXLAN Bridges
+#####
+{%- for bridge in spec.vars.get("ovs_vxlan_bridges", []) %}
+{%- set ex_to_br = "{}_{}".format(spec.vars.ovs_external_bridge.name, bridge.name) %}
+{%- set br_to_ex = "{}_{}".format(bridge.name, spec.vars.ovs_external_bridge.name) %}
+
+#####
+# {{ bridge.name }}
+#####
+ovs-vsctl --may-exist add-port {{ spec.vars.ovs_external_bridge.name }} {{ ex_to_br }} \
+    -- set interface {{ ex_to_br }} type=patch options:peer={{ br_to_ex }}
+
+# Create VXLAN bridge
+ovs-vsctl --may-exist add-br {{ bridge.name }}
+
+# Create VXLAN internal bridge
+{%- set int_br_name = "{}-int".format(bridge['name']) %}
+ovs-vsctl --may-exist add-br {{ int_br_name }}
+
+# Link VXLAN bridge and external bridge
+{%- set ex_to_vxlan_port = "{}_{}".format(spec.vars.ovs_external_bridge.name, bridge.name) %}
+{%- set  vxlan_to_ex_port = "{}_{}".format(bridge.name, spec.vars.ovs_external_bridge.name) %}
+ovs-vsctl --may-exist add-port {{ bridge.name }} {{ vxlan_to_ex_port }} \
+    -- set interface {{ vxlan_to_ex_port }} type=patch options:peer={{ ex_to_vxlan_port }}
+
+# Link VXLAN bridge and internal bridge
+{%- set vxlan_to_int_port = "{}_{}".format(bridge.name, int_br_name) %}
+{%- set int_to_vxlan_port = "{}_{}".format(int_br_name, bridge.name) %}
+ovs-vsctl --may-exist add-port {{ bridge.name }} {{ vxlan_to_int_port }} \
+    -- set interface {{ vxlan_to_int_port }} type=patch options:peer={{ int_to_vxlan_port }}
+ovs-vsctl --may-exist add-port {{ int_br_name }} {{ int_to_vxlan_port }} \
+    -- set interface {{ int_to_vxlan_port }} type=patch options:peer={{ vxlan_to_int_port }}
+
+# Setup VXLAN tunnel port
+{%- set vxlan_eth = "vxlan{}".format(bridge['vxlan_id']) %}
+{%- set vxlan_options = "options:local_ip={}".format(spec.vars.ovs_external_bridge.local_ip) %}
+ovs-vsctl --may-exist add-port {{ bridge.name }} {{ vxlan_eth }} \
+  -- set interface {{ vxlan_eth }} type=vxlan options:remote_ip=flow options:key={{ bridge['vxlan_id'] }} {{ vxlan_options }}
+
+# Setup flows for VXLAN bridge
+echo "" > /tmp/{{ bridge.name }}.flows
+{%- for port in bridge.ports %}
+{%- for ip in port.ips %}
+# Ingress from external VXLAN target
+echo "priority=800,ip,nw_dst={{ ip.ip }} actions=output:{{ vxlan_to_int_port }}" >> /tmp/{{ bridge.name }}.flows
+{%- if "eip" in ip %}
+# EIP dnat
+echo "priority=800,ip,nw_dst={{ ip.eip }} actions=set_field:{{ ip.ip }}->nw_dst,output:{{ vxlan_to_int_port }}" >> /tmp/{{ bridge.name }}.flows
+# EIP snat
+echo "priority=200,ip,nw_src={{ ip.ip }} actions=set_field:{{ ip.eip }}->nw_src,output:{{ vxlan_to_ex_port }}" >> /tmp/{{ bridge.name }}.flows
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+{%- for route in bridge.get('routes', []) %}
+# Add route to external VXLAN target
+echo "priority=700,ip,nw_dst={{ route.ip }} actions=set_field:{{ route.dst }}->tun_dst,{{ vxlan_eth }}" >> /tmp/{{ bridge.name }}.flows
+{%- endfor %}
+
+## Add VM ports to VXLAN bridge
+{%- for port in bridge.ports %}
+ovs-vsctl --may-exist add-port {{ int_br_name }} {{ port.name }}
+{%- endfor %}
+
+# Setup flows for VXLAN internal bridge
+echo "" > /tmp/{{ int_br_name }}.flows
+{%- for port in bridge.ports %}
+{%- set port_peer_mac = "0x{}".format(port.peer_mac.replace(':', '')) %}
+{%- for ip in port.ips %}
+# ingress
+echo "priority=800,ip,nw_dst={{ ip.ip }} actions=load:{{ port_peer_mac }}->NXM_OF_ETH_DST[],output:{{ port.name }}" >> /tmp/{{ int_br_name }}.flows
+# egress
+echo "priority=800,ip,nw_src={{ ip.ip }} actions=output:{{ int_to_vxlan_port }}" >> /tmp/{{ int_br_name }}.flows
+
+{#-
+# in_portからARP要求(arp_op=1)が飛んできたときに、ARP_DUMMY_MACを返却します
+# arp_op = NXM_OF_ARP_OP = Opcode of ARP, リクエストは1、リプライは2 をセットします
+# NXM_OF_ETH_SRC = Ethernet Source address
+# NXM_OF_ETH_DST = Ethernet Destination address
+# NXM_NX_ARP_SHA = ARP Source Hardware(Ethernet) Address
+# NXM_NX_ARP_THA = ARP Target Hardware(Ethernet) Address
+# NXM_OF_ARP_SPA = ARP Source IP Address
+# NXM_OF_ARP_TPA = ARP Target IP Address
+#}
+{%- set ARP_DUMMY_MAC = "0x00163e000001" %}
+{%- set tmpflow = "priority=800,in_port={},arp,arp_op=1 actions".format(port.name) %}
+{#- NXM_OF_ETH_SRCをNXM_OF_ETH_DSTにセットして、ARP_DUMMY_MACをNXM_OF_ETH_SRCにセットする #}
+{%- set tmpflow = tmpflow + "=move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],load:{}->NXM_OF_ETH_SRC[]".format(ARP_DUMMY_MAC) %}
+{# NXM_NX_ARP_SHAをNXM_NX_ARP_THAにセットして、ARP_DUMMY_MACをNXM_NX_ARP_SHAにセットする #}
+{%- set tmpflow = tmpflow + ",move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],load:{}->NXM_NX_ARP_SHA[]".format(ARP_DUMMY_MAC) %}
+{#- NXM_OF_ARP_SPAとNXM_OF_ARP_TPAを入れ替える #}
+{%- set tmpflow = tmpflow + ",push:NXM_OF_ARP_TPA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],pop:NXM_OF_ARP_SPA[]" %}
+{#- Opcodeを2にセットする(ARPのリプライであることを示すフラグ) #}
+{%- set tmpflow = tmpflow + ",load:0x2->NXM_OF_ARP_OP[]" %}
+{#- IN_PORTにそのまま返す #}
+{%- set tmpflow = tmpflow + ",IN_PORT" %}
+echo "{{ tmpflow }}" >> /tmp/{{ int_br_name }}.flows
+{%- endfor %}
+
+{%- endfor %}
+## Setup VM ports of VXLAN bridge
+
+ovs-ofctl -O OpenFlow15 replace-flows {{ bridge.name }} /tmp/{{ bridge.name }}.flows
+ovs-ofctl -O OpenFlow15 replace-flows {{ int_br_name }} /tmp/{{ int_br_name }}.flows
+
+{%- endfor %}
+#####
+# End Setup VXLAN Bridges
+#####
+
+
+
+# Replace flows
+br_ex_mac=$(ip link show {{ spec.vars.ovs_external_bridge.name }} | grep 'link/ether' | awk '{print $2}')
+sed -i "s/@external_bridge_mac/${br_ex_mac}/g" /tmp/br-ex.flows
+ovs-ofctl -O OpenFlow15 replace-flows {{ spec.vars.ovs_external_bridge.name }} /tmp/br-ex.flows

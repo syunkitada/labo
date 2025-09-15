@@ -1,9 +1,10 @@
 import json
 import logging
+from mylabo.lib.context import context
 
 
-def init(debug=False):
-    if debug:
+def init(ctx: context.Context):
+    if ctx.debug:
         log_level = logging.DEBUG
     else:
         log_level = logging.INFO
