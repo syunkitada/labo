@@ -45,7 +45,9 @@ def _new_runtime_context(context_config, spec):
         context_config["user"] = common.get("host_user", "admin")
         connect_kwargs["key_filename"] = "/root/.ssh/labo.pem"
     if host is not None:
-        c = fabric.Connection(host, config=fabric.Config(context_config), connect_kwargs=connect_kwargs)
+        c = fabric.Connection(
+            host, config=fabric.Config(context_config), connect_kwargs=connect_kwargs
+        )
         c.is_local = False
     else:
         c = invoke.Context(config=invoke.Config(context_config))

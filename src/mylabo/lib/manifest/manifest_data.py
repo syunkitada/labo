@@ -95,7 +95,9 @@ def complete_value(root_manifest: dict, value: str, times: int = 0) -> str:
             if _value is None:
                 return value
 
-            return complete_value(root_manifest, value_prefix + str(_value) + value_suffix, times)
+            return complete_value(
+                root_manifest, value_prefix + str(_value) + value_suffix, times
+            )
 
         else:
             return value
@@ -107,7 +109,9 @@ def complete_value(root_manifest: dict, value: str, times: int = 0) -> str:
         return value
 
 
-def reference_value(root_manifest: dict, data: dict | list, reference_key: str) -> str | None:
+def reference_value(
+    root_manifest: dict, data: dict | list, reference_key: str
+) -> str | None:
     splited_src = reference_key.split(".")
 
     tmp_data = None

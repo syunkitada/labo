@@ -1,16 +1,6 @@
-.PHONY: all
-all:
-	cd labo/tls; make
-	sudo .venv/bin/ansible-playbook labo.infra.labo
-	sudo .venv/bin/mylabo apply manifests/dns_record.yml
-
-.PHONY: clean
-clean:
-	rm -rf .venv
-
 .PHONY: test
 test:
-	uv run pytest
+	uv run pytest --cov --cov-report=term-missing
 
 .PHONY: bash
 bash:
@@ -19,7 +9,9 @@ bash:
 .PHONY: format
 format:
 	prettier -w **/*.md
+	uv run ruff format
 
 .PHONY: lint
 lint:
 	prettier -c **/*.md
+	uv run ruff check

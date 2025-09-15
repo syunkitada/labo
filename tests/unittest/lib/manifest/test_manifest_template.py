@@ -27,8 +27,19 @@ class TestManifestTemplate:
     def test_complete_with_simple_template(self):
         """Test basic template completion functionality"""
         manifest = {
-            "template_map": {"base_node": {"kind": "container", "spec": {"image": "ubuntu:20.04", "mtu": 1500}}},
-            "nodes": [{"templates": ["base_node"], "name": "node1", "spec": {"network": "test-net"}}],
+            "template_map": {
+                "base_node": {
+                    "kind": "container",
+                    "spec": {"image": "ubuntu:20.04", "mtu": 1500},
+                }
+            },
+            "nodes": [
+                {
+                    "templates": ["base_node"],
+                    "name": "node1",
+                    "spec": {"network": "test-net"},
+                }
+            ],
         }
 
         manifest_template.complete(manifest)
@@ -48,8 +59,16 @@ class TestManifestTemplate:
         """Test template completion with multiple templates"""
         manifest = {
             "template_map": {
-                "base": {"kind": "container", "spec": {"image": "ubuntu:20.04", "mtu": 1500}},
-                "network": {"spec": {"network": "default", "sysctl_map": {"net.ipv4.ip_forward": 1}}},
+                "base": {
+                    "kind": "container",
+                    "spec": {"image": "ubuntu:20.04", "mtu": 1500},
+                },
+                "network": {
+                    "spec": {
+                        "network": "default",
+                        "sysctl_map": {"net.ipv4.ip_forward": 1},
+                    }
+                },
             },
             "nodes": [
                 {
@@ -76,7 +95,11 @@ class TestManifestTemplate:
             "template_map": {
                 "vm_base": {
                     "kind": "vm",
-                    "spec": {"vcpus": 2, "ram": 2048, "routes": [{"dst": "default", "via": "192.168.1.1"}]},
+                    "spec": {
+                        "vcpus": 2,
+                        "ram": 2048,
+                        "routes": [{"dst": "default", "via": "192.168.1.1"}],
+                    },
                 }
             },
             "environments": {
@@ -138,11 +161,15 @@ class TestManifestTemplate:
 
     def test_complete_preserves_original_template_map(self):
         """Test that the original template_map values are not modified"""
-        template_map = {"base": {"kind": "container", "spec": {"image": "ubuntu:20.04"}}}
+        template_map = {
+            "base": {"kind": "container", "spec": {"image": "ubuntu:20.04"}}
+        }
 
         manifest = {
             "template_map": template_map,
-            "nodes": [{"templates": ["base"], "name": "node1", "spec": {"network": "test"}}],
+            "nodes": [
+                {"templates": ["base"], "name": "node1", "spec": {"network": "test"}}
+            ],
         }
 
         original_template = copy.deepcopy(template_map["base"])
@@ -156,7 +183,9 @@ class TestManifestTemplate:
         """Test that missing template_map raises appropriate exception"""
         manifest = {"nodes": [{"templates": ["base"], "name": "node1"}]}
 
-        with pytest.raises(Exception, match="template_map is not found in root_manifest"):
+        with pytest.raises(
+            Exception, match="template_map is not found in root_manifest"
+        ):
             manifest_template.complete(manifest)
 
     def test_missing_template_raises_exception(self):
@@ -166,13 +195,17 @@ class TestManifestTemplate:
             "nodes": [{"templates": ["non_existent"], "name": "node1"}],
         }
 
-        with pytest.raises(Exception, match="template non_existent is not found in template_map"):
+        with pytest.raises(
+            Exception, match="template non_existent is not found in template_map"
+        ):
             manifest_template.complete(manifest)
 
     def test_complex_nested_template_application(self):
         """Test template application in deeply nested structures"""
         manifest = {
-            "template_map": {"service": {"type": "web", "config": {"port": 8080, "ssl": False}}},
+            "template_map": {
+                "service": {"type": "web", "config": {"port": 8080, "ssl": False}}
+            },
             "clusters": {
                 "prod": {
                     "regions": {
@@ -235,8 +268,14 @@ class TestManifestTemplate:
                     "templates": ["base"],
                     "name": "worker",
                     "spec": {
-                        "resources": {"memory": "256Mi", "disk": "1Gi"},  # Override this  # Add this
-                        "env": {"DEBUG": "true", "WORKER_ID": "1"},  # Override this  # Add this
+                        "resources": {
+                            "memory": "256Mi",
+                            "disk": "1Gi",
+                        },  # Override this  # Add this
+                        "env": {
+                            "DEBUG": "true",
+                            "WORKER_ID": "1",
+                        },  # Override this  # Add this
                     },
                 }
             ],
@@ -296,7 +335,9 @@ class TestManifestTemplate:
     def test_recursive_data_structures(self):
         """Test with complex recursive data structures"""
         manifest = {
-            "template_map": {"nested": {"level1": {"level2": {"level3": ["item1", "item2"]}}}},
+            "template_map": {
+                "nested": {"level1": {"level2": {"level3": ["item1", "item2"]}}}
+            },
             "deep": {
                 "structure": [
                     {
@@ -316,7 +357,14 @@ class TestManifestTemplate:
     def test_template_with_boolean_and_numeric_values(self):
         """Test template application with various data types"""
         manifest = {
-            "template_map": {"config": {"enabled": True, "count": 5, "ratio": 3.14, "tags": ["prod", "web"]}},
+            "template_map": {
+                "config": {
+                    "enabled": True,
+                    "count": 5,
+                    "ratio": 3.14,
+                    "tags": ["prod", "web"],
+                }
+            },
             "services": [
                 {
                     "templates": ["config"],

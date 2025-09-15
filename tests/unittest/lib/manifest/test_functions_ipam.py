@@ -36,7 +36,10 @@ class TestConstants:
     def test_asn_ip_networks_conversion(self):
         """Test ASN IP networks are properly converted to ipaddress objects."""
         assert len(functions_ipam.ASN_IP_NETWORKS) == 3
-        assert all(isinstance(net, ipaddress.IPv4Network) for net in functions_ipam.ASN_IP_NETWORKS)
+        assert all(
+            isinstance(net, ipaddress.IPv4Network)
+            for net in functions_ipam.ASN_IP_NETWORKS
+        )
         assert str(functions_ipam.ASN_IP_NETWORKS[0]) == "192.168.0.0/16"
         assert str(functions_ipam.ASN_IP_NETWORKS[1]) == "172.16.0.0/12"
         assert str(functions_ipam.ASN_IP_NETWORKS[2]) == "10.0.0.0/8"
@@ -81,7 +84,9 @@ class TestAssignInet4:
 
     def test_assign_inet4_l2_network(self):
         """Test IPv4 assignment for L2 network."""
-        data = {"spec": {"ipam": {"management": {"kind": "l2", "subnet": "192.168.1.0/24"}}}}
+        data = {
+            "spec": {"ipam": {"management": {"kind": "l2", "subnet": "192.168.1.0/24"}}}
+        }
 
         result1 = functions_ipam.assign_inet4(data, "management")
         result2 = functions_ipam.assign_inet4(data, "management")
@@ -101,7 +106,9 @@ class TestAssignInet4:
 
     def test_assign_inet4_l3_network_ipv6(self):
         """Test IPv4 assignment for L3 network (IPv6)."""
-        data = {"spec": {"ipam": {"loopback_v6": {"kind": "l3", "subnet": "2001:db8::/64"}}}}
+        data = {
+            "spec": {"ipam": {"loopback_v6": {"kind": "l3", "subnet": "2001:db8::/64"}}}
+        }
 
         result1 = functions_ipam.assign_inet4(data, "loopback_v6")
         result2 = functions_ipam.assign_inet4(data, "loopback_v6")
@@ -111,7 +118,17 @@ class TestAssignInet4:
 
     def test_assign_inet4_with_existing_next_ip(self):
         """Test assignment with pre-existing _next_ip."""
-        data = {"spec": {"ipam": {"test_net": {"kind": "l2", "subnet": "172.16.0.0/16", "_next_ip": 10}}}}
+        data = {
+            "spec": {
+                "ipam": {
+                    "test_net": {
+                        "kind": "l2",
+                        "subnet": "172.16.0.0/16",
+                        "_next_ip": 10,
+                    }
+                }
+            }
+        }
 
         result = functions_ipam.assign_inet4(data, "test_net")
 
@@ -124,7 +141,9 @@ class TestAssignIp4:
 
     def test_assign_ip4_basic(self):
         """Test basic IP assignment without prefix."""
-        data = {"spec": {"ipam": {"management": {"kind": "l2", "subnet": "192.168.1.0/24"}}}}
+        data = {
+            "spec": {"ipam": {"management": {"kind": "l2", "subnet": "192.168.1.0/24"}}}
+        }
 
         result = functions_ipam.assign_ip4(data, "management")
 
@@ -254,7 +273,10 @@ class TestIpv4ToAsn:
     def test_ipv4_to_asn_boundary_conditions(self):
         """Test ASN calculation for boundary conditions."""
         # Test first IP in each network
-        assert functions_ipam.ipv4_to_asn(None, "192.168.0.0") == functions_ipam.PRIVATE_ASN_START
+        assert (
+            functions_ipam.ipv4_to_asn(None, "192.168.0.0")
+            == functions_ipam.PRIVATE_ASN_START
+        )
 
         # Test last IP in 192.168.0.0/16 network
         result = functions_ipam.ipv4_to_asn(None, "192.168.255.255")
@@ -333,7 +355,9 @@ class TestAsnToIpv4:
 
         # Test with ASN that would cause IndexError due to implementation bug
         network_192_168 = ipaddress.ip_network("192.168.0.0/16")
-        asn_beyond_first_network = functions_ipam.PRIVATE_ASN_START + network_192_168.num_addresses
+        asn_beyond_first_network = (
+            functions_ipam.PRIVATE_ASN_START + network_192_168.num_addresses
+        )
 
         # This raises IndexError, not "Invalid asn" exception
         with pytest.raises(IndexError):
@@ -368,12 +392,16 @@ class TestAsnToSid:
         """Test ASN to SID conversion with larger offset."""
         # Test with PRIVATE_ASN_START + 0x12345678
         test_offset = 0x12345678
-        result = functions_ipam.asn_to_sid(None, functions_ipam.PRIVATE_ASN_START + test_offset)
+        result = functions_ipam.asn_to_sid(
+            None, functions_ipam.PRIVATE_ASN_START + test_offset
+        )
         assert result == "fc06:0000:1234:5678:0000:0000:0000:0001/64"
 
     def test_asn_to_sid_format(self):
         """Test SID format structure."""
-        result = functions_ipam.asn_to_sid(None, functions_ipam.PRIVATE_ASN_START + 0xABCD1234)
+        result = functions_ipam.asn_to_sid(
+            None, functions_ipam.PRIVATE_ASN_START + 0xABCD1234
+        )
 
         # Should always start with fc06:0000:
         assert result.startswith("fc06:0000:")
@@ -449,7 +477,11 @@ class TestIntegration:
 
     def test_complete_ipam_workflow(self):
         """Test complete IPAM workflow."""
-        data = {"spec": {"ipam": {"management": {"kind": "l2", "subnet": "192.168.100.0/24"}}}}
+        data = {
+            "spec": {
+                "ipam": {"management": {"kind": "l2", "subnet": "192.168.100.0/24"}}
+            }
+        }
 
         # Get gateway
         gateway = functions_ipam.gateway_inet4(data, "management")

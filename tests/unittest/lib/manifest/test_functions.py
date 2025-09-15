@@ -30,7 +30,9 @@ class TestLoadFunctions:
 
         for func_name in expected_functions:
             assert func_name in func_map, f"Function {func_name} should be in func_map"
-            assert callable(func_map[func_name]), f"Function {func_name} should be callable"
+            assert callable(func_map[func_name]), (
+                f"Function {func_name} should be callable"
+            )
 
     def test_load_functions_excludes_non_decorated_functions(self):
         """Test that _load_functions excludes functions without @template_function decorator."""
@@ -44,10 +46,17 @@ class TestLoadFunctions:
         func_map = functions._load_functions()
 
         # Constants and variables should not be loaded
-        excluded_items = ["PRIVATE_ASN_START", "PRIVATE_ASN_END", "ASN_NETWORKS", "ASN_IP_NETWORKS"]
+        excluded_items = [
+            "PRIVATE_ASN_START",
+            "PRIVATE_ASN_END",
+            "ASN_NETWORKS",
+            "ASN_IP_NETWORKS",
+        ]
 
         for item in excluded_items:
-            assert item not in func_map, f"Non-function {item} should not be in func_map"
+            assert item not in func_map, (
+                f"Non-function {item} should not be in func_map"
+            )
 
     @patch("mylabo.lib.manifest.functions.inspect.getmembers")
     def test_load_functions_with_mock_members(self, mock_getmembers):
@@ -69,7 +78,9 @@ class TestLoadFunctions:
         ]
 
         # Mock inspect.isfunction
-        with patch("mylabo.lib.manifest.functions.inspect.isfunction") as mock_isfunction:
+        with patch(
+            "mylabo.lib.manifest.functions.inspect.isfunction"
+        ) as mock_isfunction:
             mock_isfunction.side_effect = lambda obj: callable(obj)
 
             func_map = functions._load_functions()
@@ -82,13 +93,17 @@ class TestLoadFunctions:
 
     def test_load_functions_handles_missing_decorator_attribute(self):
         """Test that _load_functions handles functions without _is_template_function attribute."""
-        with patch("mylabo.lib.manifest.functions.inspect.getmembers") as mock_getmembers:
+        with patch(
+            "mylabo.lib.manifest.functions.inspect.getmembers"
+        ) as mock_getmembers:
             mock_func = Mock()
             # Don't set _is_template_function attribute
 
             mock_getmembers.return_value = [("test_func", mock_func)]
 
-            with patch("mylabo.lib.manifest.functions.inspect.isfunction", return_value=True):
+            with patch(
+                "mylabo.lib.manifest.functions.inspect.isfunction", return_value=True
+            ):
                 func_map = functions._load_functions()
 
                 # Function without _is_template_function should not be loaded
@@ -96,13 +111,17 @@ class TestLoadFunctions:
 
     def test_load_functions_handles_false_decorator_attribute(self):
         """Test that _load_functions handles functions with _is_template_function = False."""
-        with patch("mylabo.lib.manifest.functions.inspect.getmembers") as mock_getmembers:
+        with patch(
+            "mylabo.lib.manifest.functions.inspect.getmembers"
+        ) as mock_getmembers:
             mock_func = Mock()
             mock_func._is_template_function = False
 
             mock_getmembers.return_value = [("test_func", mock_func)]
 
-            with patch("mylabo.lib.manifest.functions.inspect.isfunction", return_value=True):
+            with patch(
+                "mylabo.lib.manifest.functions.inspect.isfunction", return_value=True
+            ):
                 func_map = functions._load_functions()
 
                 # Function with _is_template_function = False should not be loaded
@@ -149,7 +168,11 @@ class TestHandle:
     def test_handle_calls_existing_function(self):
         """Test that handle calls an existing function successfully."""
         # Create test data
-        root_manifest = {"spec": {"ipam": {"test_network": {"kind": "l2", "subnet": "192.168.1.0/24"}}}}
+        root_manifest = {
+            "spec": {
+                "ipam": {"test_network": {"kind": "l2", "subnet": "192.168.1.0/24"}}
+            }
+        }
 
         # Call a function that exists
         result = functions.handle("assign_inet4", root_manifest, "test_network")
@@ -268,7 +291,9 @@ class TestIntegration:
     def test_handle_integration_with_real_ipam_functions(self):
         """Test handle integration with real IPAM functions."""
         # Test with assign_inet4
-        root_manifest = {"spec": {"ipam": {"mgmt": {"kind": "l2", "subnet": "192.168.100.0/24"}}}}
+        root_manifest = {
+            "spec": {"ipam": {"mgmt": {"kind": "l2", "subnet": "192.168.100.0/24"}}}
+        }
 
         # Call assign_inet4 multiple times to test state management
         result1 = functions.handle("assign_inet4", root_manifest, "mgmt")
@@ -308,7 +333,9 @@ class TestIntegration:
         func_names = list(functions.func_map.keys())
         unique_func_names = set(func_names)
 
-        assert len(func_names) == len(unique_func_names), "No duplicate function names should exist"
+        assert len(func_names) == len(unique_func_names), (
+            "No duplicate function names should exist"
+        )
 
 
 class TestErrorHandling:
@@ -333,7 +360,11 @@ class TestErrorHandling:
             functions.handle("assign_inet4", root_manifest, "nonexistent_network")
         except Exception as e:
             # Should contain details about the original error
-            assert "nonexistent_network" in str(e) or "ipam" in str(e) or "KeyError" in str(type(e).__name__)
+            assert (
+                "nonexistent_network" in str(e)
+                or "ipam" in str(e)
+                or "KeyError" in str(type(e).__name__)
+            )
 
     @patch.object(functions, "func_map", {})
     def test_handle_with_empty_func_map(self):
@@ -374,8 +405,12 @@ class TestDocumentation:
             params = list(signature.parameters.keys())
 
             # All IPAM functions should start with root_manifest parameter
-            assert len(params) >= 2, f"Function {func_name} should have at least 2 parameters"
-            assert params[0] == "root_manifest", f"Function {func_name} first parameter should be 'root_manifest'"
+            assert len(params) >= 2, (
+                f"Function {func_name} should have at least 2 parameters"
+            )
+            assert params[0] == "root_manifest", (
+                f"Function {func_name} first parameter should be 'root_manifest'"
+            )
 
 
 class TestPerformance:

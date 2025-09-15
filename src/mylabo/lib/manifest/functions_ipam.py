@@ -93,7 +93,9 @@ def ipv4_to_asn(root_manifest: dict, ipv4: str) -> int:
     else:
         raise Exception(f"Invalid ipv4: ipv4={ipv4}")
     if asn > PRIVATE_ASN_END:
-        raise Exception(f"asn > PRIVATE_ASN_END: ipv4={ipv4}, asn={asn}, PRIVATE_ASN_END={PRIVATE_ASN_END}")
+        raise Exception(
+            f"asn > PRIVATE_ASN_END: ipv4={ipv4}, asn={asn}, PRIVATE_ASN_END={PRIVATE_ASN_END}"
+        )
     return asn
 
 

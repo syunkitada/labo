@@ -83,8 +83,10 @@ class Container(resource.Resource):
         lcmds = [
             f"if ! docker inspect {self.manifest['_hostname']}; then",
             f"docker run {' '.join(docker_options)} {self.manifest['spec']['image']}",
-            f"pid=`docker inspect {self.manifest['_hostname']}" + " --format '{{.State.Pid}}'`",
-            "ln -sfT /proc/${pid}/ns/net " + f"/var/run/netns/{self.manifest['_hostname']}",
+            f"pid=`docker inspect {self.manifest['_hostname']}"
+            + " --format '{{.State.Pid}}'`",
+            "ln -sfT /proc/${pid}/ns/net "
+            + f"/var/run/netns/{self.manifest['_hostname']}",
             "fi",
         ]
         self.c.exec(lcmds, title="prepare-docker", is_local=True)
@@ -154,7 +156,9 @@ class Container(resource.Resource):
             for ip in link.get("peer_ips", []):
                 self.c.append_cmds_ip_addr_add(dcmds, ip, link["peer_name"])
         if "sid" in self.spec:
-            self.c.append_cmds_ip_addr_add(dcmds, self.spec["sid"], self.spec["sid"]["dev"])
+            self.c.append_cmds_ip_addr_add(
+                dcmds, self.spec["sid"], self.spec["sid"]["dev"]
+            )
 
         for iprule in self.spec.get("ip_rules", []):
             dcmds += self.c.wrap_if_exist_iprule(
@@ -180,7 +184,9 @@ class Container(resource.Resource):
             )
 
             iprule = "from all table 300"
-            dcmds += self.c.wrap_if_exist_iprule(iprule, [f"ip rule add {iprule} prio 30"])
+            dcmds += self.c.wrap_if_exist_iprule(
+                iprule, [f"ip rule add {iprule} prio 30"]
+            )
 
             for ip in l3admin.get("ips", []):
                 self.c.append_cmds_ip_addr_add(dcmds, ip, "l3admin")
@@ -196,11 +202,15 @@ class Container(resource.Resource):
                             f"ip addr show {link['peer_name']}.{vlan_id} | grep 169.254.0.2/24"
                             + f" || ip addr add 169.254.0.2/24 dev {link['peer_name']}.{vlan_id}",
                         ]
-                        routes += [f"nexthop via 169.254.0.1 dev {link['peer_name']}.{vlan_id}"]
+                        routes += [
+                            f"nexthop via 169.254.0.1 dev {link['peer_name']}.{vlan_id}"
+                        ]
             if len(routes) > 0:
                 for ip in l3admin.get("ips", []):
                     if ip["version"] == 4:
-                        dcmds += [f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"]
+                        dcmds += [
+                            f"ip route replace table 300 0.0.0.0/0 src {ip['ip']} {' '.join(routes)}"
+                        ]
             self.c.exec(dcmds, title="setup-l3admin")
 
         for step in self.spec.get("steps", []):

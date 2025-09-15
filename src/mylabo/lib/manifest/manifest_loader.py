@@ -5,7 +5,6 @@ import yaml
 
 from mylabo.lib.utils import dict_utils
 from mylabo.lib.manifest import (
-    manifest_data,
     manifest_template,
     manifest_nodes,
     manifest_spec_modifications,
@@ -84,7 +83,9 @@ def init_manifest(manifest: dict, file: str):
         manifest["namespace"] = namespace
 
     manifest["_script_dir"] = os.path.join(
-        manifest["local_namespaces_dir"], manifest["kind"].lower(), manifest["namespace"]
+        manifest["local_namespaces_dir"],
+        manifest["kind"].lower(),
+        manifest["namespace"],
     )
 
     manifest["_manifest_dir"] = manifest_dir

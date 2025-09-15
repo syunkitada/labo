@@ -65,9 +65,13 @@ class VMImage(resource.Resource):
         self._umount(tmp_mount_path)
 
         if "expand" in self.spec:
-            self.c.sudo(f"cp {self.manifest['_local_vm_image_base_path']} {tmp_base_image_path}")
+            self.c.sudo(
+                f"cp {self.manifest['_local_vm_image_base_path']} {tmp_base_image_path}"
+            )
 
-            result = self.c.sudo(f"virt-filesystems --long --parts --blkdevs -h -a {tmp_base_image_path}")
+            result = self.c.sudo(
+                f"virt-filesystems --long --parts --blkdevs -h -a {tmp_base_image_path}"
+            )
             device_size = ""
             part_size = 0
             root_part = ""
@@ -82,15 +86,20 @@ class VMImage(resource.Resource):
                     device_size = splited_line[3]
 
             # パッケージがインストールできるようにサイズを少しだけ拡張する
-            size = (size_str_to_float(device_size) + (self.spec["expand"]["size"] * 1024 * 1024 * 1024)) / (
-                1024 * 1024 * 1024
-            )
+            size = (
+                size_str_to_float(device_size)
+                + (self.spec["expand"]["size"] * 1024 * 1024 * 1024)
+            ) / (1024 * 1024 * 1024)
             size = "{:.1f}G".format(size)
 
             self.c.sudo(f"qemu-img create -f qcow2 {tmp_image_path} {size}")
-            self.c.sudo(f"virt-resize --align-first never --expand {root_part} {tmp_base_image_path} {tmp_image_path}")
+            self.c.sudo(
+                f"virt-resize --align-first never --expand {root_part} {tmp_base_image_path} {tmp_image_path}"
+            )
         else:
-            self.c.sudo(f"cp {self.manifest['_local_vm_image_base_path']} {tmp_image_path}")
+            self.c.sudo(
+                f"cp {self.manifest['_local_vm_image_base_path']} {tmp_image_path}"
+            )
 
         # mount --------------------
         self._mount(tmp_image_path, tmp_mount_path)
@@ -108,7 +117,9 @@ class VMImage(resource.Resource):
         for step in self.spec.get("steps", []):
             print("step", step)
             if "file" in step:
-                src_path = os.path.join(self.manifest["_manifest_dirpath"], step["file"]["src"])
+                src_path = os.path.join(
+                    self.manifest["_manifest_dirpath"], step["file"]["src"]
+                )
                 if not os.path.exists(src_path):
                     raise Exception(f"src_path is not exists: {src_path}")
                 dst = step["file"]["dst"]
@@ -159,9 +170,14 @@ class VMImage(resource.Resource):
         vm_images_dir = self.manifest["local_vm_images_dir"]
         if not os.path.exists(vm_images_dir):
             os.makedirs(vm_images_dir)
-            LOG.info("vm_images_dir created", extra={"metadata": {"dir": vm_images_dir}})
+            LOG.info(
+                "vm_images_dir created", extra={"metadata": {"dir": vm_images_dir}}
+            )
         else:
-            LOG.debug("vm_images_dir already exists", extra={"metadata": {"dir": vm_images_dir}})
+            LOG.debug(
+                "vm_images_dir already exists",
+                extra={"metadata": {"dir": vm_images_dir}},
+            )
 
         self.manifest["_local_vm_image_path"] = os.path.join(
             self.manifest["local_vm_images_dir"], self.manifest["name"]

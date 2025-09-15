@@ -34,8 +34,16 @@ class TestLoadManifests:
     def test_load_manifests_directory(self, tmp_path):
         """Test loading manifests from a directory."""
         # Create multiple manifest files
-        manifest1 = {"kind": "test1", "local_namespaces_dir": "/tmp", "spec": {"key1": "value1"}}
-        manifest2 = {"kind": "test2", "local_namespaces_dir": "/tmp", "spec": {"key2": "value2"}}
+        manifest1 = {
+            "kind": "test1",
+            "local_namespaces_dir": "/tmp",
+            "spec": {"key1": "value1"},
+        }
+        manifest2 = {
+            "kind": "test2",
+            "local_namespaces_dir": "/tmp",
+            "spec": {"key2": "value2"},
+        }
 
         file1 = tmp_path / "manifest1.yaml"
         file2 = tmp_path / "manifest2.yaml"
@@ -55,7 +63,12 @@ class TestLoadManifests:
     @patch("mylabo.lib.manifest.manifest_nodes.complete")
     @patch("mylabo.lib.manifest.manifest_data.complete")
     def test_load_manifests_processing_order(
-        self, mock_data_complete, mock_nodes_complete, mock_template_complete, mock_spec_apply, tmp_path
+        self,
+        mock_data_complete,
+        mock_nodes_complete,
+        mock_template_complete,
+        mock_spec_apply,
+        tmp_path,
     ):
         """Test that manifest processing happens in correct order."""
         manifest_content = {"kind": "test", "local_namespaces_dir": "/tmp", "spec": {}}
@@ -161,7 +174,11 @@ spec:
         imported_file.write_text(yaml.dump(imported_content))
 
         # Create main file with import
-        main_content = {"imports": [str(imported_file)], "kind": "main", "spec": {"main_key": "main_value"}}
+        main_content = {
+            "imports": [str(imported_file)],
+            "kind": "main",
+            "spec": {"main_key": "main_value"},
+        }
         main_file = tmp_path / "main.yaml"
         main_file.write_text(yaml.dump(main_content))
 
@@ -274,12 +291,19 @@ spec:
         deep_file.write_text(yaml.dump(deep_content))
 
         # Create intermediate file that imports deep file
-        intermediate_content = {"imports": [str(deep_file)], "intermediate_key": "intermediate_value"}
+        intermediate_content = {
+            "imports": [str(deep_file)],
+            "intermediate_key": "intermediate_value",
+        }
         intermediate_file = tmp_path / "intermediate.yaml"
         intermediate_file.write_text(yaml.dump(intermediate_content))
 
         # Create main file that imports intermediate file
-        main_content = {"imports": [str(intermediate_file)], "kind": "main", "main_key": "main_value"}
+        main_content = {
+            "imports": [str(intermediate_file)],
+            "kind": "main",
+            "main_key": "main_value",
+        }
         main_file = tmp_path / "main.yaml"
         main_file.write_text(yaml.dump(main_content))
 
@@ -304,13 +328,19 @@ class TestInitManifest:
 
         manifest_loader.init_manifest(manifest, str(test_file))
 
-        assert manifest["namespace"] == "test-manifest"  # Underscores replaced with dashes
+        assert (
+            manifest["namespace"] == "test-manifest"
+        )  # Underscores replaced with dashes
         assert manifest["_script_dir"] == "/tmp/test/testkind/test-manifest"
         assert manifest["_manifest_dir"] == str(tmp_path)
 
     def test_init_manifest_preserves_existing_namespace(self, tmp_path):
         """Test that existing namespace is preserved."""
-        manifest = {"kind": "TestKind", "namespace": "custom-namespace", "local_namespaces_dir": "/tmp/test"}
+        manifest = {
+            "kind": "TestKind",
+            "namespace": "custom-namespace",
+            "local_namespaces_dir": "/tmp/test",
+        }
 
         test_file = tmp_path / "any_name.yaml"
         test_file.write_text("# dummy")
@@ -381,7 +411,10 @@ class TestInitManifest:
         complex_dir = tmp_path / "path" / "to" / "manifests"
         complex_dir.mkdir(parents=True)
 
-        manifest = {"kind": "ComplexTest", "local_namespaces_dir": "/var/lib/namespaces"}
+        manifest = {
+            "kind": "ComplexTest",
+            "local_namespaces_dir": "/var/lib/namespaces",
+        }
 
         test_file = complex_dir / "complex_manifest_name.yaml"
         test_file.write_text("# dummy")
@@ -389,7 +422,10 @@ class TestInitManifest:
         manifest_loader.init_manifest(manifest, str(test_file))
 
         assert manifest["namespace"] == "complex-manifest-name"
-        assert manifest["_script_dir"] == "/var/lib/namespaces/complextest/complex-manifest-name"
+        assert (
+            manifest["_script_dir"]
+            == "/var/lib/namespaces/complextest/complex-manifest-name"
+        )
         assert manifest["_manifest_dir"] == str(complex_dir)
 
 
@@ -403,7 +439,10 @@ class TestIntegration:
             "kind": "Infrastructure",
             "local_namespaces_dir": "/tmp/infra",
             "spec": {
-                "nodes": [{"name": "node1", "type": "vm"}, {"name": "node2", "type": "container"}],
+                "nodes": [
+                    {"name": "node1", "type": "vm"},
+                    {"name": "node2", "type": "container"},
+                ],
                 "networks": {"mgmt": {"subnet": "192.168.1.0/24"}},
             },
         }
@@ -417,7 +456,6 @@ class TestIntegration:
             patch("mylabo.lib.manifest.manifest_nodes.complete") as mock_nodes,
             patch("mylabo.lib.manifest.manifest_data.complete") as mock_data,
         ):
-
             result = manifest_loader.load_manifests(str(manifest_file))
 
             assert len(result) == 1
@@ -439,7 +477,10 @@ class TestIntegration:
     def test_complex_import_scenario(self, tmp_path):
         """Test complex scenario with multiple imports and processing."""
         # Create base configuration
-        base_config = {"base_setting": "value", "networks": {"base_net": {"subnet": "10.0.0.0/24"}}}
+        base_config = {
+            "base_setting": "value",
+            "networks": {"base_net": {"subnet": "10.0.0.0/24"}},
+        }
         base_file = tmp_path / "base.yaml"
         base_file.write_text(yaml.dump(base_config))
 
@@ -476,7 +517,6 @@ class TestIntegration:
             patch("mylabo.lib.manifest.manifest_nodes.complete") as mock_nodes,
             patch("mylabo.lib.manifest.manifest_data.complete") as mock_data,
         ):
-
             result = manifest_loader.load_manifests(str(main_file))
 
             assert len(result) == 1
@@ -532,9 +572,9 @@ class TestIntegration:
 
         # Mock one of the processing functions to raise an exception
         with patch(
-            "mylabo.lib.manifest.manifest_template.complete", side_effect=Exception("Template processing failed")
+            "mylabo.lib.manifest.manifest_template.complete",
+            side_effect=Exception("Template processing failed"),
         ):
-
             with pytest.raises(Exception) as exc_info:
                 manifest_loader.load_manifests(str(manifest_file))
 
@@ -554,7 +594,6 @@ class TestErrorHandling:
             patch("os.path.exists", return_value=True),
             patch("builtins.open", side_effect=PermissionError("Permission denied")),
         ):
-
             with pytest.raises(PermissionError):
                 manifest_loader.load_manifests(str(manifest_file))
 
@@ -632,7 +671,9 @@ class TestDuplicateImportIssue:
 
         # This test documents the current state - there should be duplicate imports
         # This could be fixed by removing one of the duplicate imports
-        assert manifest_data_count >= 2, "Expected duplicate manifest_data imports to be present"
+        assert manifest_data_count >= 2, (
+            "Expected duplicate manifest_data imports to be present"
+        )
 
     def test_module_imports_work_despite_duplicate(self):
         """Test that module functionality works despite duplicate import."""

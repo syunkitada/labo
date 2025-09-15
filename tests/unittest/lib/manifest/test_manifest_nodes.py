@@ -65,8 +65,13 @@ class TestManifestNodes:
         manifest_nodes.complete(spec)
 
         # Check VM hostname format: {name}.{namespace}.{domain} (with underscores replaced)
-        assert spec["spec"]["nodes"][0]["_hostname"] == "app-server.prod-env.example.com"
-        assert spec["spec"]["nodes"][1]["_hostname"] == "load-balancer.prod-env.example.com"
+        assert (
+            spec["spec"]["nodes"][0]["_hostname"] == "app-server.prod-env.example.com"
+        )
+        assert (
+            spec["spec"]["nodes"][1]["_hostname"]
+            == "load-balancer.prod-env.example.com"
+        )
 
     def test_complete_initializes_links_and_node_map(self):
         """Test that _links and _node_map are properly initialized"""
@@ -112,7 +117,11 @@ class TestManifestNodes:
             "spec": {
                 "domain": "local",
                 "nodes": [
-                    {"name": "node1", "kind": "container", "spec": {"links": [{"peer": "node2"}]}},
+                    {
+                        "name": "node1",
+                        "kind": "container",
+                        "spec": {"links": [{"peer": "node2"}]},
+                    },
                     {"name": "node2", "kind": "container", "spec": {}},
                 ],
             },
@@ -145,7 +154,11 @@ class TestManifestNodes:
             "spec": {
                 "domain": "local",
                 "nodes": [
-                    {"name": "vm1", "kind": "vm", "spec": {"links": [{"peer": "container1"}]}},
+                    {
+                        "name": "vm1",
+                        "kind": "vm",
+                        "spec": {"links": [{"peer": "container1"}]},
+                    },
                     {"name": "container1", "kind": "container", "spec": {}},
                 ],
             },
@@ -224,7 +237,13 @@ class TestManifestNodes:
                     {
                         "name": "hub",
                         "kind": "container",
-                        "spec": {"links": [{"peer": "node1"}, {"peer": "node2"}, {"peer": "node3"}]},
+                        "spec": {
+                            "links": [
+                                {"peer": "node1"},
+                                {"peer": "node2"},
+                                {"peer": "node3"},
+                            ]
+                        },
                     },
                     {"name": "node1", "kind": "container", "spec": {}},
                     {"name": "node2", "kind": "container", "spec": {}},
@@ -255,8 +274,16 @@ class TestManifestNodes:
             "spec": {
                 "domain": "local",
                 "nodes": [
-                    {"name": "node1", "kind": "container", "spec": {"links": [{"peer": "node2"}]}},
-                    {"name": "node2", "kind": "container", "spec": {"links": [{"peer": "node3"}]}},
+                    {
+                        "name": "node1",
+                        "kind": "container",
+                        "spec": {"links": [{"peer": "node2"}]},
+                    },
+                    {
+                        "name": "node2",
+                        "kind": "container",
+                        "spec": {"links": [{"peer": "node3"}]},
+                    },
                     {"name": "node3", "kind": "container", "spec": {}},
                 ],
             },
@@ -285,7 +312,13 @@ class TestManifestNodes:
             "namespace": "test",
             "spec": {
                 "domain": "local",
-                "nodes": [{"name": "node1", "kind": "container", "spec": {"links": [{"mtu": 1500}]}}],  # Missing peer
+                "nodes": [
+                    {
+                        "name": "node1",
+                        "kind": "container",
+                        "spec": {"links": [{"mtu": 1500}]},
+                    }
+                ],  # Missing peer
             },
             "_referer": {},
         }
@@ -299,12 +332,20 @@ class TestManifestNodes:
             "namespace": "test",
             "spec": {
                 "domain": "local",
-                "nodes": [{"name": "node1", "kind": "container", "spec": {"links": [{"peer": "nonexistent_node"}]}}],
+                "nodes": [
+                    {
+                        "name": "node1",
+                        "kind": "container",
+                        "spec": {"links": [{"peer": "nonexistent_node"}]},
+                    }
+                ],
             },
             "_referer": {},
         }
 
-        with pytest.raises(Exception, match="peer node nonexistent_node is not found in node_map"):
+        with pytest.raises(
+            Exception, match="peer node nonexistent_node is not found in node_map"
+        ):
             manifest_nodes.complete(spec)
 
     def test_error_unexpected_node_kind(self):
@@ -314,7 +355,11 @@ class TestManifestNodes:
             "spec": {
                 "domain": "local",
                 "nodes": [
-                    {"name": "node1", "kind": "unknown_kind", "spec": {"links": [{"peer": "node2"}]}},
+                    {
+                        "name": "node1",
+                        "kind": "unknown_kind",
+                        "spec": {"links": [{"peer": "node2"}]},
+                    },
                     {"name": "node2", "kind": "container", "spec": {}},
                 ],
             },
@@ -332,7 +377,11 @@ class TestManifestNodes:
                 "domain": "local",
                 "nodes": [
                     {"name": "standalone", "kind": "container", "spec": {}},  # No links
-                    {"name": "connected", "kind": "container", "spec": {"links": [{"peer": "standalone"}]}},
+                    {
+                        "name": "connected",
+                        "kind": "container",
+                        "spec": {"links": [{"peer": "standalone"}]},
+                    },
                 ],
             },
             "_referer": {},
@@ -360,7 +409,11 @@ class TestManifestNodes:
             "spec": {
                 "domain": "local",
                 "nodes": [
-                    {"name": "node1", "kind": "container", "spec": {"links": [{"peer": "node2"}]}},
+                    {
+                        "name": "node1",
+                        "kind": "container",
+                        "spec": {"links": [{"peer": "node2"}]},
+                    },
                     {"name": "node2", "kind": "container", "spec": {}},
                 ],
             },

@@ -12,7 +12,9 @@ def apply(spec: dict):
 
             for node in spec["spec"]["nodes"]:
                 if node["name"] in spec_modification["overwrite_node"]:
-                    node_modification = spec_modification["overwrite_node"][node["name"]]
+                    node_modification = spec_modification["overwrite_node"][
+                        node["name"]
+                    ]
 
                     if "extend_steps" in node_modification:
                         node["spec"]["steps"].extend(node_modification["extend_steps"])

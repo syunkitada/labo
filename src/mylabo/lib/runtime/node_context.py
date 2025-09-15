@@ -21,7 +21,9 @@ class NodeContext:
 
         self.script_index = 0
         if "_root_manifest" in manifest:
-            self.script_dir = os.path.join(manifest["_root_manifest"]["_script_dir"], manifest["name"])
+            self.script_dir = os.path.join(
+                manifest["_root_manifest"]["_script_dir"], manifest["name"]
+            )
         else:
             self.script_dir = os.path.join(manifest["_script_dir"], manifest["name"])
         os.makedirs(self.script_dir, exist_ok=True)
@@ -58,7 +60,9 @@ class NodeContext:
             file_name_prefix = f"{self.script_index}"
             comment_name_prefix = f"{self.script_index}"
         else:
-            file_name_prefix = f"{self.script_index}_{title.replace(' ', '-').replace('/', '-')}"
+            file_name_prefix = (
+                f"{self.script_index}_{title.replace(' ', '-').replace('/', '-')}"
+            )
             comment_name_prefix = f"{self.script_index}: {title}"
 
         exec_filepath = os.path.join(self.script_dir, f"{file_name_prefix}_exec.sh")
@@ -98,7 +102,7 @@ class NodeContext:
 
         cmd = self._cmd(full_filepath, is_local)
         self.full_cmds += [
-            f"# {self.manifest['name']}: {comment_name_prefix} {'-'*(80-len(comment_name_prefix))}",
+            f"# {self.manifest['name']}: {comment_name_prefix} {'-' * (80 - len(comment_name_prefix))}",
             cmd,
             "",
         ]
@@ -128,7 +132,10 @@ class NodeContext:
             self.exec(cmds)
 
     def wrap_if_exist_netdev_netns(self, netdev, cmds):
-        cmds.insert(0, f"if ! ip netns exec {self.manifest['_hostname']} ip addr show dev {netdev}; then")
+        cmds.insert(
+            0,
+            f"if ! ip netns exec {self.manifest['_hostname']} ip addr show dev {netdev}; then",
+        )
         cmds.append("fi")
         return cmds
 
@@ -138,7 +145,9 @@ class NodeContext:
         return cmds
 
     def wrap_if_exist_iprule(self, iprule, cmds):
-        cmds.insert(0, f"if ! ip rule | sed -e 's/lookup/table/g' | grep '{iprule}'; then")
+        cmds.insert(
+            0, f"if ! ip rule | sed -e 's/lookup/table/g' | grep '{iprule}'; then"
+        )
         cmds.append("fi")
         return cmds
 
@@ -246,7 +255,9 @@ class NodeContext:
         self.exec(shell["cmds"], title=title)
 
     def template(self, template: dict, title: str):
-        template_file = os.path.join(self.manifest["_root_manifest"]["_manifest_dir"], template["src"])
+        template_file = os.path.join(
+            self.manifest["_root_manifest"]["_manifest_dir"], template["src"]
+        )
         with open(template_file) as f:
             content = f.read()
             t = Template(content)

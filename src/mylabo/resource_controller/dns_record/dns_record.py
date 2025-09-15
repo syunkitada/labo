@@ -57,7 +57,9 @@ class DNSRecord(resource.Resource):
                             record_content,
                         ),
                     )
-                    print(f"Inserted DNS record {record_name} {record_type} {record_content}")
+                    print(
+                        f"Inserted DNS record {record_name} {record_type} {record_content}"
+                    )
 
                 elif len(result) == 1:
                     record_id = list(result)[0]["id"]
@@ -70,7 +72,9 @@ class DNSRecord(resource.Resource):
                         ),
                     )
 
-                    print(f"Updated DNS record {record_name} {record_type} {record_content}")
+                    print(
+                        f"Updated DNS record {record_name} {record_type} {record_content}"
+                    )
 
                 else:
                     raise Exception("Conflict DNSRecord")

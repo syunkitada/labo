@@ -9,7 +9,11 @@ def _load_functions():
     # Get all members of functions_ipam module
     for name, obj in inspect.getmembers(functions_ipam):
         # Only include functions that have the @template_function decorator
-        if inspect.isfunction(obj) and hasattr(obj, "_is_template_function") and obj._is_template_function:
+        if (
+            inspect.isfunction(obj)
+            and hasattr(obj, "_is_template_function")
+            and obj._is_template_function
+        ):
             func_map[name] = obj
 
     return func_map

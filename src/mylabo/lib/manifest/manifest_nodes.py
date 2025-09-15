@@ -13,7 +13,9 @@ def complete(manifest: dict):
         if node["kind"] == "container":
             node["_hostname"] = f"{node['name']}.{manifest['namespace']}"
         else:
-            node["_hostname"] = f"{node['name'].replace('_', '-')}.{manifest['namespace']}.{manifest['spec']['domain']}"
+            node["_hostname"] = (
+                f"{node['name'].replace('_', '-')}.{manifest['namespace']}.{manifest['spec']['domain']}"
+            )
 
         node["spec"]["_links"] = []
         node_map[node["name"]] = node
@@ -63,6 +65,10 @@ def _complete_link(node_index: int, node: dict, peer_node, link_index: int, link
     # Format: MAC_OUI + [node_index, link_index, 0/1]
     # The last byte (0/1) distinguishes between link and peer sides
     if "link_mac" not in link:
-        link["link_mac"] = ":".join(map(lambda x: "%02x" % x, MAC_OUI + [node_index, link_index, 0]))
+        link["link_mac"] = ":".join(
+            map(lambda x: "%02x" % x, MAC_OUI + [node_index, link_index, 0])
+        )
     if "peer_mac" not in link:
-        link["peer_mac"] = ":".join(map(lambda x: "%02x" % x, MAC_OUI + [node_index, link_index, 1]))
+        link["peer_mac"] = ":".join(
+            map(lambda x: "%02x" % x, MAC_OUI + [node_index, link_index, 1])
+        )

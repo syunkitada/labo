@@ -55,7 +55,10 @@ class TestComplete:
         """Test completion of nodes list."""
         spec = {
             "_referer": {},
-            "nodes": [{"name": "node1", "value": '<%= "test" %>'}, {"name": "node2", "value": "static"}],
+            "nodes": [
+                {"name": "node1", "value": '<%= "test" %>'},
+                {"name": "node2", "value": "static"},
+            ],
         }
 
         with patch("builtins.print") as mock_print:
@@ -68,7 +71,14 @@ class TestComplete:
 
     def test_complete_regular_list(self):
         """Test completion of regular list (not nodes)."""
-        spec = {"_referer": {}, "items": ['<%= "item1" %>', "static_item", {"nested": '<%= "nested_value" %>'}]}
+        spec = {
+            "_referer": {},
+            "items": [
+                '<%= "item1" %>',
+                "static_item",
+                {"nested": '<%= "nested_value" %>'},
+            ],
+        }
         result = manifest_data.complete(spec, 0)
 
         assert result["items"][0] == "item1"
@@ -117,13 +127,17 @@ class TestCompleteInetData:
         manifest_data.complete_inet_data(inet_data)
 
         assert inet_data["inet_compressed"] == "2001:db8::1/128"
-        assert inet_data["inet_exploded"] == "2001:0db8:0000:0000:0000:0000:0000:0001/128"
+        assert (
+            inet_data["inet_exploded"] == "2001:0db8:0000:0000:0000:0000:0000:0001/128"
+        )
 
     def test_complete_invalid_inet(self):
         """Test completion with invalid inet format."""
         inet_data = {"inet": "invalid"}
 
-        with pytest.raises(ValueError):  # ipaddress raises ValueError, not AddressValueError
+        with pytest.raises(
+            ValueError
+        ):  # ipaddress raises ValueError, not AddressValueError
             manifest_data.complete_inet_data(inet_data)
 
 
@@ -226,10 +240,12 @@ class TestCompleteValue:
 
         # Mock reference_value to raise exception
         with (
-            patch("mylabo.lib.manifest.manifest_data.reference_value", side_effect=Exception("test exception")),
+            patch(
+                "mylabo.lib.manifest.manifest_data.reference_value",
+                side_effect=Exception("test exception"),
+            ),
             patch("builtins.print") as mock_print,
         ):
-
             value = "<%= test_key %>"
             result = manifest_data.complete_value(root_manifest, value)
 
@@ -252,10 +268,12 @@ class TestCompleteValue:
 
         # Mock reference_value to raise an exception
         with (
-            patch("mylabo.lib.manifest.manifest_data.reference_value", side_effect=Exception("test exception")),
+            patch(
+                "mylabo.lib.manifest.manifest_data.reference_value",
+                side_effect=Exception("test exception"),
+            ),
             patch("builtins.print"),
         ):
-
             value = "<%= test_key %>"
             # When times < 0, the exception should be re-raised
             with pytest.raises(Exception, match="test exception"):
@@ -383,7 +401,13 @@ class TestIntegration:
             "_referer": {},
             "namespace": "test",
             "nodes": [
-                {"name": "node1", "config": {"hostname": '<%= "prefix-" %><%= namespace %>', "inet": "192.168.1.10/24"}}
+                {
+                    "name": "node1",
+                    "config": {
+                        "hostname": '<%= "prefix-" %><%= namespace %>',
+                        "inet": "192.168.1.10/24",
+                    },
+                }
             ],
             "networks": [{"name": "test-net", "inet": "10.0.0.1/16"}],
         }
@@ -410,7 +434,9 @@ class TestIntegration:
 
         spec = {
             "_referer": {},
-            "spec": {"ipam": {"management": {"subnet": "192.168.1.0/24", "kind": "l2"}}},
+            "spec": {
+                "ipam": {"management": {"subnet": "192.168.1.0/24", "kind": "l2"}}
+            },
             "node": {"ip": '<%= assign_ip4("management") %>'},
         }
 
@@ -423,7 +449,10 @@ class TestIntegration:
         """Test node referer mechanism for cross-references."""
         spec = {
             "_referer": {},
-            "nodes": [{"name": "server1", "ip": "192.168.1.10"}, {"name": "client1", "server_ref": "<%= _node.ip %>"}],
+            "nodes": [
+                {"name": "server1", "ip": "192.168.1.10"},
+                {"name": "client1", "server_ref": "<%= _node.ip %>"},
+            ],
         }
 
         with patch("builtins.print"):
@@ -432,7 +461,9 @@ class TestIntegration:
         # The _node.ip reference will try to resolve _node from referer, but since
         # _node references the current node being processed (client1), and client1
         # doesn't have an ip field, the template resolution fails and returns original
-        assert result["nodes"][1]["server_ref"] == "<%= _node.ip %>"  # Failed resolution returns original
+        assert (
+            result["nodes"][1]["server_ref"] == "<%= _node.ip %>"
+        )  # Failed resolution returns original
 
     def test_complex_nested_references(self):
         """Test complex nested reference resolution."""

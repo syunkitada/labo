@@ -21,13 +21,25 @@ class VM(resource.Resource):
 
     def complete_spec(self):
         spec = self.manifest
-        spec["spec"]["_vm_dir"] = os.path.join(self.root_manifest["local_vms_dir"], spec["_hostname"])
+        spec["spec"]["_vm_dir"] = os.path.join(
+            self.root_manifest["local_vms_dir"], spec["_hostname"]
+        )
         spec["spec"]["_image_path"] = os.path.join(spec["spec"]["_vm_dir"], "img")
-        spec["spec"]["_domain_xml_path"] = os.path.join(spec["spec"]["_vm_dir"], "domain.xml")
-        spec["spec"]["_monitor_socket_path"] = os.path.join(spec["spec"]["_vm_dir"], "monitor.sock")
-        spec["spec"]["_serial_socket_path"] = os.path.join(spec["spec"]["_vm_dir"], "serial.sock")
-        spec["spec"]["_serial_log_path"] = os.path.join(self.spec["_vm_dir"], "serial.log")
-        spec["spec"]["_config_image_path"] = os.path.join(self.spec["_vm_dir"], "config.img")
+        spec["spec"]["_domain_xml_path"] = os.path.join(
+            spec["spec"]["_vm_dir"], "domain.xml"
+        )
+        spec["spec"]["_monitor_socket_path"] = os.path.join(
+            spec["spec"]["_vm_dir"], "monitor.sock"
+        )
+        spec["spec"]["_serial_socket_path"] = os.path.join(
+            spec["spec"]["_vm_dir"], "serial.sock"
+        )
+        spec["spec"]["_serial_log_path"] = os.path.join(
+            self.spec["_vm_dir"], "serial.log"
+        )
+        spec["spec"]["_config_image_path"] = os.path.join(
+            self.spec["_vm_dir"], "config.img"
+        )
         spec["spec"]["_metadata_path"] = os.path.join(self.spec["_vm_dir"], "meta-data")
         spec["spec"]["_userdata_path"] = os.path.join(self.spec["_vm_dir"], "user-data")
 
@@ -38,7 +50,9 @@ class VM(resource.Resource):
             f"if [ ! -e {self.manifest['spec']['_image_path']} ]; then",
         ]
         if image.startswith("local/"):
-            src_image = os.path.join(self.root_manifest["local_vm_images_dir"], image.replace("local/", ""))
+            src_image = os.path.join(
+                self.root_manifest["local_vm_images_dir"], image.replace("local/", "")
+            )
             lcmds += [
                 f"cp {src_image} {self.manifest['spec']['_image_path']}",
             ]
@@ -89,7 +103,9 @@ class VM(resource.Resource):
             userdata += [f"ip route add {route['dst']} via {route['via']}"]
 
         if "resolvers" in self.spec:
-            userdata += [f"/opt/labo/bin/init-resolver {' '.join(self.manifest['common']['resolvers'])}"]
+            userdata += [
+                f"/opt/labo/bin/init-resolver {' '.join(self.manifest['common']['resolvers'])}"
+            ]
 
         # nfs = self.root_manifest["spec"]["common"].get("nfs")
         # if nfs is not None:
@@ -161,7 +177,15 @@ class VM(resource.Resource):
         # ET.SubElement(backing_store, "backingStore")
         ET.SubElement(root_disk, "target", dev="vda", bus="virtio")
         ET.SubElement(root_disk, "alias", name="virtio-disk0")
-        ET.SubElement(root_disk, "address", type="pci", domain="0x0000", bus="0x00", slot="0x04", function="0x0")
+        ET.SubElement(
+            root_disk,
+            "address",
+            type="pci",
+            domain="0x0000",
+            bus="0x00",
+            slot="0x04",
+            function="0x0",
+        )
 
         # <disk type='file' device='cdrom'>
         #   <driver name='qemu' type='raw' cache='none'/>
@@ -174,12 +198,22 @@ class VM(resource.Resource):
         # </disk>
         config_drive = ET.SubElement(devices, "disk", type="file", device="cdrom")
         ET.SubElement(config_drive, "driver", name="qemu", type="raw", cache="none")
-        ET.SubElement(config_drive, "source", file=self.spec["_config_image_path"], index="1")
+        ET.SubElement(
+            config_drive, "source", file=self.spec["_config_image_path"], index="1"
+        )
         ET.SubElement(config_drive, "backingStore")
         ET.SubElement(config_drive, "target", dev="hda", bus="ide")
         ET.SubElement(config_drive, "readonly")
         ET.SubElement(config_drive, "alias", name="ide0-0-0")
-        ET.SubElement(config_drive, "address", type="drive", controller="0", bus="0", target="0", unit="0")
+        ET.SubElement(
+            config_drive,
+            "address",
+            type="drive",
+            controller="0",
+            bus="0",
+            target="0",
+            unit="0",
+        )
 
         #     <interface type='ethernet'>
         #       <target dev='default'/>

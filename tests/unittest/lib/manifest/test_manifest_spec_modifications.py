@@ -35,7 +35,10 @@ class TestManifestSpecModifications:
 
     def test_apply_with_empty_modifications(self):
         """Test apply() with empty spec_modifications list"""
-        spec = {"spec": {"nodes": [{"name": "web", "kind": "container"}]}, "spec_modifications": []}
+        spec = {
+            "spec": {"nodes": [{"name": "web", "kind": "container"}]},
+            "spec_modifications": [],
+        }
 
         manifest_spec_modifications.apply(spec)
 
@@ -47,9 +50,19 @@ class TestManifestSpecModifications:
     def test_overwrite_node_basic_properties(self):
         """Test basic node property overwriting"""
         spec = {
-            "spec": {"nodes": [{"name": "web", "kind": "container", "image": "nginx:latest"}]},
+            "spec": {
+                "nodes": [{"name": "web", "kind": "container", "image": "nginx:latest"}]
+            },
             "spec_modifications": [
-                {"overwrite_node": {"web": {"image": "nginx:1.20", "ports": [80, 443], "env": {"LOG_LEVEL": "debug"}}}}
+                {
+                    "overwrite_node": {
+                        "web": {
+                            "image": "nginx:1.20",
+                            "ports": [80, 443],
+                            "env": {"LOG_LEVEL": "debug"},
+                        }
+                    }
+                }
             ],
         }
 
@@ -68,8 +81,22 @@ class TestManifestSpecModifications:
     def test_overwrite_node_with_extend_steps(self):
         """Test node overwriting with step extension"""
         spec = {
-            "spec": {"nodes": [{"name": "api", "kind": "container", "spec": {"steps": ["install", "configure"]}}]},
-            "spec_modifications": [{"overwrite_node": {"api": {"extend_steps": ["test", "deploy"], "timeout": 300}}}],
+            "spec": {
+                "nodes": [
+                    {
+                        "name": "api",
+                        "kind": "container",
+                        "spec": {"steps": ["install", "configure"]},
+                    }
+                ]
+            },
+            "spec_modifications": [
+                {
+                    "overwrite_node": {
+                        "api": {"extend_steps": ["test", "deploy"], "timeout": 300}
+                    }
+                }
+            ],
         }
 
         manifest_spec_modifications.apply(spec)
@@ -120,7 +147,14 @@ class TestManifestSpecModifications:
         """Test that overwriting non-existent nodes doesn't cause errors"""
         spec = {
             "spec": {"nodes": [{"name": "web", "kind": "container"}]},
-            "spec_modifications": [{"overwrite_node": {"nonexistent": {"ports": [8080]}, "web": {"ports": [80]}}}],
+            "spec_modifications": [
+                {
+                    "overwrite_node": {
+                        "nonexistent": {"ports": [8080]},
+                        "web": {"ports": [80]},
+                    }
+                }
+            ],
         }
 
         manifest_spec_modifications.apply(spec)
@@ -169,7 +203,12 @@ class TestManifestSpecModifications:
             "spec_modifications": [
                 {"overwrite_node": {"web": {"replicas": 2, "ports": [80]}}},
                 {"extend_nodes": [{"name": "api", "kind": "container"}]},
-                {"overwrite_node": {"web": {"env": {"DEBUG": "true"}}, "api": {"ports": [8080]}}},
+                {
+                    "overwrite_node": {
+                        "web": {"env": {"DEBUG": "true"}},
+                        "api": {"ports": [8080]},
+                    }
+                },
             ],
         }
 
@@ -206,10 +245,19 @@ class TestManifestSpecModifications:
                     "overwrite_node": {
                         "app": {
                             "spec": {
-                                "resources": {"memory": "256Mi", "disk": "1Gi"},  # Override  # Add new
+                                "resources": {
+                                    "memory": "256Mi",
+                                    "disk": "1Gi",
+                                },  # Override  # Add new
                                 "config": {
-                                    "database": {"port": 3306, "username": "admin"},  # Override  # Add new
-                                    "cache": {"host": "redis", "port": 6379},  # Add new section
+                                    "database": {
+                                        "port": 3306,
+                                        "username": "admin",
+                                    },  # Override  # Add new
+                                    "cache": {
+                                        "host": "redis",
+                                        "port": 6379,
+                                    },  # Add new section
                                 },
                             }
                         }
@@ -241,7 +289,10 @@ class TestManifestSpecModifications:
 
     def test_error_overwrite_node_missing_nodes_section(self):
         """Test error when trying to overwrite nodes but nodes section is missing"""
-        spec = {"spec": {}, "spec_modifications": [{"overwrite_node": {"web": {"ports": [80]}}}]}  # No nodes section
+        spec = {
+            "spec": {},
+            "spec_modifications": [{"overwrite_node": {"web": {"ports": [80]}}}],
+        }  # No nodes section
 
         with pytest.raises(Exception, match="nodes is not found in spec"):
             manifest_spec_modifications.apply(spec)
@@ -250,7 +301,9 @@ class TestManifestSpecModifications:
         """Test error when trying to extend nodes but nodes section is missing"""
         spec = {
             "spec": {},  # No nodes section
-            "spec_modifications": [{"extend_nodes": [{"name": "api", "kind": "container"}]}],
+            "spec_modifications": [
+                {"extend_nodes": [{"name": "api", "kind": "container"}]}
+            ],
         }
 
         with pytest.raises(Exception, match="nodes is not found in spec"):
@@ -261,7 +314,10 @@ class TestManifestSpecModifications:
         spec = {
             "spec": {"nodes": [{"name": "web", "kind": "container"}]},
             "spec_modifications": [
-                {"overwrite_node": {"web": {"ports": [80]}}, "extend_nodes": [{"name": "api", "kind": "container"}]}
+                {
+                    "overwrite_node": {"web": {"ports": [80]}},
+                    "extend_nodes": [{"name": "api", "kind": "container"}],
+                }
             ],
         }
 
@@ -276,8 +332,16 @@ class TestManifestSpecModifications:
     def test_extend_steps_without_existing_steps(self):
         """Test extend_steps when node doesn't have existing steps"""
         spec = {
-            "spec": {"nodes": [{"name": "worker", "kind": "container", "spec": {}}]},  # No existing steps
-            "spec_modifications": [{"overwrite_node": {"worker": {"extend_steps": ["initialize", "start"]}}}],
+            "spec": {
+                "nodes": [{"name": "worker", "kind": "container", "spec": {}}]
+            },  # No existing steps
+            "spec_modifications": [
+                {
+                    "overwrite_node": {
+                        "worker": {"extend_steps": ["initialize", "start"]}
+                    }
+                }
+            ],
         }
 
         # This should raise a KeyError since there are no existing steps to extend
@@ -299,7 +363,11 @@ class TestManifestSpecModifications:
                             "resources": {"cpu": "100m"},
                         },
                     },
-                    {"name": "app", "kind": "container", "spec": {"image": "app:latest", "steps": ["build", "test"]}},
+                    {
+                        "name": "app",
+                        "kind": "container",
+                        "spec": {"image": "app:latest", "steps": ["build", "test"]},
+                    },
                 ],
             },
             "spec_modifications": [
@@ -307,9 +375,15 @@ class TestManifestSpecModifications:
                 {
                     "overwrite_node": {
                         "web": {
-                            "spec": {"image": "nginx:1.20-alpine", "resources": {"cpu": "200m", "memory": "256Mi"}},
+                            "spec": {
+                                "image": "nginx:1.20-alpine",
+                                "resources": {"cpu": "200m", "memory": "256Mi"},
+                            },
                             "replicas": 3,
-                            "extend_steps": ["ssl-setup", "monitoring"],  # Must be at top level
+                            "extend_steps": [
+                                "ssl-setup",
+                                "monitoring",
+                            ],  # Must be at top level
                         }
                     }
                 },
@@ -319,7 +393,10 @@ class TestManifestSpecModifications:
                         {
                             "name": "lb",
                             "kind": "vm",
-                            "spec": {"image": "haproxy:latest", "steps": ["install", "configure", "start"]},
+                            "spec": {
+                                "image": "haproxy:latest",
+                                "steps": ["install", "configure", "start"],
+                            },
                         }
                     ]
                 },
@@ -342,7 +419,12 @@ class TestManifestSpecModifications:
         # Check web node modifications
         web = nodes["web"]
         assert web["spec"]["image"] == "nginx:1.20-alpine"
-        assert web["spec"]["steps"] == ["install", "configure", "ssl-setup", "monitoring"]
+        assert web["spec"]["steps"] == [
+            "install",
+            "configure",
+            "ssl-setup",
+            "monitoring",
+        ]
         assert web["spec"]["resources"]["cpu"] == "200m"
         assert web["spec"]["resources"]["memory"] == "256Mi"
         assert web["replicas"] == 3
@@ -385,7 +467,15 @@ class TestManifestSpecModifications:
         """Test modifications with various data types (bool, int, float, None)"""
         spec = {
             "spec": {
-                "nodes": [{"name": "service", "kind": "container", "enabled": False, "replicas": 1, "timeout": 30.0}]
+                "nodes": [
+                    {
+                        "name": "service",
+                        "kind": "container",
+                        "enabled": False,
+                        "replicas": 1,
+                        "timeout": 30.0,
+                    }
+                ]
             },
             "spec_modifications": [
                 {

@@ -146,7 +146,10 @@ def _test(node, cmd=""):
     try:
         result = node.test()
     except Exception as e:
-        result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
+        result = {
+            "status": 1,
+            "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}"),
+        }
         node.next = -1
 
     if node.next > 0:
@@ -170,7 +173,10 @@ def _apply(node, cmd=""):
     try:
         result = node.apply()
     except Exception as e:
-        result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
+        result = {
+            "status": 1,
+            "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}"),
+        }
         node.next = -1
 
     if node.next > 0:
@@ -194,7 +200,10 @@ def _delete(node, cmd=""):
     try:
         result = node.delete()
     except Exception as e:
-        result = {"status": 1, "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}")}
+        result = {
+            "status": 1,
+            "msg": colors.crit(f"{str(e)}\n{traceback.format_exc()}"),
+        }
         node.next = -1
 
     if node.next > 0:

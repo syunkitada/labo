@@ -18,7 +18,11 @@ class DNSDomain(resource.Resource):
         domain_ns = self.spec["ns"]
 
         now = datetime.datetime.now()
-        soa_content = "ns1.example.com admin.example.com " + now.strftime("%Y%m%d%H") + " 10800 1800 604800 86400"
+        soa_content = (
+            "ns1.example.com admin.example.com "
+            + now.strftime("%Y%m%d%H")
+            + " 10800 1800 604800 86400"
+        )
 
         conn = mysql_utils.get_mysql_connection()
         with conn:

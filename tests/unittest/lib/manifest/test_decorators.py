@@ -204,7 +204,9 @@ class TestTemplateFunctionDecorator:
 
         # Filter functions with the template_function decorator
         template_functions = [
-            func for func in functions if hasattr(func, "_is_template_function") and func._is_template_function
+            func
+            for func in functions
+            if hasattr(func, "_is_template_function") and func._is_template_function
         ]
 
         assert len(template_functions) == 1

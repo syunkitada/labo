@@ -137,7 +137,11 @@ class TestUpdateDict:
             "cache": {"enabled": True},
         }
         u = {
-            "database": {"port": 3306, "credentials": {"password": "new_pass", "timeout": 30}, "ssl": True},
+            "database": {
+                "port": 3306,
+                "credentials": {"password": "new_pass", "timeout": 30},
+                "ssl": True,
+            },
             "logging": {"level": "INFO"},
         }
         result = update_dict(d, u)
@@ -145,7 +149,11 @@ class TestUpdateDict:
             "database": {
                 "host": "localhost",
                 "port": 3306,
-                "credentials": {"username": "admin", "password": "new_pass", "timeout": 30},
+                "credentials": {
+                    "username": "admin",
+                    "password": "new_pass",
+                    "timeout": 30,
+                },
                 "ssl": True,
             },
             "cache": {"enabled": True},

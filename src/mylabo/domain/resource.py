@@ -18,7 +18,9 @@ class AnyAction(BaseModel):
         for label_str in label_strs:
             key_value = label_str.split("=")
             if len(key_value) != 2:
-                raise ValueError(f"Invalid action format: {label_str}. Expected format is key=value.")
+                raise ValueError(
+                    f"Invalid action format: {label_str}. Expected format is key=value."
+                )
             kwargs[key_value[0]] = key_value[1]
 
         super().__init__(action=action, kwargs=kwargs)

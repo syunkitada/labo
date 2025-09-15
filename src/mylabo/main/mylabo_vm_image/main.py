@@ -135,9 +135,13 @@ def mount(spec, image_path):
     if linux_filesystem_device == "":
         raise Exception("linux_filesystem_device is not found")
 
-    command.must_run(["mount", linux_filesystem_device, spec["_tmp_mount_path"]], retry=3)
+    command.must_run(
+        ["mount", linux_filesystem_device, spec["_tmp_mount_path"]], retry=3
+    )
     command.must_run(["mount", "-o", "bind", "/dev", f"{spec['_tmp_mount_path']}/dev"])
-    command.must_run(["mount", "-o", "bind", "/proc", f"{spec['_tmp_mount_path']}/proc"])
+    command.must_run(
+        ["mount", "-o", "bind", "/proc", f"{spec['_tmp_mount_path']}/proc"]
+    )
     command.must_run(["mount", "-o", "bind", "/sys", f"{spec['_tmp_mount_path']}/sys"])
     print(f"image_path={image_path}")
     print(f"mount_path={spec['_tmp_mount_path']}")
@@ -174,7 +178,15 @@ def custom(spec):
         command.must_run(["cp", spec["_base_image_path"], tmp_base_image_path])
 
         result = command.must_run(
-            ["virt-filesystems", "--long", "--parts", "--blkdevs", "-h", "-a", tmp_base_image_path]
+            [
+                "virt-filesystems",
+                "--long",
+                "--parts",
+                "--blkdevs",
+                "-h",
+                "-a",
+                tmp_base_image_path,
+            ]
         )
         device_size = ""
         part_size = 0
@@ -190,12 +202,23 @@ def custom(spec):
                 device_size = splited_line[3]
 
         # パッケージがインストールできるようにサイズを少しだけ拡張する
-        size = (size_str_to_float(device_size) + (spec["expand"]["size"] * 1024 * 1024 * 1024)) / (1024 * 1024 * 1024)
+        size = (
+            size_str_to_float(device_size)
+            + (spec["expand"]["size"] * 1024 * 1024 * 1024)
+        ) / (1024 * 1024 * 1024)
         size = "{:.1f}G".format(size)
 
         command.must_run(["qemu-img", "create", "-f", "qcow2", tmp_image_path, size])
         command.must_run(
-            ["virt-resize", "--align-first", "never", "--expand", root_part, tmp_base_image_path, tmp_image_path]
+            [
+                "virt-resize",
+                "--align-first",
+                "never",
+                "--expand",
+                root_part,
+                tmp_base_image_path,
+                tmp_image_path,
+            ]
         )
     else:
         command.must_run(["cp", spec["_base_image_path"], tmp_image_path])
@@ -206,7 +229,9 @@ def custom(spec):
     run_steps(spec)
 
     if "expand" in spec:
-        command.must_run(["chroot", spec["_tmp_mount_path"], "grub-install", "/dev/nbd0"])
+        command.must_run(
+            ["chroot", spec["_tmp_mount_path"], "grub-install", "/dev/nbd0"]
+        )
 
     umount(spec)
     command.must_run(["cp", tmp_image_path, spec["_image_path"]])
@@ -230,7 +255,9 @@ def run_steps(spec):
             if "mode" in step["file"]:
                 command.must_run(["chmod", str(step["file"]["mode"]), dst_path])
         elif "cmd" in step:
-            command.must_run(["chroot", spec["_tmp_mount_path"], "sh", "-xec", step["cmd"]])
+            command.must_run(
+                ["chroot", spec["_tmp_mount_path"], "sh", "-xec", step["cmd"]]
+            )
 
 
 if __name__ == "__main__":
