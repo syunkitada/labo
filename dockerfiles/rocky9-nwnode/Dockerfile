@@ -1,7 +1,10 @@
 FROM local/rocky9-base
 
+RUN dnf install -y iproute
+
 # frr
-RUN dnf install -y https://rpm.frrouting.org/repo/frr-stable-repo-1-0.el9.noarch.rpm && \
+# https://rpm.frrouting.org/repo/
+RUN dnf install -y https://rpm.frrouting.org/repo/frr-stable-repo.el9.noarch.rpm && \
     dnf install -y frr frr-pythontools
 
 # ovs

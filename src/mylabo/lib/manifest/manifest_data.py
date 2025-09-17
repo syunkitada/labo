@@ -41,7 +41,15 @@ def _complete_recursively(root_manifest: dict, key: str, data: dict | list, time
 
 
 def complete_inet_data(inet_data: dict):
-    ip_interface = ipaddress.ip_interface(inet_data["inet"])
+    inet = inet_data["inet"]
+
+    _compi = inet.find(TEMPLATE_START_MARKER)
+    _compri = inet.find(TEMPLATE_END_MARKER, _compi)
+    if _compi >= 0 and _compri > 1:
+        print(f"Skip incomplete inet data: {inet}")
+        return
+
+    ip_interface = ipaddress.ip_interface(inet)
     inet_data["inet_compressed"] = ip_interface.compressed
     inet_data["inet_exploded"] = ip_interface.exploded
     inet_data["ip"] = str(ip_interface.ip)
