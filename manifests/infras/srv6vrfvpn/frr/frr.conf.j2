@@ -84,6 +84,17 @@ interface {{ interface.name }}
 
 {%- endfor %}
 
+{%- if "frr_segment_routing" in spec.vars %}
+segment-routing
+ srv6
+  locators
+   locator main
+    prefix {{ spec.vars.frr_segment_routing.srv6_locator_prefix }}
+   exit
+  exit
+ exit
+!
+{%- endif %}
 
 ###################################################
 # BGP
@@ -118,7 +129,16 @@ router bgp {{ spec.vars.frr_bgp_asn }}
 {%- for interface in bgp_interfaces %}
   neighbor {{ interface.name }} interface peer-group {{ interface.bgp_peer_group }}
 {%- endfor %}
+  !
 
+  segment-routing srv6
+    locator main
+  exit
+  !
+
+  ###################################################
+  # BGP ipv4 unicast
+  ###################################################
   address-family ipv4 unicast
 {%- for network in spec.vars.frr_bgp_ipv4_unicast_networks %}
     network {{ network }}
@@ -134,13 +154,14 @@ router bgp {{ spec.vars.frr_bgp_asn }}
   {%- if peer_group.activate_ipv4_unicast %}
     neighbor {{ peer_group.name }} activate
   {%- endif %}
-  {%- if "route_reflector_client" in peer_group %}
-    neighbor {{ peer_group.name }} route-reflector-client
-  {%- endif %}
 {%- endfor %}
 
   exit-address-family
+  !
 
+  ###################################################
+  # BGP ipv6 unicast
+  ###################################################
   address-family ipv6 unicast
 {%- for network in spec.vars.frr_bgp_ipv6_unicast_networks %}
     network {{ network }}
@@ -162,4 +183,54 @@ router bgp {{ spec.vars.frr_bgp_asn }}
 {%- endfor %}
 
   exit-address-family
+  !
+
+  ###################################################
+  # BGP ipv4 vpn unicast
+  ###################################################
+  address-family ipv4 vpn
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+  {%- if peer_group.get('activate_ipv4_vpn', false) %}
+    neighbor {{ peer_group.name }} activate
+  {%- endif %}
+{%- endfor %}
+
+  exit-address-family
+  !
+
+  ###################################################
+  # BGP ipv6 vpn unicast
+  ###################################################
+  address-family ipv6 vpn
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+  {%- if peer_group.get('activate_ipv6_vpn', false) %}
+    neighbor {{ peer_group.name }} activate
+  {%- endif %}
+{%- endfor %}
+
+  exit-address-family
+  !
+
 !
+
+###################################################
+# BGP VRFs
+###################################################
+{%- for vrf in spec.vars.get('frr_bgp_vrfs', []) %}
+router bgp {{ spec.vars.frr_bgp_asn }} vrf {{ vrf.name }}
+  bgp router-id {{ spec.vars.frr_bgp_router_id }}
+  no bgp ebgp-requires-policy
+  sid vpn per-vrf export auto
+
+  address-family ipv4 unicast
+    # sid vpn export auto
+    rd vpn export {{ vrf.rd }}
+    rt vpn both {{ vrf.rt }}
+    import vpn
+    export vpn
+    # redistribute connected
+    redistribute kernel
+  exit-address-family
+!
+{%- endfor %}
+

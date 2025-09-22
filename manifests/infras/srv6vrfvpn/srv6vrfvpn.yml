@@ -47,6 +47,7 @@ template_map:
             asn: external
             capability: extended-nexthop
             activate_ipv4_unicast: true
+            activate_ipv6_unicast: true
         frr_bgp_ipv4_unicast_networks:
           - <%=_node_map.CL1.spec.links.0.ips.0.network%>
           - <%=lo_ips.0.inet%>
@@ -64,6 +65,7 @@ template_map:
             asn: external
             capability: extended-nexthop
             activate_ipv4_unicast: true
+            activate_ipv6_unicast: true
         frr_bgp_ipv4_unicast_networks:
           - <%=_node.spec.lo_ips.0.inet%>
   leaf:
@@ -78,39 +80,10 @@ template_map:
             asn: external
             capability: extended-nexthop
             activate_ipv4_unicast: true
+            activate_ipv6_unicast: true
         frr_bgp_ipv4_unicast_networks:
           - <%=_node.spec.lo_ips.0.inet%>
   rr:
-    spec:
-      lo_ips:
-        - inet: <%=assign_inet4("hv_network")%>
-      vars:
-        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
-        frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
-        frr_bgp_peer_groups:
-          - name: ADMIN
-            asn: external
-            capability: extended-nexthop
-            activate_ipv4_unicast: true
-          - name: RR
-            asn: external
-            route_reflector_client: true
-            ebgp_multihop: 254
-            update_source: <%=_node.spec.lo_ips.0.ip%>
-            activate_ipv4_unicast: true
-            neighbors:
-              - <%=_node_map.HV1.spec.lo_ips.0.ip%>
-              - <%=_node_map.HV2.spec.lo_ips.0.ip%>
-        # frr_bgp_route_reflector_clients:
-        #   - ip: <%=_node_map.HV1.spec.lo_ips.0.ip%>
-        #     asn: <%=_node_map.HV1.spec.vars.frr_bgp_asn%>
-        #     ebgp_multihop: 254
-        #   - ip: <%=_node_map.HV2.spec.lo_ips.0.ip%>
-        #     asn: <%=_node_map.HV2.spec.vars.frr_bgp_asn%>
-        #     ebgp_multihop: 254
-        frr_bgp_ipv4_unicast_networks:
-          - <%=_node.spec.lo_ips.0.inet%>
-  hv:
     spec:
       lo_ips:
         - inet: <%=assign_inet4("hv_network")%>
@@ -123,17 +96,53 @@ template_map:
             asn: external
             capability: extended-nexthop
             activate_ipv4_unicast: true
+            activate_ipv6_unicast: true
           - name: RR
             asn: external
-            update_source: <%=_node.spec.lo_ips.0.ip%>
-            neighbors:
-              - <%=_node_map.RR1.spec.lo_ips.0.ip%>
+            capability: extended-nexthop
             ebgp_multihop: 254
+            update_source: <%=_node.spec.lo_ips.1.ip%>
+            activate_ipv4_vpn: true
+            activate_ipv6_vpn: true
+            neighbors:
+              - <%=_node_map.HV1.spec.lo_ips.1.ip%>
+              - <%=_node_map.HV2.spec.lo_ips.1.ip%>
+        frr_bgp_ipv4_unicast_networks:
+          - <%=_node.spec.lo_ips.0.inet%>
+        frr_bgp_ipv6_unicast_networks:
+          - <%=_node.spec.lo_ips.1.inet%>
+  hv:
+    spec:
+      lo_ips:
+        - inet: <%=assign_inet4("hv_network")%>
+        - inet: <%=asn_to_sid(_node.spec.vars.frr_bgp_asn)%>
+      vars:
+        frr_segment_routing:
+          srv6_locator_prefix: <%=_node.spec.lo_ips.1.network%>
+        frr_bgp_asn: <%=ipv4_to_asn(_node.spec.lo_ips.0.ip)%>
+        frr_bgp_vrfs:
+          - name: vrf50
+            rd: "65000:50"
+            rt: "65000:50"
+          - name: vrf51
+            rd: "65000:51"
+            rt: "65000:51"
+        frr_bgp_router_id: <%=_node.spec.lo_ips.0.ip%>
+        frr_bgp_peer_groups:
+          - name: ADMIN
+            asn: external
+            capability: extended-nexthop
             activate_ipv4_unicast: true
-        # frr_bgp_route_reflectors:
-        #   - ip: <%=_node_map.RR1.spec.lo_ips.0.ip%>
-        #     asn: <%=_node_map.RR1.spec.vars.frr_bgp_asn%>
-        #     ebgp_multihop: 254
+            activate_ipv6_unicast: true
+          - name: RR
+            asn: external
+            capability: extended-nexthop
+            update_source: <%=_node.spec.lo_ips.1.ip%>
+            neighbors:
+              - <%=_node_map.RR1.spec.lo_ips.1.ip%>
+            ebgp_multihop: 254
+            activate_ipv4_vpn: true
+            activate_ipv6_vpn: true
         frr_bgp_ipv4_unicast_networks:
           - <%=_node.spec.lo_ips.0.inet%>
         frr_bgp_ipv6_unicast_networks:
@@ -146,7 +155,7 @@ template_map:
           via: <%=gateway_ip(_node.spec._links.0.peer_ips.0.network)%>
 
 kind: Infra
-name: srv6vpn
+name: srv6vrf
 spec:
   ipam:
     outer_network1:
@@ -258,6 +267,12 @@ spec:
         - node
         - leaf
         - frr
+      spec:
+        links:
+          - peer: RR1
+            bgp_peer_group: ADMIN
+          - peer: HV1
+            bgp_peer_group: ADMIN
     - name: L21
       templates:
         - node
@@ -272,6 +287,10 @@ spec:
         - node
         - leaf
         - frr
+      spec:
+        links:
+          - peer: HV2
+            bgp_peer_group: ADMIN
 
     - name: RR1
       templates:
@@ -279,13 +298,6 @@ spec:
         - rr
         - frr
       spec:
-        links:
-          - peer: t1vm1
-            peer_ips:
-              - inet: <%=assign_inet4("t1vm_network2")%>
-          - peer: t2vm1
-            peer_ips:
-              - inet: <%=assign_inet4("t2vm_network2")%>
         steps:
           - template:
               src: frr/daemons.j2
@@ -321,25 +333,24 @@ spec:
               cmds:
                 - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
                 - systemctl restart frr
-          # - shell:
-          #     cmds:
-          #       - mkdir -p /etc/iproute2
-          #       - touch /etc/iproute2/rt_tables
-          #       - grep "100 localsid" /etc/iproute2/rt_tables || echo "100 localsid" >> /etc/iproute2/rt_tables
-          #       - ip -6 rule add to <%=_node.spec.lo_ips.1.network%> lookup localsid
-          #       - ip -6 route add blackhole default table localsid | echo "ignored"
+          - shell:
+              cmds:
+                - ip link add dev vrf50 type vrf table 50 | echo "ignored"
+                - ip link set dev vrf50 up
+                - ip link set dev HV1_0_t1vm1 master vrf50
+                - ip route add 10.100.1.2 dev HV1_0_t1vm1 table 50 | echo "ignored"
+                - ip addr add 10.100.1.1/24 dev HV1_0_t1vm1 | echo "ignored"
+                - sysctl -w net.ipv4.conf.HV1_0_t1vm1.proxy_arp=1
 
-          #       # vpc50の設定
-          #       - ip link add dev vrf50 type vrf table 50 | echo "ignored"
-          #       - ip link set dev vrf50 up
-          #       - ip vrf show
-          #       - ip link set dev HV1_0_t1vm1 master vrf50
-          #       - ip -6 route add `echo <%=_node.spec.lo_ips.1.network%>|sed -e "s|::/64|::0050|g"` encap seg6local action End.DX4 nh4 169.254.1.50 dev vrf50 table localsid | echo "ignored"
-          #       - ip route add 169.254.1.50 dev vrf50 | echo "ignored"
-          #       - ip route add 10.100.1.3 encap seg6 mode encap segs `echo <%=_node_map.HV2.spec.lo_ips.1.network%>|sed -e "s|::/64|::0050|g"` dev HV1_0_L11 table 50 | echo "ignored"
-          #       - ip route add 10.100.1.2 dev HV1_0_t1vm1 table 50 | echo "ignored"
-          #       - ip addr add 10.100.1.1/24 dev HV1_0_t1vm1 | echo "ignored"
-          #       - sysctl -w net.ipv4.conf.HV1_0_t1vm1.proxy_arp=1
+          - shell:
+              cmds:
+                - ip link add dev vrf51 type vrf table 51 | echo "ignored"
+                - ip link set dev vrf51 up
+                - ip link set dev HV1_1_t2vm1 master vrf51
+                - ip route add 10.100.1.2 dev HV1_1_t2vm1 table 51 | echo "ignored"
+                - ip addr add 10.100.1.1/24 dev HV1_1_t2vm1 | echo "ignored"
+                - sysctl -w net.ipv4.conf.HV1_1_t2vm1.proxy_arp=1
+
     - name: HV2
       templates:
         - node
@@ -363,38 +374,42 @@ spec:
               cmds:
                 - sed -i 's/StartLimitInterval=.*/StartLimitInterval=10s/' /usr/lib/systemd/system/frr.service
                 - systemctl restart frr
-          # - shell:
-          #     cmds:
-          #       - mkdir -p /etc/iproute2
-          #       - touch /etc/iproute2/rt_tables
-          #       - grep "100 localsid" /etc/iproute2/rt_tables || echo "100 localsid" >> /etc/iproute2/rt_tables
-          #       - ip -6 rule add to <%=_node.spec.lo_ips.1.network%> lookup localsid
-          #       - ip -6 route add blackhole default table localsid | echo "ignored"
+          - shell:
+              cmds:
+                - ip link add dev vrf50 type vrf table 50 | echo "ignored"
+                - ip link set dev vrf50 up
+                - ip link set dev HV2_0_t1vm2 master vrf50
+                - ip route add 10.100.1.3 dev HV2_0_t1vm2 table 50 | echo "ignored"
+                - ip addr add 10.100.1.1/24 dev HV2_0_t1vm2 | echo "ignored"
+                - sysctl -w net.ipv4.conf.HV2_0_t1vm2.proxy_arp=1
 
-          #       # vpc50の設定
-          #       - ip link add dev vrf50 type vrf table 50 | echo "ignored"
-          #       - ip link set dev vrf50 up
-          #       - ip vrf show
-          #       - ip link set dev HV2_0_t1vm2 master vrf50
-          #       - ip -6 route add `echo <%=_node.spec.lo_ips.1.network%>|sed -e "s|::/64|::0050|g"` encap seg6local action End.DX4 nh4 169.254.1.50 dev vrf50 table localsid | echo "ignored"
-          #       - ip route add 169.254.1.50 dev vrf50 | echo "ignored"
-          #       - ip route add 10.100.1.2 encap seg6 mode encap segs `echo <%=_node_map.HV1.spec.lo_ips.1.network%>|sed -e "s|::/64|::0050|g"` dev HV2_0_L21 table 50 | echo "ignored"
-          #       - ip route add 10.100.1.3 dev HV2_0_t1vm2 table 50 | echo "ignored"
-          #       - ip addr add 10.100.1.1/24 dev HV2_0_t1vm2 | echo "ignored"
-          #       - sysctl -w net.ipv4.conf.HV2_0_t1vm2.proxy_arp=1
+          - shell:
+              cmds:
+                - ip link add dev vrf51 type vrf table 51 | echo "ignored"
+                - ip link set dev vrf51 up
+                - ip link set dev HV2_1_t2vm2 master vrf51
+                - ip route add 10.100.1.3 dev HV2_1_t2vm2 table 51 | echo "ignored"
+                - ip addr add 10.100.1.1/24 dev HV2_1_t2vm2 | echo "ignored"
+                - sysctl -w net.ipv4.conf.HV2_1_t2vm2.proxy_arp=1
+
     - name: t1vm1
       templates:
         - node
         - vm
-      # spec:
-      #   tests:
-      #     - shell:
-      #         cmds:
-      #           - ping -c 1 -W 1 <%=_node_map.t1vm2.spec._links.0.peer_ips.0.ip%>
+      spec:
+        tests:
+          - shell:
+              cmds:
+                - ping -c 1 -W 1 <%=_node_map.t1vm2.spec._links.0.peer_ips.0.ip%>
     - name: t2vm1
       templates:
         - node
         - vm
+      spec:
+        tests:
+          - shell:
+              cmds:
+                - ping -c 1 -W 1 <%=_node_map.t2vm2.spec._links.0.peer_ips.0.ip%>
     - name: t1vm2
       templates:
         - node

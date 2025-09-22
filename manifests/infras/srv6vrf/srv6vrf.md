@@ -1,4 +1,4 @@
-# SRv6 with VRF
+# srv6vrf
 
 ## Check ping from t1vm1 to t1vm2 on SRv6 tunnel
 
