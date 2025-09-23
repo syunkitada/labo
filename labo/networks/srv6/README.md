@@ -127,6 +127,7 @@
 - [2017.07.18: Segment Routing チュートリアル](https://www.janog.gr.jp/meeting/janog40/application/files/2415/0051/7614/janog40-sr-kamata-takeda-00.pdf)
   - 必読、とりあえずこれを読むのがよい
 - 事例
+  - [2022.02.11: Our Challenges to Open Source SRv6 Data Center Networking](https://www.janog.gr.jp/meeting/janog49/dcnsrv6/)
   - [2021.09.03: Youtube:「LINE による SRv6 の挑戦に関して」城倉 弘樹 (LINE 株式会社)](https://www.youtube.com/watch?v=B6MqxXVD1aE)
     - LINE の事例ベースなので実利用のイメージができてとてもよかった
     - 関連
@@ -142,5 +143,5 @@
   - サンプル
     - [2021.01.17: SRv6 の Linux Kernel 実装](https://blog.bobuhiro11.net/2021/01-17-srv6linux.html)
       - シンプルな Linux で試せるサンプルコードあり
-    - [Segment Routing IPv6 Examples](https://github.com/slankdev/tinet2/tree/master/examples/basic_srv6)
-      - slankdev さんのサンプルがいろいろ
+    - [frr: topotests/test_bgp_srv6l3vpn_to_bgp_vrf.py](https://github.com/FRRouting/frr/blob/600390b67cff22c5cce6f1b2f2b4a5636bfe23fb/tests/topotests/bgp_srv6l3vpn_to_bgp_vrf/test_bgp_srv6l3vpn_to_bgp_vrf.py)
+      - これは、frr の公式レポ内の testcode で、実際に frr を動かしてトポロジーのテストが行われており、frr で srv6 を利用する場合の設定例として利用できます
