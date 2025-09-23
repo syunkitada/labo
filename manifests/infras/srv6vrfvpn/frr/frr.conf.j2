@@ -1,0 +1,236 @@
+log file /var/log/frr/frr.log
+
+debug bgp keepalives
+debug bgp neighbor-events
+debug bgp updates
+
+ip forwarding
+ipv6 forwarding
+!
+
+{%- if spec.vars.frr_route_map %}
+{%- for name, route_map in spec.vars.frr_route_map.items() %}
+{%- for prefix in route_map.prefix_list %}
+ip prefix-list {{ name }} {{ prefix }}
+{%- endfor %}
+route-map {{ name }} {{ route_map.policy }} {{ route_map.order }}
+{%- if route_map.version == 4 %}
+    match ip address prefix-list {{ name }}
+{%- elif route_map.version == 6 %}
+    match ipv6 address prefix-list {{ name }}
+{%- endif %}
+!
+
+{%- endfor %}
+{%- endif %}
+
+###################################################
+# Interfaces
+###################################################
+{%- set bgp_interfaces = [] %}
+{%- for link in spec.links %}
+
+{%- if 'vlan_map' in link %}
+{%- for vlan_id, vlan in link.vlan_map.items() %}
+{%- if 'bgp_peer_group' in vlan %}
+{%- set bgp_interfaces = bgp_interfaces.append({
+  "name": "{}.{}".format(link.link_name, vlan_id),
+  "bgp_peer_group": vlan.bgp_peer_group,
+}) %}
+{%- endif %}
+{%- endfor %}
+
+{%- else %}
+{%- if 'bgp_peer_group' in link %}
+{%- set bgp_interfaces = bgp_interfaces.append({
+  "name": link.link_name,
+  "bgp_peer_group": link.bgp_peer_group,
+}) %}
+{%- endif %}
+{%- endif %}
+
+{%- endfor %}
+
+{%- for link in spec._links %}
+
+{%- if 'vlan_map' in link %}
+{%- for vlan_id, vlan in link.vlan_map.items() %}
+{%- if 'bgp_peer_group' in vlan %}
+
+{%- set bgp_interfaces = bgp_interfaces.append({
+  "name": vlan.get("peer_bgp_interface", "{}.{}".format(link.peer_name, vlan_id)),
+  "bgp_peer_group": vlan.bgp_peer_group,
+}) %}
+{%- endif %}
+{%- endfor %}
+
+{%- else %}
+{%- if 'bgp_peer_group' in link %}
+{%- set bgp_interfaces = bgp_interfaces.append({
+  "name": link.peer_name,
+  "bgp_peer_group": link.bgp_peer_group,
+}) %}
+{%- endif %}
+{%- endif %}
+
+{%- endfor %}
+
+
+{%- for interface in bgp_interfaces %}
+interface {{ interface.name }}
+  ipv6 nd ra-interval 10
+  no ipv6 nd suppress-ra
+!
+
+{%- endfor %}
+
+{%- if "frr_segment_routing" in spec.vars %}
+segment-routing
+ srv6
+  locators
+   locator main
+    prefix {{ spec.vars.frr_segment_routing.srv6_locator_prefix }}
+   exit
+  exit
+ exit
+!
+{%- endif %}
+
+###################################################
+# BGP
+###################################################
+router bgp {{ spec.vars.frr_bgp_asn }}
+  bgp router-id {{ spec.vars.frr_bgp_router_id }}
+  bgp bestpath as-path multipath-relax
+  no bgp ebgp-requires-policy
+  no bgp network import-check
+  no bgp default ipv4-unicast
+
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+  neighbor {{ peer_group.name }} peer-group
+  neighbor {{ peer_group.name }} remote-as {{ peer_group.asn }}
+  {%- if capability in peer_group %}
+  neighbor {{ peer_group.name }} capability {{ peer_group.capability }}
+  {%- endif -%}
+  {%- if "ebgp_multihop" in peer_group %}
+  neighbor {{ peer_group.name }} ebgp-multihop {{ peer_group.ebgp_multihop }}
+  {%- endif %}
+  {%- if "route_reflector_client" in peer_group %}
+  neighbor {{ peer_group.name }} route-reflector-client
+  {%- endif %}
+  {%- if "update_source" in peer_group %}
+  neighbor {{ peer_group.name }} update-source {{ peer_group.update_source }}
+  {%- endif %}
+  {%- for neighbor in peer_group.get('neighbors', []) %}
+  neighbor {{ neighbor }} peer-group {{ peer_group.name }}
+  {%- endfor %}
+{%- endfor %}
+
+{%- for interface in bgp_interfaces %}
+  neighbor {{ interface.name }} interface peer-group {{ interface.bgp_peer_group }}
+{%- endfor %}
+  !
+
+  segment-routing srv6
+    locator main
+  exit
+  !
+
+  ###################################################
+  # BGP ipv4 unicast
+  ###################################################
+  address-family ipv4 unicast
+{%- for network in spec.vars.frr_bgp_ipv4_unicast_networks %}
+    network {{ network }}
+{%- endfor %}
+
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+{%- for route_map in peer_group.get('route_map_v4_ins', []) %}
+    neighbor {{ peer_group.name }} route-map {{ route_map }} in
+{%- endfor %}
+{%- for route_map in peer_group.get('route_map_v4_outs', []) %}
+    neighbor {{ peer_group.name }} route-map {{ route_map }} out
+{%- endfor %}
+  {%- if peer_group.activate_ipv4_unicast %}
+    neighbor {{ peer_group.name }} activate
+  {%- endif %}
+{%- endfor %}
+
+  exit-address-family
+  !
+
+  ###################################################
+  # BGP ipv6 unicast
+  ###################################################
+  address-family ipv6 unicast
+{%- for network in spec.vars.frr_bgp_ipv6_unicast_networks %}
+    network {{ network }}
+{%- endfor %}
+
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+{%- for route_map in peer_group.get('route_map_v6_ins', []) %}
+    neighbor {{ peer_group.name }} route-map {{ route_map }} in
+{%- endfor %}
+{%- for route_map in peer_group.get('route_map_v6_outs', []) %}
+    neighbor {{ peer_group.name }} route-map {{ route_map }} out
+{%- endfor %}
+  {%- if peer_group.activate_ipv6_unicast %}
+    neighbor {{ peer_group.name }} activate
+  {%- endif %}
+  {%- if "route_reflector_client" in peer_group %}
+    neighbor {{ peer_group.name }} route-reflector-client
+  {%- endif %}
+{%- endfor %}
+
+  exit-address-family
+  !
+
+  ###################################################
+  # BGP ipv4 vpn unicast
+  ###################################################
+  address-family ipv4 vpn
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+  {%- if peer_group.get('activate_ipv4_vpn', false) %}
+    neighbor {{ peer_group.name }} activate
+  {%- endif %}
+{%- endfor %}
+
+  exit-address-family
+  !
+
+  ###################################################
+  # BGP ipv6 vpn unicast
+  ###################################################
+  address-family ipv6 vpn
+{%- for peer_group in spec.vars.frr_bgp_peer_groups %}
+  {%- if peer_group.get('activate_ipv6_vpn', false) %}
+    neighbor {{ peer_group.name }} activate
+  {%- endif %}
+{%- endfor %}
+
+  exit-address-family
+  !
+
+!
+
+###################################################
+# BGP VRFs
+###################################################
+{%- for vrf in spec.vars.get('frr_bgp_vrfs', []) %}
+router bgp {{ spec.vars.frr_bgp_asn }} vrf {{ vrf.name }}
+  bgp router-id {{ spec.vars.frr_bgp_router_id }}
+  no bgp ebgp-requires-policy
+  sid vpn per-vrf export auto
+
+  address-family ipv4 unicast
+    # sid vpn export auto
+    rd vpn export {{ vrf.rd }}
+    rt vpn both {{ vrf.rt }}
+    import vpn
+    export vpn
+    # redistribute connected
+    redistribute kernel
+  exit-address-family
+!
+{%- endfor %}
+
