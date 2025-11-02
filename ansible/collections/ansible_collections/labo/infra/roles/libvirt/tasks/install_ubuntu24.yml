@@ -1,0 +1,7 @@
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - qemu-kvm
+      - libvirt-daemon-system
+      - libvirt-clients
+      - libguestfs-tools

@@ -37,8 +37,12 @@ $ vim /etc/ansible/host_vars/localhost.yaml
 
 ```
 $ cd labo/tls; make; cd -
-$ sudo uv run ansible-playbook labo.infra.labo
-$ sudo uv run mylabo apply -f manifests/dns
+```
+
+### 3. Build mylabo
+
+```
+$ make
 ```
 
 ## How to use mylabo

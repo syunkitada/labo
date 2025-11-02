@@ -1,109 +1,57 @@
 # mysql
 
-
-## User
-```
-# ユーザ作成と権限付与
-CREATE USER IF NOT EXISTS 'hoge'@'%' IDENTIFIED BY 'hogepass'; GRANT ALL ON *.* TO 'hoge'@'%'; FLUSH PRIVILEGES;
-
-# MySQL8から、GRANT時のIDENTIFIED BYでのパスワードは設定できなくなった
-# GRANT ALL ON *.* TO 'hoge'@'%' IDENTIFIED BY 'hogepass';
-```
-
-
-## GTID Master-Slave 構成
-``` reqlication user
-SLAVE_USER=slave
-SLAVE_PASSWARD=slavepass
-MASTER_IP=172.16.100.121
-PORT=3306
-
-# Master: create user to replication
-mysql -uroot -e "GRANT REPLICATION SLAVE ON *.* TO 'slave'@'172.16.100.0/255.255.255.0' IDENTIFIED BY 'slavepass'";
-
-# Slave: setting master
-mysql -uroot -e "
-change master to
-    master_host='${MASTER_IP}',
-    master_port='${PORT}',
-    master_user='${SLAVE_USER}',
-    master_password='${SLAVE_PASSWORD}',
-    master_auto_position=1;
-"
-```
-
-* Master-Master構成について
-    * 2つのMasterで互いにSlave設定を入れればよい
-    * しかし、Master-Masterの同時書き込みは不整合が発生しやすいので非推奨
-
-
-## GTID レプリケーション組み直し
-```
-# Slave: stop slave
-$ sudo mysql -uroot -e 'stop slave;'
-
-# Master: mysqldump and scp dump to slave
-$ sudo mysqldump -uroot -q --all-databases --master-data > all.dump
-$ sed -i "s/CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.*//g" all.dump
-$ scp all.dump slavehost.com:
-
-
-# Slave: drop databases except mysql, information_schema, and performance_schema
-$ sudo mysql -uroot -e 'show databases;'
-+--------------------+
-| Database           |
-+--------------------+
-| information_schema |
-| mysql              |
-| performance_schema |
-| sample             |
-| sysbench           |
-+--------------------+
-$ sudo mysql -uroot -e 'drop database sample;'
-$ sudo mysql -uroot -e 'drop database sysbench;'
-
-# Slave: reset slave
-$ sudo mysql -uroot -e 'reset slave;'
-
-# Slave: if Master-Master, reset master before take in dump
-$ sudo mysql -uroot -e 'reset master;'
-
-# Slave: take in dump
-$ sudo mysql -uroot < all.dump
-
-# Master: if Master-Master
-$ sudo mysql -uroot -e 'reset slave;'
-$ sudo mysql -uroot -e 'start slave;'
-
-# Check slave status
-$ sudo mysql -uroot -e 'show slave status\G'
-```
-
-
 ## Tips
-* https://dev.mysql.com/doc/refman/5.7/en/optimize-overview.html
-* server_idを確認する
 
-```
-mysql> show variables like '%server_id%';
-```
+### max_connections はどのくらいに設定すべきか？
 
-* mysql.cnfの場所
-```
-mysql --help | grep my.cnf
-                      order of preference, my.cnf, $MYSQL_TCP_PORT,
-/etc/my.cnf /etc/mysql/my.cnf ~/.my.cnf
-```
+max_connections は、mysql server が接続可能な最大のコネクション数の設定値です。
 
-* mysqldumpに失敗する場合
-    * データ量が多すぎてOOMでmysqlがダウンする場合がある
-        * innodbのbufferを割り当てすぎた場合など
-    * タイムアウトでコネクションが閉じる場合がある
+一口にコネクションと言っても active なものもあれば、idle なものもあり、max_connections はその総量を制限するための設定値です。
 
-```
-show global variable like '%timeout%'
-SET GLOBAL net_write_timeout=3600
-SET GLOBAL net_read_timeout=3600
-SET GLOBAL interactive_timeout=3600
-SET GLOBAL wait_timeout=3600
-```
+active コネクションはある程度のサーバリソースを使うので気にする必要があるのですが、idle コネクションは CPU はほぼ消費せずメモリをわずかに消費する程度です。
+
+例えば、idle コネクションが 10000 だったとしても CPU 消費はほぼなく、メモリを 2GB 程度消費する程度である。
+
+このため、idle コネクションの数はあまり制限する必要はありません。
+
+もし、クライアントサイドで connection pooling を行っている場合、コネクションのほとんどは idle である場合が多く、max_connections による制限はほとんど意味をなしません。
+
+なので、雑に 2000 と設定しても問題ありません。メモリに余裕があるなら 10000 と設定しても良いと思います。
+
+参考
+
+- [mita2 database life: MySQL max_connections は雑に設定しておけば良い](https://mita2db.hateblo.jp/entry/2020/05/31/175523)
+
+### connection pooling について
+
+connection pooling は、クライアントサイドで一度確立したコネクションを一定数プールして使い回すための仕組みです。
+
+これを利用することで、TCP 接続や認証などの新規接続処理をスキップすることができます。
+
+ただ、接続処理部分以外に占める時間やリソースのほうが圧倒的に割合が多く、connection pooling を利用することはそこまで重要ではありません。
+
+- [mita2 database life: MySQL Connection Pooling と Persistent Connections はチョット違うという話](https://mita2db.hateblo.jp/entry/2020/08/02/162024)
+
+#### client side: max pool size はどのくらいに設定すべきか？
+
+＊ 設定名は、クライアント実装によって変わります。
+
+普段の active コネクション数程度は pooling して再利用するようにしておくと良いと思います。
+
+#### client side: max connection lifetime はどのくらいに設定すべきか？
+
+＊ 設定名は、クライアント実装によって変わります。
+
+プールしたコネクションを何秒維持するかの値です。
+
+コネクションは長時間持ち続けないほうが良いため、長くても 50 秒程度にしておくと良いと思います。
+
+これは、DB の冗長化が LB や DNS などで行われていることが多く、メンテナンスなどで DB ノードの切り替わりが発生したりすると、古いコネクションが利用できなくなる場合があるためです。
+
+#### client side: max connection (max open connections) はどのくらいに設定すべきか？
+
+＊ 設定名は、クライアント実装によって変わります。
+
+mysql 側でも max_connections という設定値で最大接続数は管理されますが、クライアントサイドでもスパイク時などに mysql へ不用意にコネクションを貼らないようにハードリミットを設けると良いと思います。
+
+定常的なコネクション数の 3 倍程度はあると良いかなと思いますが、この辺は適宜調整かと思います。
