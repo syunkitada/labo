@@ -1,0 +1,21 @@
+services:
+  mysql:
+    container_name: playground-mysql
+    image: mysql:9.5
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: system
+      MYSQL_PASSWORD: ${MYSQL_SYSTEM_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./my.cnf.d/server.cnf:/etc/my.cnf.d/server.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:
