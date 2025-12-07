@@ -7,18 +7,22 @@ spec:
   from: local/rocky9
   steps:
     - file:
-        src: ../common/system/labo-init.service
+        src: files/system/labo-init.service
         dst: /etc/systemd/system/labo-init.service
     - file:
-        src: ../common/bin
+        src: files/bin
         dst: /opt/labo/bin
     - cmd: rm -rf /etc/resolv.conf
     - file:
-        src: ../common/etc/resolv.conf
+        src: files/etc/resolv.conf
         dst: /etc/resolv.conf
+    - file:
+        src: files/etc/fio.ini
+        dst: /etc/fio.ini
     - cmd: systemctl enable labo-init
     - cmd: yum remove -y cloud-init
-    - cmd: yum install -y dnsmasq tcpdump python3 python3-pip
+    - cmd: yum install -y epel-release
+    - cmd: yum install -y fio dnsmasq tcpdump python3 python3-pip
     - cmd: pip install --upgrade pip
     - cmd: export LANG=C.UTF-8; export LC_ALL=en_US.UTF-8; pip install ansible
     - cmd: sed -i  's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config

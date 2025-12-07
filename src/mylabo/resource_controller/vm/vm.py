@@ -156,6 +156,12 @@ class VM(resource.Resource):
         devices = ET.SubElement(domain, "devices")
         ET.SubElement(devices, "emulator").text = "/usr/bin/qemu-system-x86_64"
 
+        # <controller type='scsi' index='0' model='virtio-scsi'>
+        #   <alias name='scsi0'/>
+        #   <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+        # </controller>
+        ET.SubElement(devices, "controller", type="scsi", index='0', model="virtio-scsi")
+
         # <disk type='file' device='disk'>
         #   <driver name='qemu' type='qcow2' cache='none'/>
         #   <source file='/var/lib/nova/instances/88043986-97f8-416f-ada9-6eee22081a3d/disk' index='2'/>
@@ -169,23 +175,39 @@ class VM(resource.Resource):
         #   <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
         # </disk>
         root_disk = ET.SubElement(devices, "disk", type="file", device="disk")
+        #  TODO: queues="1" spec化
         ET.SubElement(root_disk, "driver", name="qemu", type="qcow2", cache="none")
         ET.SubElement(root_disk, "source", file=self.spec["_image_path"], index="2")
         # backing_store = ET.SubElement(root_disk, "backingStore", type="file", index="3")
         # ET.SubElement(backing_store, "format", type="raw")
         # ET.SubElement(backing_store, "source", file=self.spec["_base_image_path"])
         # ET.SubElement(backing_store, "backingStore")
-        ET.SubElement(root_disk, "target", dev="vda", bus="virtio")
+        ET.SubElement(root_disk, "target", dev="sda", bus="scsi")
         ET.SubElement(root_disk, "alias", name="virtio-disk0")
         ET.SubElement(
             root_disk,
             "address",
-            type="pci",
-            domain="0x0000",
-            bus="0x00",
-            slot="0x04",
-            function="0x0",
+            type="drive",
+            controller="0",
+            bus="0",
+            target="0",
+            unit="0",
         )
+        # ET.SubElement(
+        #     root_disk,
+        #     "address",
+        #     type="pci",
+        #     domain="0x0000",
+        #     bus="0x00",
+        #     slot="0x04",
+        #     function="0x0",
+        # )
+
+        # <disk type='file' device='disk'>
+        # <driver name='qemu' type='raw'/>
+        # <source file='/mnt/tmpfs/volume.qcow2'/>
+        # <target dev='vdb' bus='virtio'/>
+        # <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
 
         # <disk type='file' device='cdrom'>
         #   <driver name='qemu' type='raw' cache='none'/>
