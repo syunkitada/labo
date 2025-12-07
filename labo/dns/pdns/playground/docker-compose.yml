@@ -1,0 +1,136 @@
+services:
+  pdns-mysql:
+    container_name: playground-pdns-mysql
+    image: mysql:9.5
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: system
+      MYSQL_PASSWORD: ${MYSQL_SYSTEM_PASSWORD}
+    volumes:
+      - pdns-mysql-data:/var/lib/mysql
+      - ./pdns-mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./pdns-mysql/my.cnf.d/server.cnf:/etc/my.cnf.d/server.cnf:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      playground-pdns:
+        ipv4_address: 10.53.53.2
+
+  pdns-auth:
+    container_name: playground-pdns-auth
+    image: powerdns/pdns-auth-49:4.9.11
+    restart: always
+    entrypoint:
+      - "/usr/bin/tini"
+      - "--"
+      - "/pdns-auth/startup.sh"
+    depends_on:
+      pdns-mysql:
+        condition: service_healthy
+    environment:
+      PDNS_AUTH_API_KEY: ${PDNS_AUTH_API_KEY}
+      MYSQL_SYSTEM_PASSWORD: ${MYSQL_SYSTEM_PASSWORD}
+    volumes:
+      - ./pdns-auth/pdns.conf:/etc/powerdns/pdns.conf:ro
+      - ./pdns-auth:/pdns-auth:ro
+    healthcheck:
+      test: ["CMD", "pdns_control", "rping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "1053:1053/udp"
+      - "1053:1053/tcp"
+    networks:
+      playground-pdns:
+        ipv4_address: 10.53.53.3
+
+  pdns-recursor:
+    container_name: playground-pdns-recursor
+    image: powerdns/pdns-recursor-53:5.3.1
+    restart: always
+    entrypoint:
+      - "/usr/bin/tini"
+      - "--"
+      - "/pdns-recursor/startup.sh"
+    environment:
+      UPSTREAM_DNS_IPv4_1: ${UPSTREAM_DNS_IPv4_1:-1.1.1.1}
+      UPSTREAM_DNS_IPv4_2: ${UPSTREAM_DNS_IPv4_2:-1.0.0.1}
+      UPSTREAM_DNS_IPv6_1: ${UPSTREAM_DNS_IPv6_1:-2606:4700:4700::1111}
+      UPSTREAM_DNS_IPv6_2: ${UPSTREAM_DNS_IPv6_2:-2606:4700:4700::1001}
+      ZONE: ${ZONE:-test}
+      PTR_ZONE: ${PTR_ZONE:-2.0.192.in-addr.arpa}
+    volumes:
+      - ./pdns-recursor/startup.sh:/pdns-recursor/startup.sh:ro
+      - ./pdns-recursor/recursor.yml:/etc/powerdns/recursor.yml:ro
+      - ./pdns-recursor/nta.lua:/etc/powerdns/recursor.d/nta.lua:ro
+    healthcheck:
+      test: ["CMD", "rec_control", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "2053:2053/udp"
+      - "2053:2053/tcp"
+    networks:
+      playground-pdns:
+        ipv4_address: 10.53.53.4
+
+  pdns-dnsdist:
+    container_name: playground-pdns-dnsdist
+    image: powerdns/dnsdist-20:2.0.1
+    restart: always
+    entrypoint:
+      - "/usr/bin/tini"
+      - "--"
+      - "/pdns-dnsdist/startup.sh"
+    depends_on:
+      pdns-auth:
+        condition: service_healthy
+      pdns-recursor:
+        condition: service_healthy
+    ports:
+      - "5353:53/udp"
+      - "5353:53/tcp"
+      - "5380:8080/tcp" # dnsdist web UI
+    environment:
+      DNSDIST_API_KEY: ${DNSDIST_API_KEY}
+    volumes:
+      - ./pdns-dnsdist:/pdns-dnsdist:ro
+    networks:
+      playground-pdns:
+        ipv4_address: 10.53.53.5
+
+  pdns-admin:
+    image: powerdnsadmin/pda-legacy:0.4.2
+    container_name: playground-pdns-admin
+    restart: always
+    depends_on:
+      pdns-auth:
+        condition: service_healthy
+    ports:
+      - "9191:80"
+    environment:
+      SECRET_KEY: ${PDNS_ADMIN_SECRET_KEY}
+      SQLALCHEMY_DATABASE_URI: mysql://system:${MYSQL_SYSTEM_PASSWORD}@pdns-mysql:3306/pdns
+    volumes:
+      - pdns-admin-data:/data
+    networks:
+      playground-pdns:
+        ipv4_address: 10.53.53.6
+
+volumes:
+  pdns-mysql-data:
+  pdns-admin-data:
+
+networks:
+  playground-pdns:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.53.53.0/24
+          gateway: 10.53.53.1

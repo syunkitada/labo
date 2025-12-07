@@ -1,0 +1,28 @@
+incoming:
+  listen:
+    - 0.0.0.0
+    - "::"
+  allow_from:
+    - 0.0.0.0/0
+    - "::/0"
+  port: 2053
+  tcp_fast_open: 100
+outgoing:
+  tcp_fast_open_connect: true
+  source_address:
+    - 0.0.0.0
+    - "::"
+recursor:
+  extended_resolution_errors: true
+  serve_rfc1918: false
+  hint_file: no-refresh
+  forward_zones_recurse:
+    - zone: .
+      forwarders:
+        - 1.1.1.1
+        - 1.0.0.1
+        - 2606:4700:4700::1111
+        - 2606:4700:4700::1001
+  lua_config_file: /etc/powerdns/recursor.d/nta.lua
+logging:
+  timestamp: true
