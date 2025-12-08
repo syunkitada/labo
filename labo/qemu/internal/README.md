@@ -31,19 +31,21 @@
 ## References
 
 - 仮想マシンについて
-  - [ハイパーバイザの作り方](http://syuu1228.github.io/howto_implement_hypervisor/)
+  - [2014: syuu1228: ハイパーバイザの作り方](http://syuu1228.github.io/howto_implement_hypervisor/)
 - qemu について
-  - [QEMU のなかみ(QEMU internals) part1](http://rkx1209.hatenablog.com/entry/2015/11/15/214404)
-  - [QEMU のなかみ(QEMU internals) part2](http://rkx1209.hatenablog.com/entry/2015/11/20/203511)
-  - [KVM のなかみ(KVM internals)](http://rkx1209.hatenablog.com/entry/2016/01/01/101456)
-  - [Effective multi-threading in QEMU](http://www.linux-kvm.org/images/1/17/Kvm-forum-2013-Effective-multithreading-in-QEMU.pdf)
+  - [2023: VA Linux エンジニアブログ: Qemu のしくみ (の一部)](https://www.valinux.co.jp/blog/entry/20230112)
+    - [2023: VA Linux エンジニアブログ: Qemu 小ネタ集](https://www.valinux.co.jp/blog/entry/20230608)
+  - [2015: るくすの日記: QEMU のなかみ(QEMU internals) part1](http://rkx1209.hatenablog.com/entry/2015/11/15/214404)
+  - [2015: るくすの日記: QEMU のなかみ(QEMU internals) part2](http://rkx1209.hatenablog.com/entry/2015/11/20/203511)
+  - [2013: Effective multi-threading in QEMU](http://www.linux-kvm.org/images/1/17/Kvm-forum-2013-Effective-multithreading-in-QEMU.pdf)
 - kvm について
-  - [Using the KVM API](https://lwn.net/Articles/658511/)
-  - [Linux KVM のコードを追いかけてみよう](http://www.slideshare.net/ozax86/linux-kvm?qid=fb99f565-8ae4-44d3-9b58-8d8487197566&v=&b=&from_search=26)
-  - [KVM の中身](http://rkx1209.hatenablog.com/entry/2016/01/01/101456)
+  - [2025: VA Linux エンジニアブログ: 新 Linux カーネル解読室 - KVM (概要)](https://www.valinux.co.jp/blog/entry/20251204)
+  - [2020: LWN.net: Using the KVM API](https://lwn.net/Articles/658511/)
+  - [2009: Tsuyoshi Ozawa: Linux KVM のコードを追いかけてみよう](http://www.slideshare.net/ozax86/linux-kvm?qid=fb99f565-8ae4-44d3-9b58-8d8487197566&v=&b=&from_search=26)
+  - [2016: るくすの日記: KVM の中身](http://rkx1209.hatenablog.com/entry/2016/01/01/101456)
 - qcow2 について
-  - [Improving disk I/O performance in QEMU 2.5 with the qcow2 L2 cache](https://blogs.igalia.com/berto/2015/12/17/improving-disk-io-performance-in-qemu-2-5-with-the-qcow2-l2-cache/)
-  - [qcow2 - why (not)?](www.linux-kvm.org/images/9/92/Qcow2-why-not.pdf)
+  - [2015: Alberto Garcia's blog: Improving disk I/O performance in QEMU 2.5 with the qcow2 L2 cache](https://blogs.igalia.com/berto/2015/12/17/improving-disk-io-performance-in-qemu-2-5-with-the-qcow2-l2-cache/)
+  - [2015: RedHat: qcow2 - why (not)?](www.linux-kvm.org/images/9/92/Qcow2-why-not.pdf)
 - virtio-vhost
   - [Virtio and Vhost Architecture - Part 1](https://insujang.github.io/2021-03-10/virtio-and-vhost-architecture-part-1/)
   - [Virtio and Vhost Architecture - Part 2](https://insujang.github.io/2021-03-15/virtio-and-vhost-architecture-part-2/)

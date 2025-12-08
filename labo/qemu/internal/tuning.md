@@ -21,6 +21,12 @@ http://www.slideshare.net/janghoonsim/kvm-performance-optimization-for-ubuntu?qi
 
 - https://libvirt.org/formatdomain.html#elementsCPUTuning
 
+### 割り込み仮想化
+
+- 解説記事
+  - [2025: VA Linux エンジニアブログ: 新 Linux カーネル解読室 - KVM (概要)](https://www.valinux.co.jp/blog/entry/20251204)
+  - [2025: Oracle Linux Blog: How to enable AMD AVIC and speed up your VMs](https://blogs.oracle.com/linux/amd-avic)
+
 ## Disk
 
 ### cachemode の種類
@@ -77,9 +83,93 @@ http://www.slideshare.net/janghoonsim/kvm-performance-optimization-for-ubuntu?qi
 - https://serverfault.com/questions/677639/which-is-better-image-format-raw-or-qcow2-to-use-as-a-baseimage-for-other-vms
 - https://www.jamescoyle.net/how-to/1810-qcow2-disk-images-and-performance
 
-### blkiotune
+### disk io
 
-- https://libvirt.org/formatdomain.html#elementsBlockTuning
+- IO に制限をかける
+  - [Libvirt: Block I/O Tuning](https://libvirt.org/formatdomain.html#block-i-o-tuning)
+- IO Thread について
+  - [2024: RedHat Developer: Scaling virtio-blk disk I/O with IOThread Virtqueue Mapping](https://developers.redhat.com/articles/2024/09/05/scaling-virtio-blk-disk-io-iothread-virtqueue-mapping#performance)
+    - IO Thread を割り当てることで、ディスクがサチるまで IO 性能を上げることができる
+    - 関連資料
+      - [2024: RedHat Developer: Virtualized database I/O performance improvements in RHEL 9.4](https://developers.redhat.com/articles/2024/09/10/virtualized-database-io-performance-improvements-rhel-94)
+        - データベースのワークロードでの検証結果が乗っている
+  - [2024: Stefan Hajnoczi Blog: QEMU AioContext removal and how it was done](https://blog.vmsplice.net/2024/01/qemu-aiocontext-removal-and-how-it-was.html)
+    - Big QEMU Lock、IO Thread、AioContext の話
+  - [2023: VA Linux エンジニアブログ: Qemu のしくみ (の一部)](https://www.valinux.co.jp/blog/entry/20230112)
+    - Big QEMU Lock、IO Thread、AioContext の話
+  - [2024: Oracle Linux Blog: Improve virtio-blk device performance using iothread-vq-mapping](https://blogs.oracle.com/linux/virtioblk-using-iothread-vq-mapping)
+  - [2025: Oracle Linux Blog: Improve virtio-scsi device performance using iothread-vq-mapping](https://blogs.oracle.com/linux/virtio-scsi-device-using-iothread-vq-mapping)
+- virtio-blk と virtio-scsi
+  - virtio-blk
+    - ブロックデバイスの準仮想化インターフェイス
+    - vda, vdb ... のようにデバイス名が付与される
+    - PCI スロットに直接接続されたデバイスとして動作するため、PCI スロット数の制約を受ける（最大 28 デバイス）
+    - ホットスワップ非対応
+  - virtio-scsi
+    - SCSI デバイスの準仮想化インターフェイス
+    - sda, sdb ... のようにデバイス名が付与される
+    - SCSI コントローラとして動作し、その下に数百のディスクを接続できる
+    - ホットスワップ対応
+  - 性能の違い
+    - virtio-blk のほうが scsi のレイヤ分だけレイテンシが低い
+  - 性能重視なら virtio-blk、機能重視なら virtio-scsi を選ぶと良い
+
+### Virtio のキュー
+
+- virtqueue = vCPU 数の場合、各 vCPU ごとに virtqueu が割り当てられる
+- virtqueue = 1 の場合は一つのキューを各 CPU が共有することになる
+
+virtqueue の確認方法
+
+```
+$ virsh qemu-monitor-command 6 --hmp "info virtio"
+/machine/peripheral/balloon0/virtio-backend [virtio-balloon]
+/machine/peripheral/virtio-disk0/virtio-backend [virtio-blk]
+/machine/peripheral/net0/virtio-backend [virtio-net]
+```
+
+```
+$ virsh qemu-monitor-command 6 --hmp "info virtio-status /machine/peripheral/virtio-disk0/virtio-backend"
+/machine/peripheral/virtio-disk0/virtio-backend:
+  device_name:             virtio-blk
+  device_id:               2
+  vhost_started:           false
+  bus_name:                (null)
+  broken:                  false
+  disabled:                false
+  disable_legacy_check:    false
+  started:                 true
+  use_started:             true
+  start_on_kick:           false
+  use_guest_notifier_mask: true
+  vm_running:              true
+  num_vqs:                 4  <-- 4 つのキューがある
+  queue_sel:               3
+  isr:                     1
+  endianness:              little
+  status:
+  ...
+```
+
+```
+$ virsh qemu-monitor-command  6 --hmp "info virtio-queue-status /machine/peripheral/virtio-disk0/virtio-backend 0"
+/machine/peripheral/virtio-disk0/virtio-backend:
+  device_name:          virtio-blk
+  queue_index:          0
+  inuse:                0
+  used_idx:             60079
+  signalled_used:       60079
+  signalled_used_valid: true
+  last_avail_idx:       60079
+  shadow_avail_idx:     60079
+  VRing:
+    num:          256
+    num_default:  256
+    align:        4096
+    desc:         0x000000010c594000
+    avail:        0x000000010c595000
+    used:         0x000000010c595240
+```
 
 ## Network
 
@@ -112,3 +202,7 @@ $ cat /proc/interrupts
  32:          0          0          0          0   PCI-MSI 49155-edge      virtio1-input.1
  33:          0          0          0          0   PCI-MSI 49156-edge      virtio1-output.1
 ```
+
+## Packed Queue
+
+- [2020: Red Hat Blog: Packed virtqueue: How to reduce overhead with virtio](https://www.redhat.com/en/blog/packed-virtqueue-how-reduce-overhead-virtio)
