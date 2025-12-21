@@ -203,6 +203,53 @@ $ cat /proc/interrupts
  33:          0          0          0          0   PCI-MSI 49156-edge      virtio1-output.1
 ```
 
-## Packed Queue
+## Split virtqueue / Packed virtqueue
 
+参考
+
+- [2020: Red Hat Blog: Virtio devices and drivers overview: The headjack and the phone](https://www.redhat.com/en/blog/virtio-devices-and-drivers-overview-headjack-and-phone)
+- [2020: Red Hat Blog: Virtqueues and virtio ring: How the data travels](https://www.redhat.com/en/blog/virtqueues-and-virtio-ring-how-data-travels)
 - [2020: Red Hat Blog: Packed virtqueue: How to reduce overhead with virtio](https://www.redhat.com/en/blog/packed-virtqueue-how-reduce-overhead-virtio)
+
+1. Split Virtqueue（分割型）の課題：非効率なメモリ使用
+
+- 従来の「Split Virtqueue」は設計がシンプルで優れていましたが、根本的な問題を抱えていました。
+- メモリの分散: 「Descriptor Table」「Available Ring」「Used Ring」という 3 つのエリアがメモリ上の別々の場所に配置されています。
+  - Descriptor Table: データ本体が置かれているアドレスとサイズのリスト。
+  - Available Ring: ドライバーが「これを使って」とデバイスに指示するインデックスのリスト。
+  - Used Ring: デバイスが「処理が終わったよ」と報告するインデックスのリスト。
+- キャッシュへの負荷: データの読み書きの際、CPU がこれら離れたメモリ領域を何度も参照する必要があり、キャッシュ効率が低下します。
+- ハードウェアへの影響: NIC などのハードウェア実装においては、1 つのデスクリプタ（記述子）を処理するために複数の PCI トランザクションが発生し、遅延の原因となっていました。
+
+2. Packed Virtqueue（パケット型）による解決
+
+- virtio 1.1 で導入された「Packed Virtqueue」は、「Descriptor Table」「Available Ring」「Used Ring」という 3 つのリングをゲストメモリ上の 1 つのリング（Descriptor Ring）に統合します。
+- 考え方: デバイスがドライバーから読み取ったデータは上書きしてよいという性質を利用し、同じメモリ領域を循環させて利用します。
+- フラグによる所有権管理（Wrap Counter 方式）
+  - リングが統合されたことで「どの項目が未処理で、どれが処理済みか」を判別する必要があります。そこで導入されたのが**ラップカウンター（Wrap Counter）**です。
+  - 仕組み: ドライバーとデバイスは、リストを一周するたびに反転する「1 ビットの変数（0 or 1）」を各自で持っています。
+  - 所有権の判定: \* ドライバーはデータを置くとき、その項目の AVAIL フラグ を自分の現在のカウンター値に書き換えます。
+    - デバイスは、その項目の AVAIL フラグ が自分のカウンター値と一致していれば「自分の番だ」と認識します。
+    - 処理が終わると、デバイスは USED フラグ を更新してドライバーに返却します。
+  - これにより、インデックスを管理する別個のリングを参照する必要がなくなり、**「リストの次の要素を見るだけ」**で処理が完結します。
+- メリット
+  - メモリの局所性（Locality）
+    - データがメモリ上の 1 か所に固まっているため、CPU のプリフェッチ機能が効きやすくなり、キャッシュヒット率が劇的に向上します。
+  - インオーダー（順序通り）処理の効率化
+    - 多くのパケット処理では、データは投入した順番に処理されます。Packed Virtqueue はこの「順番通り」の処理に特化しており、複数の記述子をまとめてバッチ処理する際のオーバーヘッドが極めて小さくなっています。
+  - ハードウェア・オフロードへの適性
+    - スマート NIC（DPU）などのハードウェアで virtio を動かす場合、メモリへのアクセス回数を減らすことは消費電力の削減とスループットの向上に直結します。Packed Virtqueue はハードウェアが読み取るべきデータ量を最小限にするよう設計されています。
+
+実際どうなの？
+
+- パケットサイズ 64 バイトにおいて 約 15〜20% の性能向上が期待できる
+  - 1500 バイトのような大きなパケットでは帯域幅（40Gbps/100Gbps）の上限に達してしまい、差が見えないことがあります。
+  - Packed Virtqueue の真価は、CPU 負荷が高いショートパケット（64B）の大量転送時に現れます。
+- データプレーンによる違い
+  - vhost-net
+    - カーネルの処理オーバーヘッドが大きいため、Virtqueue 自体の改善効果はあまりみられない?
+  - DPDK(vhost-user)
+    - [DPDK Performance Reports](https://fast.dpdk.org/doc/perf/)
+      - パケットサイズが小さい(64B)場合、Packed Virtqueue の方が Split よりも 約 5% 〜 15% 高いスループット (Mpps) を記録する傾向があります。
+  - ハードウェア (vDPA / SmartNIC)
+    - PCI アクセスが激減するため、スループットとレイテンシの両方で劇的な向上が期待できる
