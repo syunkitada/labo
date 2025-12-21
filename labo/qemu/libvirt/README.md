@@ -1,5 +1,7 @@
 # Libvirt
 
+https://libvirt.org/formatdomain.html
+
 ## domxml-to-native
 
 ```
@@ -21,4 +23,25 @@ https://libvirt.org/drvqemu.html#pass-through-of-arbitrary-qemu-commands
     <qemu:env name='QEMU_ENV' value='VAL'/>
   </qemu:commandline>
 </domain>
+```
+
+## Get UUID
+
+```
+$ sudo virsh sysinfo | grep uuid
+    <entry name='uuid'>c00017b6-f84d-0000-0000-000000000000</entry>
+
+$ sudo virsh capabilities | grep uuid
+    <uuid>c00017b6-f84d-0000-0000-000000000000</uuid>
+
+$ sudo dmidecode | grep -i uuid
+        UUID: c00017b6-f84d-0000-0000-000000000000
+```
+
+## Other
+
+```
+virsh -c test+ssh://root@host/default list
+
+virsh -c .... migrate --live hoge ...
 ```

@@ -1,3 +1,8 @@
+.PHONY: env
+env:
+	sudo uv run ansible-playbook labo.infra.labo
+	sudo uv run mylabo apply -f manifests/dns
+
 .PHONY: test
 test:
 	uv run pytest --cov --cov-report=term-missing

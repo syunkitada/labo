@@ -1,0 +1,21 @@
+services:
+  mariadb:
+    container_name: playground-mariadb
+    image: mariadb:11.4
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_USER: system
+      MARIADB_PASSWORD: ${MARIADB_SYSTEM_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./my.cnf.d/server.cnf:/etc/my.cnf.d/server.cnf:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mariadb-data:

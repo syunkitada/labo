@@ -1,0 +1,15 @@
+[Unit]
+Description=Initial labo-init job
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/labo/bin/labo-init
+RemainAfterExit=yes
+TimeoutSec=60
+
+# Output needs to appear in instance console output
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

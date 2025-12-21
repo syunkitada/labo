@@ -25,7 +25,6 @@ class VMImage(resource.Resource):
         self.c = node_context.NodeContext(manifest)
         self.manifest = manifest
         self.spec = manifest["spec"]
-        self.c = node_context.NodeContext(manifest)
 
     def get(self):
         self._prepare()
@@ -49,7 +48,11 @@ class VMImage(resource.Resource):
 
     def delete(self):
         self._prepare()
-        pass
+        if os.path.exists(self.manifest["_local_vm_image_path"]):
+            os.remove(self.manifest["_local_vm_image_path"])
+            print(f"Deleted: {self.manifest['_local_vm_image_path']}")
+        else:
+            print(f"Image not found: {self.manifest['_local_vm_image_path']}")
 
     def test(self):
         pass
@@ -65,11 +68,11 @@ class VMImage(resource.Resource):
         self._umount(tmp_mount_path)
 
         if "expand" in self.spec:
-            self.c.sudo(
+            self.c.c.sudo(
                 f"cp {self.manifest['_local_vm_image_base_path']} {tmp_base_image_path}"
             )
 
-            result = self.c.sudo(
+            result = self.c.c.sudo(
                 f"virt-filesystems --long --parts --blkdevs -h -a {tmp_base_image_path}"
             )
             device_size = ""
@@ -92,12 +95,12 @@ class VMImage(resource.Resource):
             ) / (1024 * 1024 * 1024)
             size = "{:.1f}G".format(size)
 
-            self.c.sudo(f"qemu-img create -f qcow2 {tmp_image_path} {size}")
-            self.c.sudo(
+            self.c.c.sudo(f"qemu-img create -f qcow2 {tmp_image_path} {size}")
+            self.c.c.sudo(
                 f"virt-resize --align-first never --expand {root_part} {tmp_base_image_path} {tmp_image_path}"
             )
         else:
-            self.c.sudo(
+            self.c.c.sudo(
                 f"cp {self.manifest['_local_vm_image_base_path']} {tmp_image_path}"
             )
 
@@ -107,10 +110,10 @@ class VMImage(resource.Resource):
         self.run_steps(tmp_mount_path)
 
         if "expand" in self.spec:
-            self.c.sudo(f"chroot {tmp_mount_path} grub-install /dev/nbd0")
+            self.c.c.sudo(f"chroot {tmp_mount_path} grub-install /dev/nbd0")
 
         self._umount(tmp_mount_path)
-        self.c.sudo(f"cp {tmp_image_path} {self.manifest['_local_vm_image_path']}")
+        self.c.c.sudo(f"cp {tmp_image_path} {self.manifest['_local_vm_image_path']}")
         return
 
     def run_steps(self, mount_path):
@@ -118,7 +121,7 @@ class VMImage(resource.Resource):
             print("step", step)
             if "file" in step:
                 src_path = os.path.join(
-                    self.manifest["_manifest_dirpath"], step["file"]["src"]
+                    self.manifest["_manifest_dir"], step["file"]["src"]
                 )
                 if not os.path.exists(src_path):
                     raise Exception(f"src_path is not exists: {src_path}")
@@ -127,28 +130,28 @@ class VMImage(resource.Resource):
                     dst = dst[1:]
                 dst_path = os.path.join(mount_path, dst)
                 dst_dir_path = os.path.dirname(dst_path)
-                self.c.sudo(f"mkdir -p {dst_dir_path}")
-                self.c.sudo(f"cp -r {src_path} {dst_path}")
+                self.c.c.sudo(f"mkdir -p {dst_dir_path}")
+                self.c.c.sudo(f"cp -r {src_path} {dst_path}")
                 if "mode" in step["file"]:
-                    self.c.sudo(f"chmod {str(step['file']['mode'])} {dst_path}")
+                    self.c.c.sudo(f"chmod {str(step['file']['mode'])} {dst_path}")
             elif "cmd" in step:
-                self.c.sudo(f"chroot {mount_path} sh -xec '{step['cmd']}'")
+                self.c.c.sudo(f"chroot {mount_path} sh -xec '{step['cmd']}'")
 
     def _umount(self, mount_path: str):
-        self.c.sudo(f"umount {mount_path}/dev", warn=True, hide=True)
-        self.c.sudo(f"umount {mount_path}/proc", warn=True, hide=True)
-        self.c.sudo(f"umount {mount_path}/sys", warn=True, hide=True)
-        self.c.sudo(f"umount {mount_path}", warn=True, hide=True)
-        self.c.sudo("qemu-nbd --disconnect /dev/nbd0", warn=True, hide=True)
+        self.c.c.sudo(f"umount {mount_path}/dev", warn=True, hide=True)
+        self.c.c.sudo(f"umount {mount_path}/proc", warn=True, hide=True)
+        self.c.c.sudo(f"umount {mount_path}/sys", warn=True, hide=True)
+        self.c.c.sudo(f"umount {mount_path}", warn=True, hide=True)
+        self.c.c.sudo("qemu-nbd --disconnect /dev/nbd0", warn=True, hide=True)
         print(f"umount {mount_path}")
 
     def _mount(self, image_path, mount_path: str):
-        self.c.sudo("modprobe nbd max_part=63")
+        self.c.c.sudo("modprobe nbd max_part=63")
         self._umount(mount_path)
         os.makedirs(mount_path, exist_ok=True)
-        self.c.sudo(f"qemu-nbd -c /dev/nbd0 {image_path}")
+        self.c.c.sudo(f"qemu-nbd -c /dev/nbd0 {image_path}")
 
-        result = self.c.sudo("/sbin/fdisk -l -u /dev/nbd0")
+        result = self.c.c.sudo("/sbin/fdisk -l -u /dev/nbd0")
         linux_filesystem_device = ""
         for line in result.stdout.splitlines():
             if re.match(".* Linux root .*", line):
@@ -159,10 +162,10 @@ class VMImage(resource.Resource):
         if linux_filesystem_device == "":
             raise Exception("linux_filesystem_device is not found")
 
-        self.c.sudo(f"mount {linux_filesystem_device} {mount_path}")
-        self.c.sudo(f"mount -o bind /dev {mount_path}/dev")
-        self.c.sudo(f"mount -o bind /proc {mount_path}/proc")
-        self.c.sudo(f"mount -o bind /sys {mount_path}/sys")
+        self.c.c.sudo(f"mount {linux_filesystem_device} {mount_path}")
+        self.c.c.sudo(f"mount -o bind /dev {mount_path}/dev")
+        self.c.c.sudo(f"mount -o bind /proc {mount_path}/proc")
+        self.c.c.sudo(f"mount -o bind /sys {mount_path}/sys")
         print(f"image_path={image_path}")
         print(f"mount_path={mount_path}")
 
@@ -189,21 +192,23 @@ class VMImage(resource.Resource):
 
         tmp_image_path = f"/tmp/{image_name}.tmp"
         if not os.path.exists(tmp_image_path):
-            result = self.c.sudo(f"wget -O {tmp_image_path} {image_from}", warn=True)
+            result = self.c.c.sudo(f"wget -O {tmp_image_path} {image_from}", warn=True)
             if result.failed:
                 os.remove(tmp_image_path)
                 raise Exception(f"Failed to wget: {image_from}")
 
-        result = self.c.sudo(f"file {tmp_image_path}")
+        result = self.c.c.sudo(f"file {tmp_image_path}")
         file_info = result.stdout
         if "XZ compressed data" in file_info:
-            self.c.sudo(f"mv {tmp_image_path} {tmp_image_path}.xz")
-            self.c.sudo(f"xz -d {tmp_image_path}.xz")
-            result = self.c.sudo(f"file {tmp_image_path}")
+            self.c.c.sudo(f"mv {tmp_image_path} {tmp_image_path}.xz")
+            self.c.c.sudo(f"xz -d {tmp_image_path}.xz")
+            result = self.c.c.sudo(f"file {tmp_image_path}")
             file_info = result.stdout
 
         if "QCOW" in file_info:
-            self.c.sudo(f"cp {tmp_image_path} {self.manifest['_local_vm_image_path']}")
-            self.c.sudo(f"rm {tmp_image_path}")
+            self.c.c.sudo(
+                f"cp {tmp_image_path} {self.manifest['_local_vm_image_path']}"
+            )
+            self.c.c.sudo(f"rm {tmp_image_path}")
         else:
             raise Exception(f"Unsupported image format: {file_info}")

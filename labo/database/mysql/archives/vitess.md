@@ -4,10 +4,10 @@
 
 - https://vitess.io/getting-started/
 
-### etcd-operatorをインストール
+### etcd-operator をインストール
 
 - https://github.com/coreos/etcd-operator/blob/master/doc/user/install_guide.md
-  - 公式通りでOK
+  - 公式通りで OK
 
 ```
 $ kubectl get pod
@@ -15,7 +15,7 @@ NAME                             READY     STATUS    RESTARTS   AGE
 etcd-operator-69b559656f-rvx4t   1/1       Running   0          4h
 ```
 
-### vtctlclientをインストール
+### vtctlclient をインストール
 
 ```
 $ wget https://dl.google.com/go/go1.10.1.linux-amd64.tar.gz
@@ -28,20 +28,20 @@ $ go/bin/vtctlclient -h
 ...
 ```
 
-### exampleを試す
+### example を試す
 
-- $HOME/go/src/vitess.io/vitess/examples/kubernetes にexampleがある
+- $HOME/go/src/vitess.io/vitess/examples/kubernetes に example がある
 - https://vitess.io/getting-started/
 
-  - 基本的には公式通りでOK
-  - vtctldなどが動かない場合
+  - 基本的には公式通りで OK
+  - vtctld などが動かない場合
     - 実行オプションが間違って起動できてない場合があるので、イメージを書き換える
-      - examples/kubernetesディレクトリ内にある、テンプレート(vtctld-controller-template.yamlなど)のイメージを書き換える
+      - examples/kubernetes ディレクトリ内にある、テンプレート(vtctld-controller-template.yaml など)のイメージを書き換える
       - "image: {{vitess_image}}" を "image: vitess/lite:v2.1" に書き換えた
     - CPU、メモリのリソース不足で動かない場合がある
-      - テンプレートのresouceの項目を消して制限を外す
+      - テンプレートの resouce の項目を消して制限を外す
 
-- ./kvtctl.sh 使ってもいいが、vtctlclientを直接使ってもOK
+- ./kvtctl.sh 使ってもいいが、vtctlclient を直接使っても OK
 
 ```
 $ kubectl get svc
@@ -51,8 +51,8 @@ vtctld            ClusterIP      10.32.132.65    <none>        15000/TCP,15999/T
 $ ~/go/bin/vtctlclient -server 10.32.132.65:15999 help
 ```
 
-- 中身はmysql
-  - grpc経由でmysqlを叩いてる
+- 中身は mysql
+  - grpc 経由で mysql を叩いてる
 
 ```
 $ ~/go/bin/vtctlclient -server 10.32.132.65:15999 ExecuteFetchAsDba test-0000000100 "show tables"
@@ -107,7 +107,7 @@ $ ~/go/bin/vtctlclient -server 10.32.132.65:15999 ExecuteFetchAsDba test-0000000
 +--------------------------+----------+--------------+------------------+-------------------------------------------+
 ```
 
-- masterに対して、replica, rdonlyがslaveとして稼働している
+- master に対して、replica, rdonly が slave として稼働している
 
 ```
 $ ~/go/bin/vtctlclient -server 10.32.132.65:15999 ListAllTablets test
@@ -134,15 +134,15 @@ $ ~/go/bin/vtctlclient -server 10.32.132.65:15999 ExecuteFetchAsDba test-0000000
  Waiting for master to send      10.200.204.19
 ```
 
-- guestbookもexample/kubernetesの配下においてある
+- guestbook も example/kubernetes の配下においてある
 
   - guestbook/main.py
-    - webフレームワークはFlaskを利用
-    - DBへのアクセスは、vtgate_clientを利用
-      - 書き込み(INSERT)は、masterを利用して、読み込み(SELECT)はreplicaを利用している
-      - 加えて、keyspaceを設定すれば、grpcがよしなにルーティングして処理してくれる
+    - web フレームワークは Flask を利用
+    - DB へのアクセスは、vtgate_client を利用
+      - 書き込み(INSERT)は、master を利用して、読み込み(SELECT)は replica を利用している
+      - 加えて、keyspace を設定すれば、grpc がよしなにルーティングして処理してくれる
 
-- masterをdeleteしてみる
+- master を delete してみる
 
 ```
 $ kubectl delete pod vttablet-100

@@ -1,0 +1,55 @@
+acl:
+  - 0.0.0.0/0
+
+binds:
+  - listen_address: "0.0.0.0:53"
+    reuseport: true
+    protocol: Do53
+    threads: 2
+
+pools:
+  - name: default
+  - name: google
+
+backends:
+  - address: "10.53.53.3:1053"
+    protocol: Do53
+    pools:
+      - auth
+  - address: "10.53.53.4:2053"
+    protocol: Do53
+    pools:
+      - recursor
+
+query_rules:
+  - name: "auth"
+    selector:
+      type: QNameSuffix
+      suffixes:
+        - "test"
+    action:
+      type: Pool
+      pool_name: auth
+
+  - name: "recursor"
+    selector:
+      type: All
+    action:
+      type: Pool
+      pool_name: recursor
+
+webserver:
+  listen_addresses:
+    - "0.0.0.0:8080"
+  acl:
+    - 0.0.0.0/0
+  password: "@DNSDIST_API_KEY"
+  api_key: "@DNSDIST_API_KEY"
+  hash_plaintext_credentials: true
+  api_requires_authentication: false
+
+console:
+  listen_address: "0.0.0.0:5199"
+  key: "pVC5gO/HECwOfgFzQDjAy6v5mWYmpwcj2h546GjqDgg="
+  acl:
+    - 0.0.0.0/0
