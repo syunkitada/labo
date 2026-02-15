@@ -1,0 +1,53 @@
+services:
+  grafana:
+    image: grafana/grafana:12.3
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - "grafana-data:/var/lib/grafana"
+    ports:
+      - "3000:3000"
+    restart: always
+
+  grafana-loki:
+    image: grafana/loki:3.5.10
+    ports:
+      - "3100:3100"
+    volumes:
+      - "grafana-loki-data:/loki"
+      # - "./grafana-loki/loki-config.yaml:/mnt/config/loki-config.yaml"
+    restart: always
+
+  victoriametrics-main:
+    container_name: victoriametrics
+    image: victoriametrics/victoria-metrics:v1.135.0
+    ports:
+      - "9999:9999"
+    volumes:
+      - "victoriametrics-main-data:/storage"
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:9999"
+    restart: always
+
+  victoriametrics-vmagent:
+    container_name: vmagent
+    image: victoriametrics/vmagent:v1.135.0
+    depends_on:
+      - "victoriametrics-main"
+    ports:
+      - "8429:8429"
+    volumes:
+      - "victoriametrics-vmagent-data:/vmagentdata"
+      - "./victoriametrics/scrape_config.yml:/etc/prometheus/scrape_config.yml"
+    command:
+      - "--promscrape.config=/etc/prometheus/scrape_config.yml"
+      - "--remoteWrite.url=http://victoriametrics-main:9999/api/v1/write"
+    restart: always
+
+volumes:
+  grafana-data:
+  grafana-loki-data:
+  victoriametrics-main-data:
+  victoriametrics-vmagent-data:
