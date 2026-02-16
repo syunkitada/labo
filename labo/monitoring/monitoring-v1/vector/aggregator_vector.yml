@@ -1,0 +1,40 @@
+# https://vector.dev/docs/reference/configuration/
+api:
+  enabled: false
+  playground: false
+
+sources:
+  internal_logs:
+    type: internal_logs
+
+  kafka:
+    type: kafka
+    bootstrap_servers: monitoring-kafka:29092
+    group_id: log-consumer-group
+    topics:
+      - common-logs
+
+transforms:
+  kafka_transform:
+    type: remap
+    inputs:
+      - kafka
+    source: >-
+      .ddsource = "kafka"
+
+      .ddtags = "env:dev,region:tokyo1,service:vector-log-poc"
+
+      .service = "vector-log-poc"
+
+sinks:
+  # Reference: https://vector.dev/docs/reference/configuration/sinks/loki/
+  grafana_loki:
+    type: loki
+    encoding:
+      codec: "json"
+    labels:
+      dummy: "value"
+    inputs:
+      - internal_logs
+      - kafka_transform
+    endpoint: http://monitoring-grafana-loki:3100
