@@ -12,14 +12,14 @@ sources:
     bootstrap_servers: monitoring-kafka:29092
     group_id: log-consumer-group
     topics:
-      - common-logs
+      - mylabo-logs
 
 transforms:
   kafka_transform:
     type: remap
     inputs:
       - kafka
-    source: >-
+    source: |-
       .ddsource = "kafka"
 
       .ddtags = "env:dev,region:tokyo1,service:vector-log-poc"
@@ -38,3 +38,9 @@ sinks:
       - internal_logs
       - kafka_transform
     endpoint: http://monitoring-grafana-loki:3100
+
+  prometheus:
+    type: prometheus_exporter
+    inputs:
+      - vector_metrics
+    address: "0.0.0.0:9598"

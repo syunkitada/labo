@@ -13,20 +13,24 @@ services:
     ports:
       - "3000:3000"
 
-  grafana-loki:
-    container_name: monitoring-grafana-loki
-    image: grafana/loki:3.5.10
+  # ----------------------------------------------------------------------------------------------------
+  # Metrics and alerting components
+  # ----------------------------------------------------------------------------------------------------
+  prometheus-alertmanager:
+    container_name: monitoring-prometheus-alertmanager
+    restart: always
+    image: prom/alertmanager:v0.31.1
     ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki-config.yaml
+      - "9093:9093"
     volumes:
-      - "grafana-loki-data:/loki"
-      - "./grafana-loki/loki-config.yaml:/etc/loki-config.yaml"
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml
 
   victoriametrics:
     container_name: monitoring-victoriametrics
     restart: always
     image: victoriametrics/victoria-metrics:v1.135.0
+    depends_on:
+      - "prometheus-alertmanager"
     ports:
       - "9999:9999"
     volumes:
@@ -35,6 +39,9 @@ services:
       - "--storageDataPath=/storage"
       - "--httpListenAddr=:9999"
 
+  # ----------------------------------------------------------------------------------------------------
+  # Log components
+  # ----------------------------------------------------------------------------------------------------
   victoriametrics-vmagent:
     container_name: monitoring-victoriametrics-vmagent
     restart: always
@@ -100,28 +107,58 @@ services:
       - -c
       - >
         echo Initializing Kafka topics... &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server monitoring-kafka:29092 --create --topic common-logs || echo "Already created" &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server monitoring-kafka:29092 --create --topic mylabo-logs || echo "Already created" &&
         echo Kafka topics created successfully.
+
+  grafana-loki:
+    container_name: monitoring-grafana-loki
+    image: grafana/loki:3.5.10
+    ports:
+      - "3100:3100"
+    command: -config.file=/opt/grafana-loki/config.yaml
+    volumes:
+      - "grafana-loki-data:/loki"
+      - "./grafana-loki/config.yaml:/opt/grafana-loki/config.yaml"
 
   vector-aggregator:
     container_name: monitoring-vector-aggregator
     restart: always
-    image: timberio/vector:0.53.0-alpine
+    image: timberio/vector:0.53.0-debian
     depends_on:
       - kafka
+      - grafana-loki
+    ports:
+      - "9599:9599"
     volumes:
       - ./vector/aggregator_vector.yml:/etc/vector/vector.yml
     command: ["--config", "/etc/vector/vector.yml"]
 
-  prometheus-alertmanager:
-    container_name: monitoring-prometheus-alertmanager
+  # ----------------------------------------------------------------------------------------------------
+  # Node components
+  # ----------------------------------------------------------------------------------------------------
+  vector-agent:
+    container_name: monitoring-vector-agent
     restart: always
-    image: prom/alertmanager:v0.31.1
+    image: timberio/vector:0.53.0-debian
+    depends_on:
+      - kafka
     ports:
-      - "9093:9093"
+      - "9598:9598"
     volumes:
-      - ./alertmanager/config.yml:/etc/alertmanager/config.yml
+      - ./vector/agent_vector.yml:/etc/vector/vector.yml
+      - /var/log/journal:/var/log/journal:ro
+    command: ["--config", "/etc/vector/vector.yml"]
 
+  prometheus-node-exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: monitoring-prometheus-node-exporter
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host
+    pid: host
+    restart: always
+    volumes:
+      - '/:/host:ro,rslave'
 
 volumes:
   grafana-data:
