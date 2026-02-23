@@ -4,6 +4,7 @@
 - VictoriaMetrics UI: http://dev01.pm.local.test:9999/vmui
 - Kafka UI: http://dev01.pm.local.test:9090/
 - Alertmanager: http://dev01.pm.local.test:9093/
+- RustFS: http://dev01.pm.local.test:9001/
 
 Prometheus metrics endpoints
 

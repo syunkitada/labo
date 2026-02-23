@@ -13,6 +13,23 @@ services:
     ports:
       - "3000:3000"
 
+  # S3 compatible object storage
+  rustfs:
+    container_name: monitoring-rustfs
+    restart: always
+    image: rustfs/rustfs:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - RUSTFS_ADDRESS=0.0.0.0:9000
+      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+      - RUSTFS_ACCESS_KEY=admin
+      - RUSTFS_SECRET_KEY=admin
+      - RUSTFS_CONSOLE_ENABLE=true
+    volumes:
+      - rustfs-data:/data
+
   # ----------------------------------------------------------------------------------------------------
   # Metrics and alerting components
   # ----------------------------------------------------------------------------------------------------
@@ -165,3 +182,4 @@ volumes:
   grafana-loki-data:
   victoriametrics-data:
   victoriametrics-vmagent-data:
+  rustfs-data:
