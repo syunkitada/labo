@@ -1,0 +1,13 @@
+name: openstack-2025-2
+
+services:
+  openstack-allinone:
+    container_name: openstack-2025-2
+    hostname: openstack-allinone
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - "./opt:/opt/openstack:ro"
+    privileged: true
+    cgroup_parent: docker.slice
