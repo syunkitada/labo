@@ -5,7 +5,7 @@ incoming:
   allow_from:
     - 0.0.0.0/0
     - "::/0"
-  port: 2053
+  port: 1153
   tcp_fast_open: 100
 outgoing:
   tcp_fast_open_connect: true

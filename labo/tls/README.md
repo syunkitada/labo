@@ -1,8 +1,8 @@
 # TLS
 
-以下のコマンドにより、Labo用の証明書を作成することができます。
+以下のコマンドにより、mylabo用の証明書を作成することができます。
 
-このコマンドは、Laboの初期セットアップ時のmake内部でも呼び出されています。
+このコマンドは、mylaboの初期セットアップ時のmake内部でも呼び出されています。
 
 ```
 $ make
@@ -12,7 +12,7 @@ $ make
 
 ```
 $ ls /etc/labo/tls-assets/
-ca/  localhost.test/
+ca/  svc.local.test/
 ```
 
 次に、CA用の証明書(ca.pem)を、サーバやブラウザなどで事前に信頼させておいてください。
@@ -25,13 +25,13 @@ makeを実行したサーバでは、この証明書を信頼する設定も自�
 $ cat /etc/labo/tls-assets/ca/ca-certs/ca.pem
 ```
 
-"localhost.test" ディレクトリには、以下のファイルが生成されています。
+"svc.local.test" ディレクトリには、以下のファイルが生成されています。
 
 ```
-$ ls /etc/labo/tls-assets/localhost.test/
+$ ls /etc/labo/tls-assets/svc.local.test/
 server-csr.json  server-key.pem  server.csr  server.pem
 ```
 
-server-key.pem, server.pem をWEBサーバに読み込ませることで、"\*.localhost.test" でのTLS通信が利用できるようになります。
+server-key.pem, server.pem をWEBサーバに読み込ませることで、"\*.svc.local.test" でのTLS通信が利用できるようになります。
 
 例: [nginxで利用する例](../webserver/nginx/plgyground-tls/)

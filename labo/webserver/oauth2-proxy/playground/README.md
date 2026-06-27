@@ -11,8 +11,8 @@ https://github.com/settings/applications/new
 入力項目:
 
 - Application name: myapp
-- Homepage URL: https://myapp.localhost.test
-- Authorization callback URL: https://myapp.localhost.test
+- Homepage URL: https://myapp.local.test
+- Authorization callback URL: https://myapp.local.test
 
 アプリケーションが作成で来たら、client_id、client_secret をメモしておきます。
 
@@ -42,12 +42,12 @@ $ make clean
 
 ### Access to your web site
 
-myapp.localhost.test にアクセスできるよう、/etc/hosts にエントリを記載しておきます。
+myapp.local.test にアクセスできるよう、/etc/hosts にエントリを記載しておきます。
 
 ```
-[your server ip]   myapp.localhost.test
+[your server ip]   myapp.local.test
 ```
 
 ブラウザから、以下のアドレスにアクセスして、GitHubの認証を通してWebページにアクセスできることを確認してください。
 
-https://myapp.localhost.test
+https://myapp.local.test

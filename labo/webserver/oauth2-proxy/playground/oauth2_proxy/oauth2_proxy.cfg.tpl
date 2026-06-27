@@ -1,6 +1,6 @@
 http_address = "127.0.0.1:4180"
 
-redirect_url="https://myapp.localhost.test/oauth2/callback"
+redirect_url="https://myapp.local.test/oauth2/callback"
 upstreams = "http://127.0.0.1/"
 
 provider = "github"

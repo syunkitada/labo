@@ -1,6 +1,7 @@
 .PHONY: all
 all:
 	sudo docker compose up -d
+	@make status
 
 .PHONY: status
 status:

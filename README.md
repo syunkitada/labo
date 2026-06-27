@@ -28,7 +28,7 @@ $ uv pip install -e .
 
 ```
 $ sudo mkdir -p /etc/ansible/host_vars
-$ cp etc/ansible/host_vars/localhost.yml /etc/ansible/host_vars/localhost.yaml
+$ sudo cp etc/ansible/host_vars/localhost.yml /etc/ansible/host_vars/localhost.yaml
 $ vim /etc/ansible/host_vars/localhost.yaml
 < local_ipaddr: "{{ CHANGE_ME }}"
 ---
@@ -43,6 +43,9 @@ $ cd labo/tls; make; cd -
 
 ```
 $ make
+
+# Apply DNS manifests
+$	sudo uv run mylabo apply -f manifests/dns
 ```
 
 ## How to use mylabo

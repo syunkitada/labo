@@ -1,6 +1,6 @@
 services:
-  pdns-mysql:
-    container_name: playground-pdns-mysql
+  mylabo-pdns-mysql:
+    container_name: mylabo-pdns-mysql
     image: mysql:9.5
     restart: always
     environment:
@@ -8,20 +8,22 @@ services:
       MYSQL_USER: system
       MYSQL_PASSWORD: ${MYSQL_SYSTEM_PASSWORD}
     volumes:
-      - pdns-mysql-data:/var/lib/mysql
+      - mylabo-pdns-mysql-data:/var/lib/mysql
       - ./pdns-mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./pdns-mysql/my.cnf.d/server.cnf:/etc/my.cnf.d/server.cnf:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      test: [
+        "CMD", "mysql", "-usystem", "-p${MYSQL_SYSTEM_PASSWORD}", "-e",
+        "select * from pdns.records where name = 'sample.test';"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      playground-pdns:
+      mylabo-pdns:
         ipv4_address: 10.53.53.2
 
-  pdns-auth:
-    container_name: playground-pdns-auth
+  mylabo-pdns-auth:
+    container_name: mylabo-pdns-auth
     image: powerdns/pdns-auth-49:4.9.11
     restart: always
     entrypoint:
@@ -29,7 +31,7 @@ services:
       - "--"
       - "/pdns-auth/startup.sh"
     depends_on:
-      pdns-mysql:
+      mylabo-pdns-mysql:
         condition: service_healthy
     environment:
       PDNS_AUTH_API_KEY: ${PDNS_AUTH_API_KEY}
@@ -38,7 +40,7 @@ services:
       - ./pdns-auth/pdns.conf:/etc/powerdns/pdns.conf:ro
       - ./pdns-auth:/pdns-auth:ro
     healthcheck:
-      test: ["CMD", "pdns_control", "rping"]
+      test: ["CMD", "sleep", "3s"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,11 +48,11 @@ services:
       - "1053:1053/udp"
       - "1053:1053/tcp"
     networks:
-      playground-pdns:
+      mylabo-pdns:
         ipv4_address: 10.53.53.3
 
-  pdns-recursor:
-    container_name: playground-pdns-recursor
+  mylabo-pdns-recursor:
+    container_name: mylabo-pdns-recursor
     image: powerdns/pdns-recursor-53:5.3.1
     restart: always
     entrypoint:
@@ -74,14 +76,14 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "2053:2053/udp"
-      - "2053:2053/tcp"
+      - "1153:1153/udp"
+      - "1153:1153/tcp"
     networks:
-      playground-pdns:
+      mylabo-pdns:
         ipv4_address: 10.53.53.4
 
-  pdns-dnsdist:
-    container_name: playground-pdns-dnsdist
+  mylabo-pdns-dnsdist:
+    container_name: mylabo-pdns-dnsdist
     image: powerdns/dnsdist-20:2.0.1
     restart: always
     entrypoint:
@@ -89,46 +91,46 @@ services:
       - "--"
       - "/pdns-dnsdist/startup.sh"
     depends_on:
-      pdns-auth:
+      mylabo-pdns-auth:
         condition: service_healthy
-      pdns-recursor:
+      mylabo-pdns-recursor:
         condition: service_healthy
     ports:
-      - "5353:53/udp"
-      - "5353:53/tcp"
-      - "5380:8080/tcp" # dnsdist web UI
+      - "1253:53/udp"
+      - "1253:53/tcp"
+      - "1280:8080/tcp" # dnsdist web UI
     environment:
       DNSDIST_API_KEY: ${DNSDIST_API_KEY}
     volumes:
       - ./pdns-dnsdist:/pdns-dnsdist:ro
     networks:
-      playground-pdns:
+      mylabo-pdns:
         ipv4_address: 10.53.53.5
 
-  pdns-admin:
+  mylabo-pdns-admin:
     image: powerdnsadmin/pda-legacy:0.4.2
-    container_name: playground-pdns-admin
+    container_name: mylabo-pdns-admin
     restart: always
     depends_on:
-      pdns-auth:
+      mylabo-pdns-auth:
         condition: service_healthy
     ports:
       - "9191:80"
     environment:
       SECRET_KEY: ${PDNS_ADMIN_SECRET_KEY}
-      SQLALCHEMY_DATABASE_URI: mysql://system:${MYSQL_SYSTEM_PASSWORD}@pdns-mysql:3306/pdns
+      SQLALCHEMY_DATABASE_URI: mysql://system:${MYSQL_SYSTEM_PASSWORD}@mylabo-pdns-mysql:3306/pdns
     volumes:
-      - pdns-admin-data:/data
+      - mylabo-pdns-admin-data:/data
     networks:
-      playground-pdns:
+      mylabo-pdns:
         ipv4_address: 10.53.53.6
 
 volumes:
-  pdns-mysql-data:
-  pdns-admin-data:
+  mylabo-pdns-mysql-data:
+  mylabo-pdns-admin-data:
 
 networks:
-  playground-pdns:
+  mylabo-pdns:
     driver: bridge
     ipam:
       config:

@@ -16,7 +16,7 @@ backends:
     protocol: Do53
     pools:
       - auth
-  - address: "10.53.53.4:2053"
+  - address: "10.53.53.4:1153"
     protocol: Do53
     pools:
       - recursor
