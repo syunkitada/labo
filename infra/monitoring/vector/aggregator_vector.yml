@@ -9,10 +9,13 @@ sources:
 
   kafka:
     type: kafka
-    bootstrap_servers: monitoring-kafka:29092
+    bootstrap_servers: 127.0.0.1:29092 # monitoring-kafka:29092
     group_id: log-consumer-group
     topics:
       - mylabo-logs
+
+  vector_metrics:
+    type: internal_metrics
 
 transforms:
   kafka_transform:
@@ -37,10 +40,10 @@ sinks:
     inputs:
       - internal_logs
       - kafka_transform
-    endpoint: http://monitoring-grafana-loki:3100
+    endpoint: http://127.0.0.1:3100 # monitoring-grafana-loki:3100
 
   prometheus:
     type: prometheus_exporter
     inputs:
       - vector_metrics
-    address: "0.0.0.0:9598"
+    address: "0.0.0.0:9599"

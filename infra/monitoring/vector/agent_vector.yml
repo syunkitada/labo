@@ -127,7 +127,7 @@ sinks:
       - infrastructure
     encoding:
       codec: "json"
-    bootstrap_servers: monitoring-kafka:29092
+    bootstrap_servers: 127.0.0.1:29092 # monitoring-kafka:29092
     topic: mylabo-logs
 
   prometheus:

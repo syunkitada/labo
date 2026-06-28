@@ -1,0 +1,11 @@
+groups:
+- name: debug
+  rules:
+  - alert: AlwaysFiring
+    expr: vector(1)
+    for: 0s
+    labels:
+      severity: debug
+    annotations:
+      summary: "This alert always fires"
+      description: "This is a test alert."

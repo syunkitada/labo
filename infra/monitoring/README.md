@@ -1,14 +1,19 @@
 # Monitoring
 
-- Grafana UI: http://dev01.pm.local.test:3000/
+- grafana: http://dev01.pm.local.test:3000
   - user: admin, password: admin
-- VictoriaMetrics UI: http://dev01.pm.local.test:9999/vmui
-- Kafka UI: http://dev01.pm.local.test:9090/
-- Alertmanager: http://dev01.pm.local.test:9093/
-- RustFS: http://dev01.pm.local.test:9001/
+- victoriametrics: http://dev01.pm.local.test:8428/vmui
+- victoriametrics-vmagent: http://dev01.pm.local.test:8429
+- victoriametrics-vmalert: http://dev01.pm.local.test:8880
+- kafka-ui: http://dev01.pm.local.test:9090
+- alertmanager: http://dev01.pm.local.test:9093
+- rustfs: http://dev01.pm.local.test:9001
 
-Prometheus metrics endpoints
+Prometheus metrics endpoints:
 
-- vector-aggregator: localhost:9599/metrics
-- vector-agent: localhost:9598/metrics
-- node-exporter: localhost:9100/metrics
+- victoriametrics: http://dev01.pm.local.test:8428/metrics
+- victoriametrics-vmagent: http://dev01.pm.local.test:8429/metrics
+- victoriametrics-vmalert: http://dev01.pm.local.test:8880/metrics
+- vector-aggregator: http://dev01.pm.local.test:9599/metrics
+- vector-agent: http://dev01.pm.local.test:9598/metrics
+- node-exporter: http://dev01.pm.local.test:9100/metrics
