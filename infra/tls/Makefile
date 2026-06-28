@@ -1,3 +1,4 @@
+.PHONY: all
 all:
 	./scripts/make-ca-certs.sh
 	./scripts/trust-ca-certs.sh

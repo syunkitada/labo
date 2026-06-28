@@ -35,17 +35,10 @@ $ vim /etc/ansible/host_vars/localhost.yaml
 > local_ipaddr: "192.168.XX.YY"
 ```
 
-```
-$ cd labo/tls; make; cd -
-```
-
-### 3. Build mylabo
+### 3. Build mylabo infra
 
 ```
 $ make
-
-# Apply DNS manifests
-$	sudo uv run mylabo apply -f manifests/dns
 ```
 
 ## How to use mylabo

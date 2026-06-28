@@ -11,6 +11,8 @@ services:
       - mylabo-pdns-mysql-data:/var/lib/mysql
       - ./pdns-mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./pdns-mysql/my.cnf.d/server.cnf:/etc/my.cnf.d/server.cnf:ro
+    ports:
+      - "1306:3306/tcp"
     healthcheck:
       test: [
         "CMD", "mysql", "-usystem", "-p${MYSQL_SYSTEM_PASSWORD}", "-e",

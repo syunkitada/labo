@@ -1,5 +1,5 @@
 # Trust self CA cert
-CA_PEM_PATH=/etc/labo/tls-assets/ca/ca-certs/ca.pem
+CA_PEM_PATH=/etc/mylabo/tls-assets/ca/ca-certs/ca.pem
 
 if grep "Ubuntu" /etc/os-release; then
 	sudo cp "${CA_PEM_PATH}" /usr/local/share/ca-certificates/self-ca.crt

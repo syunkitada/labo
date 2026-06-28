@@ -1,15 +1,15 @@
 #!/bin/bash -e
 
-CA_CONFIG_PATH=${CA_CONFIG_PATH:-/etc/labo/tls-assets/ca/ca-config.json}
-CA_CSR_PATH=${CA_CSR_PATH:-/etc/labo/tls-assets/ca/ca-csr.json}
-CA_PEM_PATH=/etc/labo/tls-assets/ca/ca-certs/ca.pem
+CA_CONFIG_PATH=${CA_CONFIG_PATH:-/etc/mylabo/tls-assets/ca/ca-config.json}
+CA_CSR_PATH=${CA_CSR_PATH:-/etc/mylabo/tls-assets/ca/ca-csr.json}
+CA_PEM_PATH=/etc/mylabo/tls-assets/ca/ca-certs/ca.pem
 
 if test -e "${CA_PEM_PATH}"; then
 	echo "SKIPPED: ca-certs is already initialized."
 	exit 0
 fi
 
-sudo mkdir -p /etc/labo/tls-assets/ca
+sudo mkdir -p /etc/mylabo/tls-assets/ca
 
 cat <<EOS | sudo tee "${CA_CONFIG_PATH}"
 {
@@ -29,7 +29,7 @@ EOS
 
 cat <<EOS | sudo tee "${CA_CSR_PATH}"
 {
-  "CN": "Labo",
+  "CN": "mylabo",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -38,7 +38,7 @@ cat <<EOS | sudo tee "${CA_CSR_PATH}"
     {
       "C": "US",
       "L": "Portland",
-      "O": "Labo",
+      "O": "mylabo",
       "OU": "CA",
       "ST": "Oregon"
     }
@@ -46,8 +46,8 @@ cat <<EOS | sudo tee "${CA_CSR_PATH}"
 }
 EOS
 
-sudo mkdir -p /etc/labo/tls-assets/ca/ca-certs
-cd /etc/labo/tls-assets/ca/ca-certs
+sudo mkdir -p /etc/mylabo/tls-assets/ca/ca-certs
+cd /etc/mylabo/tls-assets/ca/ca-certs
 
 # Generate ca
 cfssl gencert -config "${CA_CONFIG_PATH}" -initca "${CA_CSR_PATH}" | sudo cfssljson -bare ca

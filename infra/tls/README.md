@@ -2,8 +2,6 @@
 
 以下のコマンドにより、mylabo用の証明書を作成することができます。
 
-このコマンドは、mylaboの初期セットアップ時のmake内部でも呼び出されています。
-
 ```
 $ make
 ```
@@ -11,7 +9,7 @@ $ make
 上記のコマンド実行が完了すると以下のディレクトリに、CA用の証明書と、サーバ証明書が作成されます。
 
 ```
-$ ls /etc/labo/tls-assets/
+$ ls /etc/mylabo/tls-assets/
 ca/  svc.local.test/
 ```
 
@@ -22,16 +20,18 @@ makeを実行したサーバでは、この証明書を信頼する設定も自�
 サーバでの証明書を信頼する設定は方法は、[trust-ca-certs.sh](./scripts/trust-ca-certs.sh) を参考にしてください。
 
 ```
-$ cat /etc/labo/tls-assets/ca/ca-certs/ca.pem
+$ cat /etc/mylabo/tls-assets/ca/ca-certs/ca.pem
 ```
 
 "svc.local.test" ディレクトリには、以下のファイルが生成されています。
 
 ```
-$ ls /etc/labo/tls-assets/svc.local.test/
-server-csr.json  server-key.pem  server.csr  server.pem
+$ ls /etc/mylabo/tls-assets/svc.local.test/
+server-bundle.pem  server-csr.json  server-key.pem  server.csr  server.pem
 ```
 
-server-key.pem, server.pem をWEBサーバに読み込ませることで、"\*.svc.local.test" でのTLS通信が利用できるようになります。
+server.pem, server-key.pem をWEBサーバに読み込ませることで、"\*.svc.local.test" でのTLS通信が利用できるようになります。
 
-例: [nginxで利用する例](../webserver/nginx/plgyground-tls/)
+nginxでの利用例は、[labo/webserver/nginx/playground-tls](/labo/webserver/nginx/playground-tls/README.md) を参照してください。
+
+server-bundle.pem は、server.pem, server-key.pem をバンドルしたもので、haproxyはこれを読み込ませることで、TLS通信が利用できるようになります。

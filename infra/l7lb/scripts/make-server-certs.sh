@@ -2,12 +2,12 @@
 
 HOSTNAME_SUFFIX=${1:?}
 
-CA_CONFIG_PATH=${CA_CONFIG_PATH:-/etc/labo/tls-assets/ca/ca-config.json}
-CA_CSR_PATH=${CA_CSR_PATH:-/etc/labo/tls-assets/ca/ca-csr.json}
-CA_PEM_PATH=/etc/labo/tls-assets/ca/ca-certs/ca.pem
-CA_KEY_PATH=/etc/labo/tls-assets/ca/ca-certs/ca-key.pem
+CA_CONFIG_PATH=${CA_CONFIG_PATH:-/etc/mylabo/tls-assets/ca/ca-config.json}
+CA_CSR_PATH=${CA_CSR_PATH:-/etc/mylabo/tls-assets/ca/ca-csr.json}
+CA_PEM_PATH=/etc/mylabo/tls-assets/ca/ca-certs/ca.pem
+CA_KEY_PATH=/etc/mylabo/tls-assets/ca/ca-certs/ca-key.pem
 
-SERVER_CERTS_ROOT_DIR="/etc/labo/tls-assets/${HOSTNAME_SUFFIX}"
+SERVER_CERTS_ROOT_DIR="/etc/mylabo/tls-assets/${HOSTNAME_SUFFIX}"
 SERVER_CSR_PATH="${SERVER_CERTS_ROOT_DIR}/server-csr.json"
 
 if test -e "${SERVER_CERTS_ROOT_DIR}"; then
@@ -19,7 +19,7 @@ sudo mkdir -p "${SERVER_CERTS_ROOT_DIR}"
 
 cat <<EOS | sudo tee "${SERVER_CSR_PATH}"
 {
-  "CN": "labo:server",
+  "CN": "mylabo:server",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -28,7 +28,7 @@ cat <<EOS | sudo tee "${SERVER_CSR_PATH}"
     {
       "C": "US",
       "L": "Portland",
-      "O": "labo:server",
+      "O": "mylabo:server",
       "OU": "Kubernetes The Hard Way",
       "ST": "Oregon"
     }
@@ -45,3 +45,8 @@ sudo cfssl gencert \
 	-hostname="*.${HOSTNAME_SUFFIX}" \
 	-profile=server \
 	"${SERVER_CSR_PATH}" | sudo cfssljson -bare server
+
+sudo cat \
+    ${SERVER_CERTS_ROOT_DIR}/server.pem \
+    ${SERVER_CERTS_ROOT_DIR}/server-key.pem \
+    | sudo tee ${SERVER_CERTS_ROOT_DIR}/server-bundle.pem 2&> /dev/null

@@ -1,4 +1,4 @@
-# nginx: playground
+# L7LB
 
 ## セットアップ方法
 
@@ -12,10 +12,10 @@ $ make clean
 
 ## アクセス方法
 
-### サーバのローカルからアクセスする場合
+### ブラウザから
 
 ```
-$ curl https://myapp.svc.local.test:10443/
+https://haproxy.svc.local.test/
 ```
 
 ### Windows リモート端末 からアクセスする場合
@@ -24,12 +24,12 @@ C:\Windows\System32\drivers\etc\hosts に以下の内容を追記してくださ
 
 ```
 /etc/hosts
-192.168.10.121 myapp.svc.local.test
+192.168.10.121 haproxy.svc.local.test
 ```
 
 ブラウザから以下にアクセスできます。
 
-https://myapp.svc.local.test:10443/
+https://haproxy.svc.local.test
 
 ### 証明書エラーが出る場合
 

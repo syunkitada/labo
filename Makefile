@@ -1,6 +1,9 @@
 .PHONY: env
 env:
-	sudo uv run ansible-playbook labo.infra.labo
+	cd infra/dns/ && make && cd -
+	sudo uv run mylabo apply -f manifests/dns
+	cd infra/tls; make; cd -
+	cd infra/l7lb; make; cd -
 
 .PHONY: test
 test:

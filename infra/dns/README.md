@@ -1,4 +1,4 @@
-# PDNS for mylabo
+# DNS
 
 ## Description
 
@@ -26,10 +26,15 @@ $ docker compose up -d
 Verify the setup by querying both internal and external domains:
 
 ```
-$ dig dns01.sample.test @127.0.0.1 -p1253 +time=2 +tries=1 +short
+$ dig +short dns01.sample.test
+10.53.53.3
+```
+
+```
+$ dig +short @127.0.0.1 -p1253 dns01.sample.test
 10.53.53.3
 
-$ dig google.com @127.0.0.1 -p1253 +time=2 +tries=1 +short
+$ dig +short @127.0.0.1 -p1253 google.com
 142.251.42.206
 ```
 

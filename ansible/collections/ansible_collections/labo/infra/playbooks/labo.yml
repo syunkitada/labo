@@ -19,13 +19,11 @@
     #   tags: haproxy_ingress
     - name: libvirt
       tags: libvirt
-    - name: mysql
-      tags: mysql
-      vars:
-        mysql_container_engine: docker
+    # - name: mysql
+    #   tags: mysql
+    #   vars:
+    #     mysql_container_engine: docker
     # - name: postgres
     #   tags: postgres
-    - name: pdns
-      tags: pdns
-    - name: keycloak
-      tags: keycloak
+    # - name: keycloak
+    #   tags: keycloak

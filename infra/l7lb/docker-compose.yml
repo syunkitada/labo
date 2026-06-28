@@ -1,0 +1,21 @@
+services:
+  mylabo-haproxy:
+    container_name: mylabo-haproxy
+    image: haproxy:3.3.1
+    restart: always
+    network_mode: host
+    user: root
+    command: ["-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - /etc/mylabo/tls-assets/svc.local.test/server-bundle.pem:/etc/haproxy/certs/svc.local.test.pem:ro
+
+  mylabo-nginx:
+    container_name: mylabo-nginx
+    image: nginx:latest
+    restart: always
+    network_mode: host
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/mylabo/tls-assets/ca/ca-certs/ca.pem:/usr/share/nginx/download/ca.pem:ro

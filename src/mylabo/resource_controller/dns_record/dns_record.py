@@ -12,7 +12,7 @@ class DNSRecord(resource.Resource):
         self.spec = manifest["spec"]
 
     def get(self):
-        conn = mysql_utils.get_mysql_connection()
+        conn = mysql_utils.get_pdns_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
                 select_domain = "SELECT * FROM records"
@@ -27,7 +27,7 @@ class DNSRecord(resource.Resource):
         record_content = self.spec["content"]
 
         select_domain = "SELECT * FROM domains WHERE name = %s"
-        conn = mysql_utils.get_mysql_connection()
+        conn = mysql_utils.get_pdns_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
                 select_records = "SELECT * FROM records WHERE name = %s AND type = %s;"
@@ -85,7 +85,7 @@ class DNSRecord(resource.Resource):
         record_name = self.manifest["name"]
         record_type = self.spec["type"]
 
-        conn = mysql_utils.get_mysql_connection()
+        conn = mysql_utils.get_pdns_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
                 delete_record = "DELETE FROM records WHERE name = %s AND type = %s"

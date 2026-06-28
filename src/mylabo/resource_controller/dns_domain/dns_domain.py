@@ -24,7 +24,7 @@ class DNSDomain(resource.Resource):
             + " 10800 1800 604800 86400"
         )
 
-        conn = mysql_utils.get_mysql_connection()
+        conn = mysql_utils.get_pdns_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
                 select_domain = "SELECT * FROM domains WHERE name = %s"
@@ -77,7 +77,7 @@ class DNSDomain(resource.Resource):
     def delete(self):
         domain_name = self.manifest["name"]
 
-        conn = mysql_utils.get_mysql_connection()
+        conn = mysql_utils.get_pdns_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
                 select_domain = "DELETE FROM domains WHERE name = %s"
@@ -89,7 +89,7 @@ class DNSDomain(resource.Resource):
             conn.commit()
 
     def get(self):
-        conn = mysql_utils.get_mysql_connection()
+        conn = mysql_utils.get_pdns_mysql_connection()
         with conn:
             with conn.cursor() as cursor:
                 select_domain = "SELECT * FROM domains"
