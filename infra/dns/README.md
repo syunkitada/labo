@@ -41,7 +41,7 @@ $ dig +short @127.0.0.1 -p1253 google.com
 # Debug container status
 
 ```
-$ docker inspect mylabo-pdns-mysql --format '{{json .State.Health}}' | jq
+$ docker inspect dns-pdns-mysql --format '{{json .State.Health}}' | jq
 {
   "Status": "starting",
   "FailingStreak": 0,
@@ -60,7 +60,7 @@ $ docker inspect mylabo-pdns-mysql --format '{{json .State.Health}}' | jq
 # Debug MySQL
 
 ```
-$ docker exec -it mylabo-pdns-mysql mysql -usystem -psystempass pdns
+$ docker exec -it dns-pdns-mysql mysql -usystem -psystempass pdns
 mysql> show tables;
 +----------------+
 | Tables_in_pdns |
@@ -107,5 +107,5 @@ $ dig +short google.com @127.0.0.1 -p1153
 
 2. Login and Input Server Settings:
 
-- PowerDNS API URL: http://mylabo-pdns-auth:8081/
+- PowerDNS API URL: http://dns-pdns-auth:8081/
 - PowerDNS API Key: See `.env` file for `PDNS_AUTH_API_KEY`

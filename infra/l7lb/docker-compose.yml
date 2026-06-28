@@ -1,6 +1,6 @@
 services:
-  mylabo-haproxy:
-    container_name: mylabo-haproxy
+  l7lb-haproxy:
+    container_name: l7lb-haproxy
     image: haproxy:3.3.1
     restart: always
     network_mode: host
@@ -10,8 +10,8 @@ services:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
       - /etc/mylabo/tls-assets/svc.local.test/server-bundle.pem:/etc/haproxy/certs/svc.local.test.pem:ro
 
-  mylabo-nginx:
-    container_name: mylabo-nginx
+  l7lb-nginx:
+    container_name: l7lb-nginx
     image: nginx:latest
     restart: always
     network_mode: host

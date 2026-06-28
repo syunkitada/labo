@@ -1,5 +1,7 @@
+name: monitoring
+
 services:
-  grafana:
+  monitoring-grafana:
     container_name: monitoring-grafana
     restart: always
     image: grafana/grafana:12.3
@@ -14,7 +16,7 @@ services:
       - "3000:3000"
 
   # S3 compatible object storage
-  rustfs:
+  monitoring-rustfs:
     container_name: monitoring-rustfs
     restart: always
     image: rustfs/rustfs:latest
@@ -33,7 +35,7 @@ services:
   # ----------------------------------------------------------------------------------------------------
   # Metrics and alerting components
   # ----------------------------------------------------------------------------------------------------
-  prometheus-alertmanager:
+  monitoring-prometheus-alertmanager:
     container_name: monitoring-prometheus-alertmanager
     restart: always
     image: prom/alertmanager:v0.31.1
@@ -42,12 +44,12 @@ services:
     volumes:
       - ./alertmanager/config.yml:/etc/alertmanager/config.yml
 
-  victoriametrics:
+  monitoring-victoriametrics:
     container_name: monitoring-victoriametrics
     restart: always
     image: victoriametrics/victoria-metrics:v1.135.0
     depends_on:
-      - "prometheus-alertmanager"
+      - "monitoring-prometheus-alertmanager"
     ports:
       - "9999:9999"
     volumes:
@@ -59,12 +61,12 @@ services:
   # ----------------------------------------------------------------------------------------------------
   # Log components
   # ----------------------------------------------------------------------------------------------------
-  victoriametrics-vmagent:
+  monitoring-victoriametrics-vmagent:
     container_name: monitoring-victoriametrics-vmagent
     restart: always
     image: victoriametrics/vmagent:v1.135.0
     depends_on:
-      - "victoriametrics"
+      - "monitoring-victoriametrics"
     ports:
       - "8429:8429"
     volumes:
@@ -79,7 +81,7 @@ services:
   # - 9092: for external communication
   # - 29092: for internal communication
   # - 29093: for internal controller communication
-  kafka:
+  monitoring-kafka:
     container_name: monitoring-kafka
     restart: always
     image: apache/kafka:4.1.1
@@ -100,25 +102,25 @@ services:
       KAFKA_NUM_PARTITIONS: 3
 
   # Reference: https://github.com/kafbat/kafka-ui/blob/main/.dev/dev.yaml
-  kafka-ui:
+  monitoring-kafka-ui:
     container_name: monitoring-kafka-ui
     restart: always
     image: ghcr.io/kafbat/kafka-ui:v1.2.0
     ports:
       - "9090:8080"
     depends_on:
-      - kafka
+      - monitoring-kafka
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: monitoring-kafka:29092
       KAFKA_CLUSTERS_0_METRICS_PORT: 9997
 
-  kafka-init-topics:
+  monitoring-kafka-init-topics:
     container_name: monitoring-kafka-init-topics
     restart: "no"
     image: apache/kafka:4.1.1
     depends_on:
-      - kafka
+      - monitoring-kafka
     command:
       - bash
       - -c
@@ -127,7 +129,7 @@ services:
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server monitoring-kafka:29092 --create --topic mylabo-logs || echo "Already created" &&
         echo Kafka topics created successfully.
 
-  grafana-loki:
+  monitoring-grafana-loki:
     container_name: monitoring-grafana-loki
     image: grafana/loki:3.5.10
     ports:
@@ -137,13 +139,13 @@ services:
       - "grafana-loki-data:/loki"
       - "./grafana-loki/config.yaml:/opt/grafana-loki/config.yaml"
 
-  vector-aggregator:
+  monitoring-vector-aggregator:
     container_name: monitoring-vector-aggregator
     restart: always
     image: timberio/vector:0.53.0-debian
     depends_on:
-      - kafka
-      - grafana-loki
+      - monitoring-kafka
+      - monitoring-grafana-loki
     ports:
       - "9599:9599"
     volumes:
@@ -153,12 +155,12 @@ services:
   # ----------------------------------------------------------------------------------------------------
   # Node components
   # ----------------------------------------------------------------------------------------------------
-  vector-agent:
+  monitoring-vector-agent:
     container_name: monitoring-vector-agent
     restart: always
     image: timberio/vector:0.53.0-debian
     depends_on:
-      - kafka
+      - monitoring-kafka
     ports:
       - "9598:9598"
     volumes:
@@ -166,7 +168,7 @@ services:
       - /var/log/journal:/var/log/journal:ro
     command: ["--config", "/etc/vector/vector.yml"]
 
-  prometheus-node-exporter:
+  monitoring-prometheus-node-exporter:
     image: quay.io/prometheus/node-exporter:latest
     container_name: monitoring-prometheus-node-exporter
     command:

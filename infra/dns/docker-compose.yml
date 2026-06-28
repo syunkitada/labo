@@ -1,6 +1,8 @@
+name: dns
+
 services:
-  mylabo-pdns-mysql:
-    container_name: mylabo-pdns-mysql
+  dns-pdns-mysql:
+    container_name: dns-pdns-mysql
     image: mysql:9.5
     restart: always
     environment:
@@ -8,7 +10,7 @@ services:
       MYSQL_USER: system
       MYSQL_PASSWORD: ${MYSQL_SYSTEM_PASSWORD}
     volumes:
-      - mylabo-pdns-mysql-data:/var/lib/mysql
+      - pdns-mysql-data:/var/lib/mysql
       - ./pdns-mysql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       - ./pdns-mysql/my.cnf.d/server.cnf:/etc/my.cnf.d/server.cnf:ro
     ports:
@@ -21,11 +23,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      mylabo-pdns:
+      local:
         ipv4_address: 10.53.53.2
 
-  mylabo-pdns-auth:
-    container_name: mylabo-pdns-auth
+  dns-pdns-auth:
+    container_name: dns-pdns-auth
     image: powerdns/pdns-auth-49:4.9.11
     restart: always
     entrypoint:
@@ -33,7 +35,7 @@ services:
       - "--"
       - "/pdns-auth/startup.sh"
     depends_on:
-      mylabo-pdns-mysql:
+      dns-pdns-mysql:
         condition: service_healthy
     environment:
       PDNS_AUTH_API_KEY: ${PDNS_AUTH_API_KEY}
@@ -50,11 +52,11 @@ services:
       - "1053:1053/udp"
       - "1053:1053/tcp"
     networks:
-      mylabo-pdns:
+      local:
         ipv4_address: 10.53.53.3
 
-  mylabo-pdns-recursor:
-    container_name: mylabo-pdns-recursor
+  dns-pdns-recursor:
+    container_name: dns-pdns-recursor
     image: powerdns/pdns-recursor-53:5.3.1
     restart: always
     entrypoint:
@@ -81,11 +83,11 @@ services:
       - "1153:1153/udp"
       - "1153:1153/tcp"
     networks:
-      mylabo-pdns:
+      local:
         ipv4_address: 10.53.53.4
 
-  mylabo-pdns-dnsdist:
-    container_name: mylabo-pdns-dnsdist
+  dns-pdns-dnsdist:
+    container_name: dns-pdns-dnsdist
     image: powerdns/dnsdist-20:2.0.1
     restart: always
     entrypoint:
@@ -93,9 +95,9 @@ services:
       - "--"
       - "/pdns-dnsdist/startup.sh"
     depends_on:
-      mylabo-pdns-auth:
+      dns-pdns-auth:
         condition: service_healthy
-      mylabo-pdns-recursor:
+      dns-pdns-recursor:
         condition: service_healthy
     ports:
       - "1253:53/udp"
@@ -106,33 +108,33 @@ services:
     volumes:
       - ./pdns-dnsdist:/pdns-dnsdist:ro
     networks:
-      mylabo-pdns:
+      local:
         ipv4_address: 10.53.53.5
 
-  mylabo-pdns-admin:
+  dns-pdns-admin:
+    container_name: dns-pdns-admin
     image: powerdnsadmin/pda-legacy:0.4.2
-    container_name: mylabo-pdns-admin
     restart: always
     depends_on:
-      mylabo-pdns-auth:
+      dns-pdns-auth:
         condition: service_healthy
     ports:
       - "9191:80"
     environment:
       SECRET_KEY: ${PDNS_ADMIN_SECRET_KEY}
-      SQLALCHEMY_DATABASE_URI: mysql://system:${MYSQL_SYSTEM_PASSWORD}@mylabo-pdns-mysql:3306/pdns
+      SQLALCHEMY_DATABASE_URI: mysql://system:${MYSQL_SYSTEM_PASSWORD}@dns-pdns-mysql:3306/pdns
     volumes:
-      - mylabo-pdns-admin-data:/data
+      - pdns-admin-data:/data
     networks:
-      mylabo-pdns:
+      local:
         ipv4_address: 10.53.53.6
 
 volumes:
-  mylabo-pdns-mysql-data:
-  mylabo-pdns-admin-data:
+  pdns-mysql-data:
+  pdns-admin-data:
 
 networks:
-  mylabo-pdns:
+  local:
     driver: bridge
     ipam:
       config:
