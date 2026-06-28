@@ -16,4 +16,5 @@ Prometheus metrics endpoints:
 - victoriametrics-vmalert: http://dev01.pm.local.test:8880/metrics
 - vector-aggregator: http://dev01.pm.local.test:9599/metrics
 - vector-agent: http://dev01.pm.local.test:9598/metrics
+- alertmanager: http://dev01.pm.local.test:9093/metrics
 - node-exporter: http://dev01.pm.local.test:9100/metrics
